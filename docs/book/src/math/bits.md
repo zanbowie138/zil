@@ -2,7 +2,7 @@
 
 count, test, set, rotate and swap bits
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ### conversions
@@ -17,17 +17,17 @@ count, test, set, rotate and swap bits
 
 | function | description |
 |---|---|
-| [`popcount(n)`](#popcount) | number of 1 bits (two's complement for negatives) |
-| [`bit(n, i)`](#bit) | bit i of n (0 is the lowest), as 0 or 1 |
-| [`set_bit(n, i)`](#set_bit) | n with bit i set |
-| [`clear_bit(n, i)`](#clear_bit) | n with bit i cleared |
-| [`rotl(n, k, width)`](#rotl) | rotate the low width bits left by k |
-| [`rotr(n, k, width)`](#rotr) | rotate the low width bits right by k |
-| [`byteswap(n, width)`](#byteswap) | reverse the bytes of a width-bit number |
+| [`popcount(n: int)`](#popcount) | number of 1 bits (two's complement for negatives) |
+| [`bit(n: int, i: int)`](#bit) | bit i of n (0 is the lowest), as 0 or 1 |
+| [`set_bit(n: int, i: int)`](#set_bit) | n with bit i set |
+| [`clear_bit(n: int, i: int)`](#clear_bit) | n with bit i cleared |
+| [`rotl(n: int, k: int, width: int)`](#rotl) | rotate the low width bits left by k |
+| [`rotr(n: int, k: int, width: int)`](#rotr) | rotate the low width bits right by k |
+| [`byteswap(n: int, width: int)`](#byteswap) | reverse the bytes of a width-bit number |
 
 ### popcount
 
-`popcount(n)`: number of 1 bits (two's complement for negatives)
+`popcount(n: int)`: number of 1 bits (two's complement for negatives)
 
 ```zil
 popcount(0b1011)
@@ -40,7 +40,7 @@ See also: [bit](../math/bits.md#bit)
 
 ### bit
 
-`bit(n, i)`: bit i of n (0 is the lowest), as 0 or 1
+`bit(n: int, i: int)`: bit i of n (0 is the lowest), as 0 or 1
 
 ```zil
 bit(0b100, 2)
@@ -51,7 +51,7 @@ See also: [set_bit](../math/bits.md#set_bit), [clear_bit](../math/bits.md#clear_
 
 ### set_bit
 
-`set_bit(n, i)`: n with bit i set
+`set_bit(n: int, i: int)`: n with bit i set
 
 ```zil
 set_bit(0b1, 4)
@@ -62,7 +62,7 @@ See also: [clear_bit](../math/bits.md#clear_bit), [bit](../math/bits.md#bit)
 
 ### clear_bit
 
-`clear_bit(n, i)`: n with bit i cleared
+`clear_bit(n: int, i: int)`: n with bit i cleared
 
 ```zil
 clear_bit(0xff, 0)
@@ -73,7 +73,7 @@ See also: [set_bit](../math/bits.md#set_bit), [bit](../math/bits.md#bit)
 
 ### rotl
 
-`rotl(n, k, width)`: rotate the low width bits left by k
+`rotl(n: int, k: int, width: int)`: rotate the low width bits left by k
 
 ```zil
 rotl(0x81, 1, 8)
@@ -86,7 +86,7 @@ See also: [rotr](../math/bits.md#rotr)
 
 ### rotr
 
-`rotr(n, k, width)`: rotate the low width bits right by k
+`rotr(n: int, k: int, width: int)`: rotate the low width bits right by k
 
 ```zil
 rotr(0x81, 1, 8)
@@ -97,7 +97,7 @@ See also: [rotl](../math/bits.md#rotl)
 
 ### byteswap
 
-`byteswap(n, width)`: reverse the bytes of a width-bit number
+`byteswap(n: int, width: int)`: reverse the bytes of a width-bit number
 
 ```zil
 byteswap(0x1234, 16)

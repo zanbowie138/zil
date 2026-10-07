@@ -22,8 +22,8 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("keys", "keys(map)", "list of map keys", &["{a: 1, b: 2}.keys"], &["values"]),
-    doc("values", "values(map)", "list of map values", &["{a: 1, b: 2}.values"], &["keys"]),
+    doc("keys", "keys(m: map)", "list of map keys", &["{a: 1, b: 2}.keys"], &["values"]),
+    doc("values", "values(m: map)", "list of map values", &["{a: 1, b: 2}.values"], &["keys"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {

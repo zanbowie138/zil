@@ -126,10 +126,22 @@ impl Interp {
     }
 
     pub fn call(&mut self, f: &Value, args: Vec<Value>, span: &Span) -> Result<Value, Error> {
+        self.call_at(f, args, span, &[], None)
+    }
+
+    /// `call` with each argument's span and the callee's name as written, for sharper errors.
+    fn call_at(&mut self, f: &Value, args: Vec<Value>, span: &Span, arg_spans: &[Span], name: Option<&str>) -> Result<Value, Error> {
         match f {
             Value::Fn(c) => {
-                if args.len() != c.def.params.len() {
-                    return Err(Error::new(format!("expected {} args, got {}", c.def.params.len(), args.len()), span.clone()));
+                let n = c.def.params.len();
+                if args.len() != n {
+                    let who = name.unwrap_or("the function");
+                    let at = arg_spans.get(n).unwrap_or(span).clone();
+                    let mut e = Error::new(format!("{who} takes {}, got {}", modules::args_word(n), args.len()), at);
+                    for s in arg_spans.iter().skip(n) {
+                        e = e.label(s.clone(), "extra argument");
+                    }
+                    return Err(e);
                 }
                 if self.depth >= MAX_DEPTH {
                     return Err(Error::new("recursion too deep", span.clone()));
@@ -143,9 +155,115 @@ impl Interp {
                 self.depth -= 1;
                 r
             }
-            Value::Builtin(m, name) => (m.call)(self, name, &args, span).map_err(|f| f.error(name, &args, span)),
-            v => Err(Error::new(format!("{} is not callable", v.type_name()), span.clone())),
+            Value::Builtin(m, name) => {
+                let doc = m.fns.iter().find(|f| f.name == *name).expect("builtins have docs");
+                (m.call)(self, name, &args, span).map_err(|f| f.error(doc, &args, span, arg_spans))
+            }
+            v => Err(Error::new(format!("cannot call a {}", v.type_name()), span.clone()).note(format!("{} is {}", name.unwrap_or("it"), modules::short(v)))),
         }
+    }
+
+    /// `obj.key`: a map's key, else a zero-arg method (`s.upper` is `upper(s)`), else nil for maps.
+    /// The second half is the keys of a map that just lacked `key`, so `{a: 1}.b.c` can blame `.b`.
+    fn field(&mut self, e: &Expr, obj: &Expr, key: &str, env: &Env) -> Result<(Value, Option<Vec<String>>), Ctl> {
+        let (o, missed) = match &obj.kind {
+            ExprKind::Field(inner, k) => self.field(obj, inner, k, env)?,
+            _ => (self.eval(obj, env)?, None),
+        };
+        let missing_key = |keys: Vec<String>| {
+            let ExprKind::Field(_, k) = &obj.kind else { unreachable!("only fields miss keys") };
+            let at = obj.span.end - k.len()..obj.span.end;
+            let hint = crate::error::did_you_mean(k, keys.iter().map(String::as_str));
+            Ctl::Err(Error::new(format!("map has no key `{k}`{hint}"), at))
+        };
+        if let Value::Map(m) = &o
+            && let Some(v) = m.borrow().get(key)
+        {
+            return Ok((v.clone(), None));
+        }
+        match (lookup(env, key), missed) {
+            (Some(f @ (Value::Fn(_) | Value::Builtin(..))), missed) => match self.call_at(&f, vec![o], &e.span, std::slice::from_ref(&obj.span), Some(key)) {
+                Ok(v) => Ok((v, None)),
+                Err(_) if missed.is_some() => Err(missing_key(missed.unwrap())),
+                Err(err) => Err(err.into()),
+            },
+            (_, _) if let Value::Map(m) = &o => Ok((Value::Nil, Some(m.borrow().keys().cloned().collect()))),
+            (_, Some(keys)) => Err(missing_key(keys)),
+            _ => {
+                let at = e.span.end - key.len()..e.span.end;
+                let hint = crate::error::did_you_mean(key, methods(env).iter().map(String::as_str));
+                Err(Ctl::Err(
+                    Error::new(format!("{} has no field or method `{key}`{hint}", o.type_name()), at)
+                        .label(obj.span.clone(), format!("this is {}", modules::short(&o))),
+                ))
+            }
+        }
+    }
+
+    /// `x to target` for unit and string targets. Kept out of `eval` (like `call_expr`) so its locals don't grow every recursion level.
+    #[inline(never)]
+    fn convert_to(&mut self, e: &Expr, x: &Expr, target: &Target, env: &Env) -> EResult {
+        let v = self.eval(x, env)?;
+        match modules::convert(&v, target) {
+            Some(Ok(r)) => Ok(r),
+            Some(Err(msg)) => {
+                // Name both sides as written: `5 kmh to kg` says kmh, not kph.
+                let msg = match (&v, target) {
+                    (Value::Qty(_, u), Target::Unit(spec)) if units::unit_of(spec).is_ok_and(|t| t.dim() != u.dim()) => {
+                        let t = units::unit_of(spec).unwrap();
+                        format!("cannot convert {} to {}", units::describe(u, written(x).as_deref()), units::describe(&t, Some(&units::spec_name(spec))))
+                    }
+                    _ => msg,
+                };
+                if msg.starts_with("unknown unit") {
+                    // ponytail: assumes the target is written compactly (`km/h`, not `km / h`).
+                    let len = target_name(target).len() - 2;
+                    return Err(Ctl::Err(Error::new(msg, e.span.end.saturating_sub(len)..e.span.end)));
+                }
+                let e = Error::new(msg, x.span.clone());
+                Err(Ctl::Err(if written(x).is_some() { e } else { e.label(x.span.clone(), format!("this is {}", modules::short(&v))) }))
+            }
+            None => Err(Ctl::Err(Error::new(format!("cannot convert {} to {}", v.type_name(), target_name(target)), e.span.clone()))),
+        }
+    }
+
+    /// `f(a)` and `x.f(a)`: a map's own fn field wins, else sugar for `f(x, a)`.
+    #[inline(never)]
+    fn call_expr(&mut self, e: &Expr, callee: &Expr, args: &[Expr], env: &Env) -> EResult {
+        let (f, mut argv) = match &callee.kind {
+            ExprKind::Field(obj, name) => {
+                let o = self.eval(obj, env)?;
+                let own = match &o {
+                    Value::Map(m) => m.borrow().get(name).cloned(),
+                    _ => None,
+                };
+                match own {
+                    Some(f) => (f, vec![]),
+                    None => {
+                        let Some(f) = lookup(env, name) else {
+                            let at = callee.span.end - name.len()..callee.span.end;
+                            let hint = crate::error::did_you_mean(name, methods(env).iter().map(String::as_str));
+                            return Err(Ctl::Err(Error::new(format!("{} has no method `{name}`{hint}", o.type_name()), at)));
+                        };
+                        (f, vec![o])
+                    }
+                }
+            }
+            _ => (self.eval(callee, env)?, vec![]),
+        };
+        let mut spans: Vec<Span> = match &callee.kind {
+            ExprKind::Field(obj, _) if !argv.is_empty() => vec![obj.span.clone()],
+            _ => vec![],
+        };
+        for a in args {
+            argv.push(self.eval(a, env)?);
+            spans.push(a.span.clone());
+        }
+        let name = match &callee.kind {
+            ExprKind::Ident(n) | ExprKind::Field(_, n) => Some(n.as_str()),
+            _ => None,
+        };
+        Ok(self.call_at(&f, argv, &e.span, &spans, name)?)
     }
 
     fn eval(&mut self, e: &Expr, env: &Env) -> EResult {
@@ -161,7 +279,9 @@ impl Interp {
             ExprKind::Regex(r) => Value::Regex(r.clone()),
             ExprKind::Ident(name) => match lookup(env, name) {
                 Some(v) => v,
-                None => modules::ident(self, name).unwrap_or_else(|| Err(format!("undefined variable `{name}`"))).map_err(err)?,
+                None => modules::ident(self, name)
+                    .unwrap_or_else(|| Err(format!("undefined variable `{name}`{}", crate::error::did_you_mean(name, names(env).iter().map(String::as_str)))))
+                    .map_err(err)?,
             },
             ExprKind::List(items) => {
                 let mut v = Vec::with_capacity(items.len());
@@ -179,7 +299,12 @@ impl Interp {
             }
             ExprKind::Qty(n, spec) => {
                 let v = self.eval(n, env)?;
-                let n = num(&v).ok_or_else(|| err(format!("cannot attach a unit to a {}", v.type_name())))?;
+                let n = num(&v).ok_or_else(|| {
+                    Ctl::Err(
+                        Error::new(format!("cannot attach a unit to a {}", v.type_name()), n.span.clone())
+                            .label(n.span.clone(), format!("this is {}", modules::short(&v))),
+                    )
+                })?;
                 Value::Qty(n, units::unit_of(spec).map_err(err)?)
             }
             // `x to hex(8)` is the builtin call `hex(x, 8)`, even if `hex` is shadowed.
@@ -189,13 +314,7 @@ impl Interp {
                 args.extend(arg.map(Value::int));
                 self.call(&Value::Builtin(m, f), args, &e.span)?
             }
-            ExprKind::To(v, target) => {
-                let v = self.eval(v, env)?;
-                match modules::convert(&v, target) {
-                    Some(r) => r.map_err(err)?,
-                    None => return Err(err(format!("cannot convert {} like that", v.type_name()))),
-                }
-            }
+            ExprKind::To(x, target) => self.convert_to(e, x, target, env)?,
             ExprKind::Percent(x) => binary(BinOp::Div, &self.eval(x, env)?, &Value::int(100)).map_err(err)?,
             ExprKind::Format(x, spec) => {
                 let v = self.eval(x, env)?;
@@ -209,11 +328,11 @@ impl Interp {
                 (UnOp::Neg, Value::Frac(r, f)) => Value::Frac(Rc::new(-&*r), f),
                 (UnOp::Neg, Value::Float(n)) => Value::Float(-n),
                 (UnOp::Neg, Value::Qty(n, u)) => Value::Qty(-n, u),
-                (UnOp::Neg, v) => return Err(err(format!("cannot negate {}", v.type_name()))),
+                (UnOp::Neg, v) => return Err(err(format!("cannot negate a {}", v.type_name()))),
                 (UnOp::BitNot, Value::Int(n, b)) => Value::Int(!n, b),
                 (UnOp::BitNot, Value::Big(n, b)) => exact(BigRational::from_integer(!&*n), b, false),
                 (UnOp::BitNot, v) => {
-                    return Err(err(format!("cannot bit-invert {}", v.type_name())));
+                    return Err(err(format!("cannot bit-invert a {}", v.type_name())));
                 }
             },
             ExprKind::Binary(BinOp::And, a, b) => {
@@ -227,22 +346,22 @@ impl Interp {
             // `x in v` is `contains(v, x)`, even if `contains` is shadowed; `5 km in mi` is `to`.
             ExprKind::Binary(BinOp::In, x, v) => match (self.eval(x, env)?, self.eval(v, env)?) {
                 (Value::Qty(x, u), Value::Qty(_, t)) => units::to_unit(x, &u, t).map_err(err)?,
-                (x, v) => self.call(&modules::builtin("contains"), vec![v, x], &e.span)?,
+                (xv, vv) => self.call_at(&modules::builtin("contains"), vec![vv, xv], &e.span, &[v.span.clone(), x.span.clone()], None)?,
             },
             ExprKind::Chain(first, rest) => {
-                let mut l = self.eval(first, env)?;
+                let (mut l, mut le) = (self.eval(first, env)?, &**first);
                 for (op, r) in rest {
-                    let r = self.eval(r, env)?;
-                    if !binary(*op, &l, &r).map_err(err)?.truthy() {
+                    let rv = self.eval(r, env)?;
+                    if !binary(*op, &l, &rv).map_err(|m| operands(m, *op, (le, &l), (r, &rv)))?.truthy() {
                         return Ok(Value::Bool(false));
                     }
-                    l = r;
+                    (l, le) = (rv, r);
                 }
                 Value::Bool(true)
             }
             ExprKind::Binary(op, a, b) => {
-                let (a, b) = (self.eval(a, env)?, self.eval(b, env)?);
-                binary(*op, &a, &b).map_err(err)?
+                let (av, bv) = (self.eval(a, env)?, self.eval(b, env)?);
+                binary(*op, &av, &bv).map_err(|m| operands(m, *op, (a, &av), (b, &bv)))?
             }
             ExprKind::Assign(target, v) => {
                 let v = self.eval(v, env)?;
@@ -256,14 +375,14 @@ impl Interp {
                         Value::Map(m) => {
                             m.borrow_mut().insert(key.clone(), v.clone());
                         }
-                        o => return Err(err(format!("cannot set field on {}", o.type_name()))),
+                        o => return Err(err(format!("cannot set a field on a {}", o.type_name()))),
                     },
                     ExprKind::Index(obj, idx) => {
-                        let (obj, idx) = (self.eval(obj, env)?, self.eval(idx, env)?);
-                        match (obj, idx) {
+                        let (ov, iv) = (self.eval(obj, env)?, self.eval(idx, env)?);
+                        match (ov, iv) {
                             (Value::List(l), Value::Int(i, _)) => {
                                 let mut l = l.borrow_mut();
-                                let i = list_index(i, l.len()).ok_or_else(|| err("index out of range".into()))?;
+                                let i = list_index(i, l.len()).ok_or_else(|| out_of_range(i, l.len(), obj, idx))?;
                                 l[i] = v.clone();
                             }
                             (Value::Map(m), Value::Str(k)) => {
@@ -278,52 +397,18 @@ impl Interp {
                 }
                 v
             }
-            ExprKind::Call(callee, args) => {
-                // `x.f(a)`: a map's own fn field wins, else sugar for `f(x, a)`.
-                let (f, mut argv) = match &callee.kind {
-                    ExprKind::Field(obj, name) => {
-                        let o = self.eval(obj, env)?;
-                        let own = match &o {
-                            Value::Map(m) => m.borrow().get(name).cloned(),
-                            _ => None,
-                        };
-                        match own {
-                            Some(f) => (f, vec![]),
-                            None => (lookup(env, name).ok_or_else(|| err(format!("no method `{name}`")))?, vec![o]),
-                        }
-                    }
-                    _ => (self.eval(callee, env)?, vec![]),
-                };
-                for a in args {
-                    argv.push(self.eval(a, env)?);
-                }
-                self.call(&f, argv, &e.span)?
-            }
-            // `x.k`: map key, else zero-arg method (`s.upper` == `upper(s)`), else nil for maps.
-            ExprKind::Field(obj, key) => {
-                let o = self.eval(obj, env)?;
-                if let Value::Map(m) = &o
-                    && let Some(v) = m.borrow().get(key)
-                {
-                    return Ok(v.clone());
-                }
-                match lookup(env, key) {
-                    Some(f @ (Value::Fn(_) | Value::Builtin(..))) => self.call(&f, vec![o], &e.span)?,
-                    _ if matches!(o, Value::Map(_)) => Value::Nil,
-                    _ => {
-                        return Err(err(format!("{} has no field or method `{key}`", o.type_name())));
-                    }
-                }
-            }
+            ExprKind::Call(callee, args) => self.call_expr(e, callee, args, env)?,
+            ExprKind::Field(obj, key) => self.field(e, obj, key, env)?.0,
             ExprKind::Index(obj, idx) => match (self.eval(obj, env)?, self.eval(idx, env)?) {
                 (Value::List(l), Value::Int(i, _)) => {
                     let l = l.borrow();
-                    let i = list_index(i, l.len()).ok_or_else(|| err("index out of range".into()))?;
-                    l[i].clone()
+                    let at = list_index(i, l.len()).ok_or_else(|| out_of_range(i, l.len(), obj, idx))?;
+                    l[at].clone()
                 }
                 (Value::Str(s), Value::Int(i, _)) => {
-                    let i = list_index(i, s.chars().count()).ok_or_else(|| err("index out of range".into()))?;
-                    Value::str(s.chars().nth(i).unwrap().to_string())
+                    let n = s.chars().count();
+                    let at = list_index(i, n).ok_or_else(|| out_of_range(i, n, obj, idx))?;
+                    Value::str(s.chars().nth(at).unwrap().to_string())
                 }
                 (Value::Map(m), Value::Str(k)) => m.borrow().get(&*k).cloned().unwrap_or(Value::Nil),
                 (o, i) => {
@@ -337,7 +422,7 @@ impl Interp {
                         None => Ok(None),
                         Some(b) => match self.eval(b, env)? {
                             Value::Int(n, _) => Ok(Some(n)),
-                            v => Err(err(format!("slice bounds must be int, got {}", v.type_name()))),
+                            v => Err(Ctl::Err(Error::new(format!("slice bounds must be int, got {}", v.type_name()), b.span.clone()))),
                         },
                     }
                 };
@@ -380,7 +465,12 @@ impl Interp {
                     Value::List(l) => l.borrow().clone(),
                     Value::Map(m) => m.borrow().keys().map(|k| Value::str(k.as_str())).collect(),
                     Value::Str(s) => s.chars().map(|c| Value::str(c.to_string())).collect(),
-                    v => return Err(err(format!("cannot iterate {}", v.type_name()))),
+                    v => {
+                        return Err(Ctl::Err(
+                            Error::new(format!("cannot loop over a {}", v.type_name()), iter.span.clone())
+                                .label(iter.span.clone(), format!("this is {}", modules::short(&v))),
+                        ));
+                    }
                 };
                 for it in items {
                     let scope = child(env);
@@ -428,18 +518,93 @@ fn slice_range(from: Option<i64>, to: Option<i64>, len: usize) -> (usize, usize)
     (a, b.max(a))
 }
 
-pub fn mismatch(a: &Value, b: &Value) -> String {
-    format!("unsupported operands {} and {}", a.type_name(), b.type_name())
+/// Every name in scope, innermost first.
+fn names(env: &Env) -> Vec<String> {
+    let s = env.borrow();
+    let mut out: Vec<String> = s.vars.keys().cloned().collect();
+    out.extend(s.parent.as_ref().map(names).unwrap_or_default());
+    out
+}
+
+/// Names in scope that hold functions, for `x.method` suggestions.
+fn methods(env: &Env) -> Vec<String> {
+    names(env).into_iter().filter(|n| matches!(lookup(env, n), Some(Value::Fn(_) | Value::Builtin(..)))).collect()
+}
+
+/// A unit as the source wrote it, when `e` is a literal like `5 kmh`.
+fn written(e: &Expr) -> Option<String> {
+    match &e.kind {
+        ExprKind::Qty(_, spec) => Some(units::spec_name(spec)),
+        _ => None,
+    }
+}
+
+fn target_name(t: &Target) -> String {
+    match t {
+        Target::Unit(spec) => format!("`{}`", units::spec_name(spec)),
+        Target::Units(specs) => format!("`{}`", specs.iter().map(units::spec_name).collect::<Vec<_>>().join(" ")),
+        Target::Named(n, _) => format!("`{n}`"),
+        Target::Str(s) => format!("{s:?}"),
+    }
+}
+
+/// `index 5 out of range` on the index, with the length in a note.
+fn out_of_range(i: i64, len: usize, obj: &Expr, idx: &Expr) -> Ctl {
+    let what = match &obj.kind {
+        ExprKind::Ident(n) => format!("`{n}`"),
+        _ => "it".into(),
+    };
+    let items = if matches!(obj.kind, ExprKind::Str(_)) { "character" } else { "item" };
+    Ctl::Err(Error::new(format!("index {i} out of range"), idx.span.clone()).note(format!("{what} has {len} {items}{}", if len == 1 { "" } else { "s" })))
+}
+
+/// A binary operator's error, labeling each operand with its value. Mismatched quantities are named
+/// by kind and unit as written: `cannot add length (km) and mass (kg)`.
+fn operands(msg: String, op: BinOp, (a, av): (&Expr, &Value), (b, bv): (&Expr, &Value)) -> Ctl {
+    let msg = match (av, bv) {
+        (Value::Qty(_, u), Value::Qty(_, w)) if u.dim() != w.dim() => {
+            format!("cannot {} {} and {}", verb(op), units::describe(u, written(a).as_deref()), units::describe(w, written(b).as_deref()))
+        }
+        _ => msg,
+    };
+    Ctl::Err(Error::new(msg, a.span.clone()).label(a.span.clone(), modules::short(av)).label(b.span.clone(), modules::short(bv)))
+}
+
+fn verb(op: BinOp) -> &'static str {
+    match op {
+        BinOp::Add => "add",
+        BinOp::Sub => "subtract",
+        BinOp::Mul => "multiply",
+        BinOp::Div | BinOp::IntDiv => "divide",
+        BinOp::Rem => "take the remainder of",
+        BinOp::Pow => "raise",
+        BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge => "compare",
+        BinOp::Range | BinOp::RangeIncl => "make a range of",
+        BinOp::BitAnd | BinOp::BitOr | BinOp::BitXor | BinOp::Shl | BinOp::Shr => "bit-combine",
+        _ => "combine",
+    }
+}
+
+/// `int`, or `length (km)` for a quantity.
+fn describe(v: &Value) -> String {
+    match v {
+        Value::Qty(_, u) => units::describe(u, None),
+        _ => v.type_name().to_string(),
+    }
+}
+
+pub fn mismatch(op: BinOp, a: &Value, b: &Value) -> String {
+    format!("cannot {} {} and {}", verb(op), describe(a), describe(b))
 }
 
 pub fn binary(op: BinOp, a: &Value, b: &Value) -> Result<Value, String> {
     use Value::*;
-    let mismatch = || mismatch(a, b);
+    let mismatch = || mismatch(op, a, b);
     match op {
         BinOp::Eq => return Ok(Bool(a == b)),
         BinOp::Ne => return Ok(Bool(a != b)),
         BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge => {
-            let ord = compare(a, b).ok_or_else(|| format!("cannot compare {a:?} and {b:?}"))?;
+            let ord = compare(a, b).ok_or_else(mismatch)?;
             return Ok(Bool(match op {
                 BinOp::Lt => ord.is_lt(),
                 BinOp::Le => ord.is_le(),
@@ -491,7 +656,7 @@ fn int_op(op: BinOp, x: i64, y: i64) -> Result<Option<i64>, String> {
         BinOp::BitOr => Some(x | y),
         BinOp::BitXor => Some(x ^ y),
         // ponytail: `<<` drops high bits like C instead of erroring on overflow.
-        BinOp::Shl | BinOp::Shr if !(0..64).contains(&y) => return Err("shift must be 0-63".into()),
+        BinOp::Shl | BinOp::Shr if !(0..64).contains(&y) => return Err(format!("shift by {y} is out of range\nnote: shifts go from 0 to 63")),
         BinOp::Shl => Some(x << y),
         BinOp::Shr => Some(x >> y),
         _ => None,
@@ -531,12 +696,12 @@ fn exact_op(op: BinOp, a: &Value, b: &Value, x: BigRational, y: BigRational) -> 
                 BinOp::BitOr => p | q,
                 BinOp::BitXor => p ^ q,
                 _ => {
-                    let s = q.to_u8().filter(|s| *s < 64).ok_or("shift must be 0-63")?;
+                    let s = q.to_u8().filter(|s| *s < 64).ok_or(format!("shift by {q} is out of range\nnote: shifts go from 0 to 63"))?;
                     if op == BinOp::Shl { p << s } else { p >> s }
                 }
             })
         }
-        _ => return Err(mismatch(a, b)),
+        _ => return Err(mismatch(op, a, b)),
     };
     Ok(exact(r, base, as_frac))
 }
@@ -559,7 +724,7 @@ fn pow(x: BigRational, e: BigInt) -> Result<BigRational, String> {
     let bits = x.numer().bits().max(x.denom().bits());
     match e.to_i32() {
         Some(n) if bits.saturating_mul(n.unsigned_abs() as u64) <= 1 << 22 => Ok(x.pow(n)),
-        _ => Err("result too large".into()),
+        _ => Err("result too large\nnote: exact results stop at about 1.2 million digits; a float base like `2.0 ** n` gives an estimate".into()),
     }
 }
 
@@ -572,7 +737,7 @@ pub mod tests {
     }
 
     pub fn try_eval(src: &str) -> Result<Value, Error> {
-        let ast = crate::parser::parse(crate::lexer::lex(src)?)?;
+        let ast = crate::parser::parse(src)?;
         Interp::new().run(&ast)
     }
 

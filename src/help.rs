@@ -42,27 +42,19 @@ pub fn help(topic: Option<&str>) -> bool {
 
 /// `help(value)`: every builtin whose first parameter takes that type; false for a type with none.
 pub fn type_page(ty: &str) -> bool {
-    let Some((_, params)) = TAKES.iter().find(|t| t.0 == ty) else {
-        return false;
+    // A typed first parameter that names `ty` (or `num`, for numbers); `any` would list everything.
+    let takes = |f: &Doc| {
+        let num = matches!(ty, "int" | "frac" | "float");
+        modules::forms(f.sig).is_ok_and(|fs| fs.iter().any(|g| g.params.first().is_some_and(|p| p.0.iter().any(|t| *t == ty || (num && *t == "num")))))
     };
-    let first = |sig: &str| sig.split_once('(').and_then(|r| r.1.split([',', ')']).next()).unwrap_or("").trim().to_string();
+    let hits: Vec<_> = docs().filter(|(_, f)| takes(f)).collect();
+    if hits.is_empty() {
+        return false;
+    }
     println!("functions taking a {} first, so x.f(...) works\n", paint(BOLD, ty));
-    listing(docs().filter(|(_, f)| params.contains(&first(f.sig).as_str())).collect());
+    listing(hits);
     true
 }
-
-/// Types, and the first-parameter names in signatures that take them.
-// ponytail: leans on the sigs' naming convention (d, s, x...); add a `takes` field to Doc if it drifts.
-const TAKES: &[(&str, &[&str])] = &[
-    ("date", &["d"]),
-    ("str", &["s", "c", "ip", "block", "path"]),
-    ("int", &["x", "n"]),
-    ("frac", &["x"]),
-    ("float", &["x"]),
-    ("quantity", &["x", "qty", "duration", "sum", "loan", "balance", "cost", "rate"]),
-    ("list", &["list"]),
-    ("map", &["map"]),
-];
 
 /// Things most languages can't do in one line: heads `help("examples")` and the mdBook index.
 #[rustfmt::skip]
@@ -214,27 +206,7 @@ fn search(topic: &str) -> Vec<(&'static Module, &'static Doc)> {
 fn near(topic: &str) -> Vec<&'static str> {
     let units = crate::modules::units::TABLE.iter().flat_map(|u| u.0.split(' '));
     let names = docs().map(|(_, f)| f.name).chain(ALL.iter().flat_map(|(path, m)| [path.as_str(), m.name])).chain(["examples", "syntax"]).chain(units);
-    let max = (topic.chars().count() / 3).max(1);
-    let mut hits: Vec<_> = names.map(|n| (edits(topic, n), n)).filter(|h| h.0 <= max).collect();
-    hits.sort();
-    hits.dedup();
-    hits.into_iter().take(3).map(|h| h.1).collect()
-}
-
-/// Levenshtein distance.
-fn edits(a: &str, b: &str) -> usize {
-    let b: Vec<char> = b.chars().collect();
-    let mut row: Vec<usize> = (0..=b.len()).collect();
-    for (i, ca) in a.chars().enumerate() {
-        let mut diag = row[0];
-        row[0] = i + 1;
-        for j in 0..b.len() {
-            let next = (diag + usize::from(ca != b[j])).min(row[j] + 1).min(row[j + 1] + 1);
-            diag = row[j + 1];
-            row[j + 1] = next;
-        }
-    }
-    row[b.len()]
+    crate::error::near(topic, names)
 }
 
 /// A module's page: what it adds (types, operators, conversions, units...), its submodules, then its functions by group.
@@ -324,9 +296,10 @@ fn result(src: &str) -> (String, String) {
     }
 }
 
-/// A signature with its function name in bold.
+/// A signature with the function name of each form in bold.
 fn sig(f: &Doc) -> String {
-    f.sig.strip_prefix(f.name).map_or(f.sig.to_string(), |rest| format!("{}{rest}", paint(BOLD, f.name)))
+    let bold = |form: &str| form.strip_prefix(f.name).map_or(form.to_string(), |rest| format!("{}{rest}", paint(BOLD, f.name)));
+    f.sig.split(" / ").map(bold).collect::<Vec<_>>().join(" / ")
 }
 
 fn paint(color: &str, s: &str) -> String {
@@ -381,7 +354,6 @@ mod tests {
 
     #[test]
     fn near_suggests_typos() {
-        assert_eq!(edits("kitten", "sitting"), 3);
         assert_eq!(near("uper")[0], "upper");
         assert!(near("syntx").contains(&"syntax"));
         assert!(near("qqqqqq").is_empty());

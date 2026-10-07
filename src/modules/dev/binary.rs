@@ -23,8 +23,8 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("hexdump", "hexdump(v)", "xxd-style dump of a string's UTF-8 bytes or a list of bytes", &[r#"hexdump("hi\n")"#, "hexdump([0, 255, 65])"], &["bytes", "entropy"]),
-    doc("entropy", "entropy(v)", "Shannon entropy in bits per byte: 0 is constant, 8 is random", &[r#""aaaa".entropy"#, r#""abcd".entropy"#], &["hexdump"]),
+    doc("hexdump", "hexdump(v: str|list)", "xxd-style dump of a string's UTF-8 bytes or a list of bytes", &[r#"hexdump("hi\n")"#, "hexdump([0, 255, 65])"], &["bytes", "entropy"]),
+    doc("entropy", "entropy(v: str|list)", "Shannon entropy in bits per byte: 0 is constant, 8 is random", &[r#""aaaa".entropy"#, r#""abcd".entropy"#], &["hexdump"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {

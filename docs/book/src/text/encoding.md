@@ -2,7 +2,7 @@
 
 base64, URL and hex encodings, code points, UTF-8 bytes
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ### conversions
@@ -17,18 +17,18 @@ base64, URL and hex encodings, code points, UTF-8 bytes
 
 | function | description |
 |---|---|
-| [`base64(s)`](#base64) | base64-encode a string; same as `s to base64` |
-| [`encode(s, fmt)`](#encode) | encode as "base64", "url" or "hex" |
-| [`decode(s, fmt)`](#decode) | decode "base64", "url" or "hex" |
-| [`ord(c)`](#ord) | Unicode code point of a single character |
-| [`chr(n)`](#chr) | character for a Unicode code point |
-| [`bytes(s)`](#bytes) | list of the string's UTF-8 bytes |
-| [`from_bytes(list)`](#from_bytes) | string from a list of UTF-8 bytes |
-| [`byte_len(s)`](#byte_len) | length in UTF-8 bytes rather than characters |
+| [`base64(s: str)`](#base64) | base64-encode a string; same as `s to base64` |
+| [`encode(s: str, fmt: str)`](#encode) | encode as "base64", "url" or "hex" |
+| [`decode(s: str, fmt: str)`](#decode) | decode "base64", "url" or "hex" |
+| [`ord(c: str)`](#ord) | Unicode code point of a single character |
+| [`chr(n: int)`](#chr) | character for a Unicode code point |
+| [`bytes(s: str)`](#bytes) | list of the string's UTF-8 bytes |
+| [`from_bytes(xs: list)`](#from_bytes) | string from a list of UTF-8 bytes |
+| [`byte_len(v: str\|list)`](#byte_len) | length in UTF-8 bytes rather than characters |
 
 ### base64
 
-`base64(s)`: base64-encode a string; same as `s to base64`
+`base64(s: str)`: base64-encode a string; same as `s to base64`
 
 ```zil
 base64("hi there")
@@ -41,7 +41,7 @@ See also: [encode](../text/encoding.md#encode), [decode](../text/encoding.md#dec
 
 ### encode
 
-`encode(s, fmt)`: encode as "base64", "url" or "hex"
+`encode(s: str, fmt: str)`: encode as "base64", "url" or "hex"
 
 ```zil
 "hi there".encode("base64")
@@ -54,7 +54,7 @@ See also: [decode](../text/encoding.md#decode)
 
 ### decode
 
-`decode(s, fmt)`: decode "base64", "url" or "hex"
+`decode(s: str, fmt: str)`: decode "base64", "url" or "hex"
 
 ```zil
 "aGk=".decode("base64")
@@ -67,7 +67,7 @@ See also: [encode](../text/encoding.md#encode)
 
 ### ord
 
-`ord(c)`: Unicode code point of a single character
+`ord(c: str)`: Unicode code point of a single character
 
 ```zil
 "A".ord
@@ -80,7 +80,7 @@ See also: [chr](../text/encoding.md#chr), [bytes](../text/encoding.md#bytes)
 
 ### chr
 
-`chr(n)`: character for a Unicode code point
+`chr(n: int)`: character for a Unicode code point
 
 ```zil
 97.chr
@@ -93,7 +93,7 @@ See also: [ord](../text/encoding.md#ord)
 
 ### bytes
 
-`bytes(s)`: list of the string's UTF-8 bytes
+`bytes(s: str)`: list of the string's UTF-8 bytes
 
 ```zil
 "hé".bytes
@@ -104,7 +104,7 @@ See also: [from_bytes](../text/encoding.md#from_bytes), [ord](../text/encoding.m
 
 ### from_bytes
 
-`from_bytes(list)`: string from a list of UTF-8 bytes
+`from_bytes(xs: list)`: string from a list of UTF-8 bytes
 
 ```zil
 [104, 105].from_bytes
@@ -115,7 +115,7 @@ See also: [bytes](../text/encoding.md#bytes), [chr](../text/encoding.md#chr)
 
 ### byte_len
 
-`byte_len(s)`: length in UTF-8 bytes rather than characters
+`byte_len(v: str|list)`: length in UTF-8 bytes rather than characters
 
 ```zil
 "héllo".byte_len

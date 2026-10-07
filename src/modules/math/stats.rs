@@ -30,16 +30,16 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("sum", "sum(list)", "add up a list; works with units", &["[1, 2, 3].sum", "[1 m, 50 cm].sum"], &["avg", "reduce"]),
-    doc("avg", "avg(list)", "mean of a list", &["[1, 2, 4].avg", "[2 h, 30 min].avg"], &["sum", "median"]),
-    doc("product", "product(list)", "multiply a list together", &["[2, 3, 4].product", "[2 m, 3 m].product"], &["sum", "factorial"]),
-    doc("median", "median(list)", "middle value; mean of the middle two for an even count", &["[3, 1, 2].median", "[1 m, 3 m, 50 cm, 2 m].median"], &["avg", "percentile"]),
-    doc("mode", "mode(list)", "most common item; the first one on ties", &["[1, 2, 2, 3].mode", r#""hello".chars.mode"#], &["median", "count"]),
-    doc("percentile", "percentile(list, p)", "the p-th percentile (0-100), interpolating between items", &["[1, 2, 3, 4, 5].percentile(90)", "(1..=100).percentile(25)"], &["median"]),
-    doc("variance", "variance(list)", "sample variance (n - 1)", &["[2, 4, 4, 4, 5, 5, 7, 9].variance"], &["stdev"]),
-    doc("stdev", "stdev(list)", "sample standard deviation (n - 1); works with units", &["[2, 4, 4, 4, 5, 5, 7, 9].stdev", "[1 m, 2 m, 3 m].stdev"], &["variance", "avg"]),
-    doc("min", "min(list) / min(a, b, ...)", "smallest value", &["min(3, 9, 4)", "[2 km, 1 mi].min"], &["max", "sort"]),
-    doc("max", "max(list) / max(a, b, ...)", "largest value", &["max(3, 9, 4)", r#"["b", "a"].max"#], &["min", "sort"]),
+    doc("sum", "sum(xs: list)", "add up a list; works with units", &["[1, 2, 3].sum", "[1 m, 50 cm].sum"], &["avg", "reduce"]),
+    doc("avg", "avg(xs: list)", "mean of a list", &["[1, 2, 4].avg", "[2 h, 30 min].avg"], &["sum", "median"]),
+    doc("product", "product(xs: list)", "multiply a list together", &["[2, 3, 4].product", "[2 m, 3 m].product"], &["sum", "factorial"]),
+    doc("median", "median(xs: list)", "middle value; mean of the middle two for an even count", &["[3, 1, 2].median", "[1 m, 3 m, 50 cm, 2 m].median"], &["avg", "percentile"]),
+    doc("mode", "mode(xs: list)", "most common item; the first one on ties", &["[1, 2, 2, 3].mode", r#""hello".chars.mode"#], &["median", "count"]),
+    doc("percentile", "percentile(xs: list, p: num)", "the p-th percentile (0-100), interpolating between items", &["[1, 2, 3, 4, 5].percentile(90)", "(1..=100).percentile(25)"], &["median"]),
+    doc("variance", "variance(xs: list)", "sample variance (n - 1)", &["[2, 4, 4, 4, 5, 5, 7, 9].variance"], &["stdev"]),
+    doc("stdev", "stdev(xs: list)", "sample standard deviation (n - 1); works with units", &["[2, 4, 4, 4, 5, 5, 7, 9].stdev", "[1 m, 2 m, 3 m].stdev"], &["variance", "avg"]),
+    doc("min", "min(xs: list) / min(a: any, b: any, ...)", "smallest value", &["min(3, 9, 4)", "[2 km, 1 mi].min"], &["max", "sort"]),
+    doc("max", "max(xs: list) / max(a: any, b: any, ...)", "largest value", &["max(3, 9, 4)", r#"["b", "a"].max"#], &["min", "sort"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -66,9 +66,9 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             match (name, rest) {
                 ("median", []) => qty(percentile(&mut xs, 50.0), u),
                 ("percentile", [p]) if num(p).is_some_and(|p| (0.0..=100.0).contains(&p)) => qty(percentile(&mut xs, num(p).unwrap()), u),
-                ("percentile", [_]) => return Err("p must be 0-100".into()),
+                ("percentile", [p]) => return Err(Fail::Arg(1, format!("p must be from 0 to 100, got {p:?}"))),
                 ("variance" | "stdev", []) if xs.len() < 2 => {
-                    return Err("needs at least 2 items".into());
+                    return Err(format!("needs at least 2 items, got {}", xs.len()).into());
                 }
                 ("variance", []) => qty(variance(&xs), u.map(|u| u.pow(2))),
                 ("stdev", []) => qty(variance(&xs).sqrt(), u),
@@ -113,7 +113,7 @@ fn floats(l: &[Value]) -> Result<(Vec<f64>, Option<Unit>), String> {
         (_, None) => num(v),
         _ => None,
     });
-    Ok((xs.collect::<Option<_>>().ok_or("expected numbers, or quantities of one kind")?, unit))
+    Ok((xs.collect::<Option<_>>().ok_or("expected a list of numbers, or of quantities of one kind")?, unit))
 }
 
 /// Linear interpolation between the closest ranks, like numpy's default.
@@ -135,7 +135,7 @@ fn extreme(name: &str, vs: &[Value]) -> Result<Value, String> {
         best = Some(match best {
             None => v,
             Some(b) => {
-                let ord = compare(v, b).ok_or_else(|| format!("cannot compare {v:?} and {b:?}"))?;
+                let ord = compare(v, b).ok_or_else(|| format!("cannot compare {} and {}", crate::modules::short(v), crate::modules::short(b)))?;
                 if (name == "min" && ord.is_lt()) || (name == "max" && ord.is_gt()) { v } else { b }
             }
         });

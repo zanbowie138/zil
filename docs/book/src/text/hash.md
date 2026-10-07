@@ -2,20 +2,20 @@
 
 SHA-256, MD5 and CRC-32 of strings
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ## Functions
 
 | function | description |
 |---|---|
-| [`sha256(s)`](#sha256) | hex SHA-256 hash |
-| [`md5(s)`](#md5) | hex MD5 hash |
-| [`crc32(v)`](#crc32) | CRC-32 checksum (the zip/PNG one) |
+| [`sha256(s: str)`](#sha256) | hex SHA-256 hash |
+| [`md5(s: str)`](#md5) | hex MD5 hash |
+| [`crc32(v: str\|list)`](#crc32) | CRC-32 checksum (the zip/PNG one) |
 
 ### sha256
 
-`sha256(s)`: hex SHA-256 hash
+`sha256(s: str)`: hex SHA-256 hash
 
 ```zil
 "hello".sha256[..16]
@@ -26,7 +26,7 @@ See also: [md5](../text/hash.md#md5)
 
 ### md5
 
-`md5(s)`: hex MD5 hash
+`md5(s: str)`: hex MD5 hash
 
 ```zil
 "hello".md5
@@ -37,7 +37,7 @@ See also: [sha256](../text/hash.md#sha256)
 
 ### crc32
 
-`crc32(v)`: CRC-32 checksum (the zip/PNG one)
+`crc32(v: str|list)`: CRC-32 checksum (the zip/PNG one)
 
 ```zil
 "hello".crc32

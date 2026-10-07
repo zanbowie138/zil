@@ -2,7 +2,7 @@
 
 the same moment in UTC, local time or any IANA zone
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ### conversions
@@ -20,12 +20,12 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 
 | function | description |
 |---|---|
-| [`utc(d)`](#utc) | the same moment in UTC; same as `d to UTC` (`d to "Asia/Tokyo"` for any zone) |
-| [`local(d)`](#local) | the same moment in the system time zone; same as `d to local` |
+| [`utc(d: date)`](#utc) | the same moment in UTC; same as `d to UTC` (`d to "Asia/Tokyo"` for any zone) |
+| [`local(d: date)`](#local) | the same moment in the system time zone; same as `d to local` |
 
 ### utc
 
-`utc(d)`: the same moment in UTC; same as `d to UTC` (`d to "Asia/Tokyo"` for any zone)
+`utc(d: date)`: the same moment in UTC; same as `d to UTC` (`d to "Asia/Tokyo"` for any zone)
 
 ```zil
 date(0) to UTC
@@ -38,7 +38,7 @@ See also: [local](../time/zones.md#local), [date](../time.md#date)
 
 ### local
 
-`local(d)`: the same moment in the system time zone; same as `d to local`
+`local(d: date)`: the same moment in the system time zone; same as `d to local`
 
 ```zil
 (date(0) to UTC).local.year

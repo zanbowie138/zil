@@ -32,8 +32,8 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("utc", "utc(d)", "the same moment in UTC; same as `d to UTC` (`d to \"Asia/Tokyo\"` for any zone)", &["date(0) to UTC", "date(0).utc.year"], &["local", "date"]),
-    doc("local", "local(d)", "the same moment in the system time zone; same as `d to local`", &["(date(0) to UTC).local.year"], &["utc"]),
+    doc("utc", "utc(d: date)", "the same moment in UTC; same as `d to UTC` (`d to \"Asia/Tokyo\"` for any zone)", &["date(0) to UTC", "date(0).utc.year"], &["local", "date"]),
+    doc("local", "local(d: date)", "the same moment in the system time zone; same as `d to local`", &["(date(0) to UTC).local.year"], &["utc"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &crate::lexer::Span) -> Call {

@@ -35,10 +35,10 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("fixed", "fixed(x, digits)", "string with exactly that many decimals; keeps units", &["pi.fixed(2)", "(5 km to mi).fixed(1)"], &["sci", "commas", "round"]),
-    doc("sci", "sci(x, digits?)", "string in scientific notation", &["123456.sci", "123456.sci(2)"], &["fixed"]),
-    doc("percent", "percent(x, digits?)", "string as a percentage", &["0.256.percent", "(1/3).percent(1)"], &["fixed"]),
-    doc("commas", "commas(x, digits?)", "string with thousands separators", &["1234567.commas", "1234.5.commas(2)"], &["fixed"]),
+    doc("fixed", "fixed(x: num|quantity, digits: int)", "string with exactly that many decimals; keeps units", &["pi.fixed(2)", "(5 km to mi).fixed(1)"], &["sci", "commas", "round"]),
+    doc("sci", "sci(x: num|quantity, digits?: int)", "string in scientific notation", &["123456.sci", "123456.sci(2)"], &["fixed"]),
+    doc("percent", "percent(x: num|quantity, digits?: int)", "string as a percentage", &["0.256.percent", "(1/3).percent(1)"], &["fixed"]),
+    doc("commas", "commas(x: num|quantity, digits?: int)", "string with thousands separators", &["1234567.commas", "1234.5.commas(2)"], &["fixed"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {

@@ -34,11 +34,11 @@ pub const MODULE: Module = Module {
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
     doc("fortune", "fortune()", "a fortune cookie", &["fortune()"], &["eight_ball"]),
-    doc("eight_ball", "eight_ball(question?)", "a magic 8-ball answer; the same question gets the same answer all day", &[r#"eight_ball("is it Friday?")"#], &["yes_or_no", "fortune"]),
-    doc("coin", "coin(n?)", "heads or tails, or a list of n flips", &["coin()", "coin(3)"], &["rand"]),
-    doc("yes_or_no", "yes_or_no(question?)", "yes or no; leans yes on Fridays", &["yes_or_no()"], &["eight_ball"]),
+    doc("eight_ball", "eight_ball(question?: str)", "a magic 8-ball answer; the same question gets the same answer all day", &[r#"eight_ball("is it Friday?")"#], &["yes_or_no", "fortune"]),
+    doc("coin", "coin(n?: int)", "heads or tails, or a list of n flips", &["coin()", "coin(3)"], &["rand"]),
+    doc("yes_or_no", "yes_or_no(question?: str)", "yes or no; leans yes on Fridays", &["yes_or_no()"], &["eight_ball"]),
     doc("excuse", "excuse()", "why it doesn't work", &["excuse()"], &["fortune"]),
-    doc("roman", "roman(v)", "an int 1-3999 as a Roman numeral, or a numeral back to an int; same as `n to roman`", &["roman(2026)", r#""MCMXCIX".roman"#], &[]),
+    doc("roman", "roman(v: int|str)", "an int 1-3999 as a Roman numeral, or a numeral back to an int; same as `n to roman`", &["roman(2026)", r#""MCMXCIX".roman"#], &[]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -142,7 +142,7 @@ const DIGITS: [(i64, &str); 13] =
 fn roman(args: &[Value]) -> Call {
     match args {
         [Value::Int(n, _)] if (1..4000).contains(n) => Ok(Value::str(to_roman(*n))),
-        [Value::Int(..)] => Err("Romans only went from 1 to 3999".into()),
+        [Value::Int(n, _)] => Err(format!("`{n}` has no Roman numeral\nnote: Roman numerals go from 1 to 3999").into()),
         [Value::Str(s)] => {
             let s = s.trim().to_uppercase();
             // Read greedily, then check by writing it back: rejects IIII, IC, VX and friends.
@@ -154,7 +154,7 @@ fn roman(args: &[Value]) -> Call {
                 }
             }
             if !rest.is_empty() || n == 0 || to_roman(n) != s {
-                return Err(format!("not a Roman numeral: {s:?}").into());
+                return Err(format!("{s:?} is not a Roman numeral").into());
             }
             Ok(Value::int(n))
         }

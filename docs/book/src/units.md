@@ -2,7 +2,7 @@
 
 numbers with units, combined and converted; currencies use live rates
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ### types

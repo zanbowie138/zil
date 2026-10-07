@@ -2,27 +2,27 @@
 
 sums, averages, spread and extremes of lists; units welcome
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ## Functions
 
 | function | description |
 |---|---|
-| [`sum(list)`](#sum) | add up a list; works with units |
-| [`avg(list)`](#avg) | mean of a list |
-| [`product(list)`](#product) | multiply a list together |
-| [`median(list)`](#median) | middle value; mean of the middle two for an even count |
-| [`mode(list)`](#mode) | most common item; the first one on ties |
-| [`percentile(list, p)`](#percentile) | the p-th percentile (0-100), interpolating between items |
-| [`variance(list)`](#variance) | sample variance (n - 1) |
-| [`stdev(list)`](#stdev) | sample standard deviation (n - 1); works with units |
-| [`min(list) / min(a, b, ...)`](#min) | smallest value |
-| [`max(list) / max(a, b, ...)`](#max) | largest value |
+| [`sum(xs: list)`](#sum) | add up a list; works with units |
+| [`avg(xs: list)`](#avg) | mean of a list |
+| [`product(xs: list)`](#product) | multiply a list together |
+| [`median(xs: list)`](#median) | middle value; mean of the middle two for an even count |
+| [`mode(xs: list)`](#mode) | most common item; the first one on ties |
+| [`percentile(xs: list, p: num)`](#percentile) | the p-th percentile (0-100), interpolating between items |
+| [`variance(xs: list)`](#variance) | sample variance (n - 1) |
+| [`stdev(xs: list)`](#stdev) | sample standard deviation (n - 1); works with units |
+| [`min(xs: list) / min(a: any, b: any, ...)`](#min) | smallest value |
+| [`max(xs: list) / max(a: any, b: any, ...)`](#max) | largest value |
 
 ### sum
 
-`sum(list)`: add up a list; works with units
+`sum(xs: list)`: add up a list; works with units
 
 ```zil
 [1, 2, 3].sum
@@ -35,7 +35,7 @@ See also: [avg](../math/stats.md#avg), [reduce](../data/lists.md#reduce)
 
 ### avg
 
-`avg(list)`: mean of a list
+`avg(xs: list)`: mean of a list
 
 ```zil
 [1, 2, 4].avg
@@ -48,7 +48,7 @@ See also: [sum](../math/stats.md#sum), [median](../math/stats.md#median)
 
 ### product
 
-`product(list)`: multiply a list together
+`product(xs: list)`: multiply a list together
 
 ```zil
 [2, 3, 4].product
@@ -61,7 +61,7 @@ See also: [sum](../math/stats.md#sum), [factorial](../math/numtheory.md#factoria
 
 ### median
 
-`median(list)`: middle value; mean of the middle two for an even count
+`median(xs: list)`: middle value; mean of the middle two for an even count
 
 ```zil
 [3, 1, 2].median
@@ -74,7 +74,7 @@ See also: [avg](../math/stats.md#avg), [percentile](../math/stats.md#percentile)
 
 ### mode
 
-`mode(list)`: most common item; the first one on ties
+`mode(xs: list)`: most common item; the first one on ties
 
 ```zil
 [1, 2, 2, 3].mode
@@ -87,7 +87,7 @@ See also: [median](../math/stats.md#median), [count](../data.md#count)
 
 ### percentile
 
-`percentile(list, p)`: the p-th percentile (0-100), interpolating between items
+`percentile(xs: list, p: num)`: the p-th percentile (0-100), interpolating between items
 
 ```zil
 [1, 2, 3, 4, 5].percentile(90)
@@ -100,7 +100,7 @@ See also: [median](../math/stats.md#median)
 
 ### variance
 
-`variance(list)`: sample variance (n - 1)
+`variance(xs: list)`: sample variance (n - 1)
 
 ```zil
 [2, 4, 4, 4, 5, 5, 7, 9].variance
@@ -111,7 +111,7 @@ See also: [stdev](../math/stats.md#stdev)
 
 ### stdev
 
-`stdev(list)`: sample standard deviation (n - 1); works with units
+`stdev(xs: list)`: sample standard deviation (n - 1); works with units
 
 ```zil
 [2, 4, 4, 4, 5, 5, 7, 9].stdev
@@ -124,7 +124,7 @@ See also: [variance](../math/stats.md#variance), [avg](../math/stats.md#avg)
 
 ### min
 
-`min(list) / min(a, b, ...)`: smallest value
+`min(xs: list) / min(a: any, b: any, ...)`: smallest value
 
 ```zil
 min(3, 9, 4)
@@ -137,7 +137,7 @@ See also: [max](../math/stats.md#max), [sort](../data.md#sort)
 
 ### max
 
-`max(list) / max(a, b, ...)`: largest value
+`max(xs: list) / max(a: any, b: any, ...)`: largest value
 
 ```zil
 max(3, 9, 4)

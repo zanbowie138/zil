@@ -22,16 +22,16 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("sin", "sin(x)", "sine of radians or an angle unit", &["sin(30 deg)", "sin(pi / 2)"], &["cos", "tan", "asin"]),
-    doc("cos", "cos(x)", "cosine of radians or an angle unit", &["cos(60 deg)"], &["sin", "tan", "acos"]),
-    doc("tan", "tan(x)", "tangent of radians or an angle unit", &["tan(45 deg)"], &["sin", "cos", "atan"]),
-    doc("asin", "asin(x)", "arcsine, as an angle", &["asin(1) to deg"], &["sin"]),
-    doc("acos", "acos(x)", "arccosine, as an angle", &["acos(0) to deg"], &["cos"]),
-    doc("atan", "atan(x)", "arctangent, as an angle", &["atan(1) to deg"], &["tan", "atan2"]),
-    doc("atan2", "atan2(y, x)", "angle of the point (x, y), as an angle", &["atan2(1, -1) to deg"], &["atan", "hypot"]),
-    doc("sinh", "sinh(x)", "hyperbolic sine", &["sinh(1)"], &["cosh", "tanh"]),
-    doc("cosh", "cosh(x)", "hyperbolic cosine", &["cosh(1)"], &["sinh", "tanh"]),
-    doc("tanh", "tanh(x)", "hyperbolic tangent", &["tanh(1)"], &["sinh", "cosh"]),
+    doc("sin", "sin(x: num|quantity)", "sine of radians or an angle unit", &["sin(30 deg)", "sin(pi / 2)"], &["cos", "tan", "asin"]),
+    doc("cos", "cos(x: num|quantity)", "cosine of radians or an angle unit", &["cos(60 deg)"], &["sin", "tan", "acos"]),
+    doc("tan", "tan(x: num|quantity)", "tangent of radians or an angle unit", &["tan(45 deg)"], &["sin", "cos", "atan"]),
+    doc("asin", "asin(x: num)", "arcsine, as an angle", &["asin(1) to deg"], &["sin"]),
+    doc("acos", "acos(x: num)", "arccosine, as an angle", &["acos(0) to deg"], &["cos"]),
+    doc("atan", "atan(x: num)", "arctangent, as an angle", &["atan(1) to deg"], &["tan", "atan2"]),
+    doc("atan2", "atan2(y: num|quantity, x: num|quantity)", "angle of the point (x, y), as an angle", &["atan2(1, -1) to deg"], &["atan", "hypot"]),
+    doc("sinh", "sinh(x: num)", "hyperbolic sine", &["sinh(1)"], &["cosh", "tanh"]),
+    doc("cosh", "cosh(x: num)", "hyperbolic cosine", &["cosh(1)"], &["sinh", "tanh"]),
+    doc("tanh", "tanh(x: num)", "hyperbolic tangent", &["tanh(1)"], &["sinh", "cosh"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {

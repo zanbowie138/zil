@@ -1,6 +1,6 @@
 //! Calendar math: periods, weekdays, business days, month grids. Weeks start Monday.
 
-use super::{e, end_of, is_weekend, start_of, weekday};
+use super::{e, end_of, is_weekend, start_of, unknown_weekday, weekday};
 use crate::interp::Interp;
 use crate::modules::{Call, Doc, Fail, Module, doc};
 use crate::value::Value;
@@ -32,21 +32,21 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("weekday_num", "weekday_num(d)", "weekday as a number, Monday = 1 ... Sunday = 7", &["today.weekday_num"], &["weekday"]),
-    doc("day_of_year", "day_of_year(d)", "day of the year, 1-366", &[r#"date("2026-12-31").day_of_year"#], &["iso_week"]),
-    doc("iso_week", "iso_week(d)", "ISO 8601 week number (weeks start Monday)", &[r#"date("2026-12-31").iso_week"#], &["day_of_year", "quarter"]),
-    doc("quarter", "quarter(d)", "quarter of the year, 1-4", &["today.quarter"], &["iso_week"]),
-    doc("leap_year", "leap_year(d or year)", "whether the year is a leap year", &["leap_year(2028)", "today.leap_year"], &["days_in_year"]),
-    doc("days_in_month", "days_in_month(d)", "number of days in the date's month", &[r#"date("2028-02-10").days_in_month"#], &["days_in_year"]),
-    doc("days_in_year", "days_in_year(d)", "365 or 366", &["today.days_in_year"], &["leap_year"]),
-    doc("start_of", "start_of(d, period)", "start of the second/minute/hour/day/week/month/quarter/year", &[r#"now.start_of("week")"#, r#"now.start_of("quarter")"#], &["end_of", "with"]),
-    doc("end_of", "end_of(d, period)", "last moment of the period", &[r#"now.end_of("month")"#, r#"(today.end_of("year") - now).parts"#], &["start_of"]),
-    doc("next", "next(d, weekday)", "the next given weekday strictly after d", &[r#"today.next("friday")"#, r#"now.next("mon")"#], &["prev", "nth_weekday"]),
-    doc("prev", "prev(d, weekday)", "the last given weekday strictly before d", &[r#"today.prev("sunday")"#], &["next"]),
-    doc("nth_weekday", "nth_weekday(d, n, weekday)", "nth weekday of d's month; negative counts from the end", &[r#"date(2026, 11, 1).nth_weekday(4, "thu")"#, r#"date(2026, 5, 1).nth_weekday(-1, "mon")"#], &["next"]),
-    doc("add_workdays", "add_workdays(d, n)", "move n Monday-Friday days (no holidays); negative goes back", &["today.add_workdays(10)"], &["workdays", "is_weekend"]),
-    doc("workdays", "workdays(a, b)", "Monday-Friday days from a up to (not including) b", &[r#"workdays(today, date("2026-12-25"))"#], &["add_workdays"]),
-    doc("calendar", "calendar(d) / calendar(year, month)", "month grid, weeks starting Monday", &["calendar(2026, 12)"], &["date"]),
+    doc("weekday_num", "weekday_num(d: date)", "weekday as a number, Monday = 1 ... Sunday = 7", &["today.weekday_num"], &["weekday"]),
+    doc("day_of_year", "day_of_year(d: date)", "day of the year, 1-366", &[r#"date("2026-12-31").day_of_year"#], &["iso_week"]),
+    doc("iso_week", "iso_week(d: date)", "ISO 8601 week number (weeks start Monday)", &[r#"date("2026-12-31").iso_week"#], &["day_of_year", "quarter"]),
+    doc("quarter", "quarter(d: date)", "quarter of the year, 1-4", &["today.quarter"], &["iso_week"]),
+    doc("leap_year", "leap_year(d: date|int)", "whether the year is a leap year", &["leap_year(2028)", "today.leap_year"], &["days_in_year"]),
+    doc("days_in_month", "days_in_month(d: date)", "number of days in the date's month", &[r#"date("2028-02-10").days_in_month"#], &["days_in_year"]),
+    doc("days_in_year", "days_in_year(d: date)", "365 or 366", &["today.days_in_year"], &["leap_year"]),
+    doc("start_of", "start_of(d: date, period: str)", "start of the second/minute/hour/day/week/month/quarter/year", &[r#"now.start_of("week")"#, r#"now.start_of("quarter")"#], &["end_of", "with"]),
+    doc("end_of", "end_of(d: date, period: str)", "last moment of the period", &[r#"now.end_of("month")"#, r#"(today.end_of("year") - now).parts"#], &["start_of"]),
+    doc("next", "next(d: date, weekday: str)", "the next given weekday strictly after d", &[r#"today.next("friday")"#, r#"now.next("mon")"#], &["prev", "nth_weekday"]),
+    doc("prev", "prev(d: date, weekday: str)", "the last given weekday strictly before d", &[r#"today.prev("sunday")"#], &["next"]),
+    doc("nth_weekday", "nth_weekday(d: date, n: int, weekday: str)", "nth weekday of d's month; negative counts from the end", &[r#"date(2026, 11, 1).nth_weekday(4, "thu")"#, r#"date(2026, 5, 1).nth_weekday(-1, "mon")"#], &["next"]),
+    doc("add_workdays", "add_workdays(d: date, n: int)", "move n Monday-Friday days (no holidays); negative goes back", &["today.add_workdays(10)"], &["workdays", "is_weekend"]),
+    doc("workdays", "workdays(a: date, b: date)", "Monday-Friday days from a up to (not including) b", &[r#"workdays(today, date("2026-12-25"))"#], &["add_workdays"]),
+    doc("calendar", "calendar(d: date) / calendar(year: int, month: int)", "month grid, weeks starting Monday", &["calendar(2026, 12)"], &["date"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &crate::lexer::Span) -> Call {
@@ -60,16 +60,17 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &crate::lexer::Sp
         ("leap_year", [Int(y, _)]) => Bool(y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)),
         ("days_in_month", [Date(z)]) => Value::int(z.days_in_month() as i64),
         ("days_in_year", [Date(z)]) => Value::int(z.days_in_year() as i64),
-        ("start_of", [Date(z), Str(p)]) => Value::date(start_of(z, p)?),
-        ("end_of", [Date(z), Str(p)]) => Value::date(end_of(z, p)?),
+        ("start_of", [Date(z), Str(p)]) => Value::date(start_of(z, p).map_err(|m| Fail::Arg(1, m))?),
+        ("end_of", [Date(z), Str(p)]) => Value::date(end_of(z, p).map_err(|m| Fail::Arg(1, m))?),
         ("next" | "prev", [Date(z), Str(wd)]) => {
-            let wd = weekday(wd).ok_or_else(|| format!("unknown weekday {wd:?}"))?;
+            let wd = weekday(wd).ok_or_else(|| Fail::Arg(1, unknown_weekday(wd)))?;
             let nth = if name == "next" { 1 } else { -1 };
             Value::date(z.nth_weekday(nth, wd).map_err(|e| e.to_string())?)
         }
         ("nth_weekday", [Date(z), Int(n, _), Str(wd)]) => {
-            let wd = weekday(wd).ok_or_else(|| format!("unknown weekday {wd:?}"))?;
-            let n = i8::try_from(*n).map_err(|_| format!("{n} out of range"))?;
+            let wd = weekday(wd).ok_or_else(|| Fail::Arg(2, unknown_weekday(wd)))?;
+            let n = i8::try_from(*n)
+                .map_err(|_| Fail::Arg(1, format!("{n} is out of range\nnote: use 1 to 5 from the start of the month, or -1 to -5 from the end")))?;
             Value::date(z.nth_weekday_of_month(n, wd).map_err(|e| e.to_string())?)
         }
         ("add_workdays", [Date(z), Int(n, _)]) => Value::date(add_workdays(z, *n)?),

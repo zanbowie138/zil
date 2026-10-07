@@ -1,0 +1,202 @@
+>>> 1 +
+Error: expected an expression after `+`
+   ╭─[ <-e>:1:3 ]
+   │
+ 1 │ 1 +
+   │   ┬  
+   │   ╰── 
+───╯
+>>> 5 km + 1 kg
+Error: cannot add length (km) and mass (kg)
+   ╭─[ <-e>:1:1 ]
+   │
+ 1 │ 5 km + 1 kg
+   │ ──┬─   ──┬─  
+   │   ╰────────── `5 km`
+   │          │   
+   │          ╰─── `1 kg`
+───╯
+>>> upper(5)
+Error: upper: expected str, got int
+   ╭─[ <-e>:1:7 ]
+   │
+ 1 │ upper(5)
+   │       ┬  
+   │       ╰── this is `5`
+   │ 
+   │ Help: upper(s: str)
+───╯
+>>> foo
+Error: undefined variable `foo`
+   ╭─[ <-e>:1:1 ]
+   │
+ 1 │ foo
+   │ ─┬─  
+   │  ╰─── 
+───╯
+>>> "abc".uper
+Error: str has no field or method `uper`
+   ╭─[ <-e>:1:7 ]
+   │
+ 1 │ "abc".uper
+   │ ──┬── ──┬─  
+   │   ╰───────── this is `"abc"`
+   │         │   
+   │         ╰─── 
+   │ 
+   │ Help: did you mean `upper`?
+───╯
+>>> xs=[1]; xs[5]
+Error: index 5 out of range
+   ╭─[ <-e>:1:12 ]
+   │
+ 1 │ xs=[1]; xs[5]
+   │            ┬  
+   │            ╰── 
+   │ 
+   │ Note: `xs` has 1 item
+───╯
+>>> {a:1}.b.c
+Error: map has no key `b`
+   ╭─[ <-e>:1:7 ]
+   │
+ 1 │ {a:1}.b.c
+   │       ┬  
+   │       ╰── 
+   │ 
+   │ Help: did you mean `a`?
+───╯
+>>> f=|x| x; f(1,2)
+Error: f takes 1 argument, got 2
+   ╭─[ <-e>:1:14 ]
+   │
+ 1 │ f=|x| x; f(1,2)
+   │              ┬  
+   │              ╰── extra argument
+───╯
+>>> "{x"
+Error: unclosed `{` in a string
+   ╭─[ <-e>:1:2 ]
+   │
+ 1 │ "{x"
+   │  ┬ ┬  
+   │  ╰──── opened here
+   │    │  
+   │    ╰── string ends here
+   │ 
+   │ Help: close it with `}`, or write `\{` for a literal brace
+───╯
+>>> 5 kmh to kg
+Error: cannot convert speed (kmh) to mass (kg)
+   ╭─[ <-e>:1:1 ]
+   │
+ 1 │ 5 kmh to kg
+   │ ──┬──  
+   │   ╰──── 
+───╯
+>>> round(1, 2, 3)
+Error: round takes 1-2 arguments, got 3
+   ╭─[ <-e>:1:13 ]
+   │
+ 1 │ round(1, 2, 3)
+   │             ┬  
+   │             ╰── extra argument
+   │ 
+   │ Help 1: round(x: num|quantity, digits?: int)
+   │ 
+   │ Help 2: round(x: num|quantity, step: num|quantity)
+───╯
+>>> 5 kmhr
+Error: unknown unit `kmhr`
+   ╭─[ <-e>:1:1 ]
+   │
+ 1 │ 5 kmhr
+   │ ───┬──  
+   │    ╰──── 
+   │ 
+   │ Help: did you mean `kmh`?
+───╯
+>>> "abc
+Error: unclosed string
+   ╭─[ <-e>:1:1 ]
+   │
+ 1 │ "abc
+   │ ┬   │ 
+   │ ╰───── opened here
+   │     │ 
+   │     ╰─ expected `"` here
+───╯
+>>> (1, 2
+Error: expected `)`, found `,`
+   ╭─[ <-e>:1:3 ]
+   │
+ 1 │ (1, 2
+   │ ┬ ┬  
+   │ ╰──── opened here
+   │   │  
+   │   ╰── 
+───╯
+>>> today.next("fridya")
+Error: next: unknown weekday "fridya"
+   ╭─[ <-e>:1:12 ]
+   │
+ 1 │ today.next("fridya")
+   │            ────┬───  
+   │                ╰───── 
+   │ 
+   │ Help: did you mean `friday`?
+───╯
+>>> "hi".encode("bse64")
+Error: encode: unknown encoding "bse64"
+   ╭─[ <-e>:1:13 ]
+   │
+ 1 │ "hi".encode("bse64")
+   │             ───┬───  
+   │                ╰───── 
+   │ 
+   │ Help: did you mean `base64`?
+───╯
+>>> factorial(-1)
+Error: factorial: n must be from 0 to 20000, got -1
+   ╭─[ <-e>:1:11 ]
+   │
+ 1 │ factorial(-1)
+   │           ─┬  
+   │            ╰── 
+───╯
+>>> 1 km < 1 kg
+Error: cannot compare length (km) and mass (kg)
+   ╭─[ <-e>:1:1 ]
+   │
+ 1 │ 1 km < 1 kg
+   │ ──┬─   ──┬─  
+   │   ╰────────── `1 km`
+   │          │   
+   │          ╰─── `1 kg`
+───╯
+>>> [1].map(|a, b| a)
+Error: the function takes 2 arguments, got 1
+   ╭─[ <-e>:1:1 ]
+   │
+ 1 │ [1].map(|a, b| a)
+   │ ────────┬────────  
+   │         ╰────────── 
+───╯
+>>> 1 2
+Error: expected a newline or `;` between statements, found `2`
+   ╭─[ <-e>:1:3 ]
+   │
+ 1 │ 1 2
+   │   ┬  
+   │   ╰── 
+───╯
+>>> now.start_of("wek")
+Error: start_of: unknown period "wek"
+   ╭─[ <-e>:1:14 ]
+   │
+ 1 │ now.start_of("wek")
+   │              ──┬──  
+   │                ╰──── 
+   │ 
+   │ Help: did you mean `week`?
+───╯

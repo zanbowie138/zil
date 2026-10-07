@@ -2,49 +2,49 @@
 
 numbers, picks, shuffles, UUIDs
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ## Functions
 
 | function | description |
 |---|---|
-| [`rand() / rand(a, b)`](#rand) | float in [0, 1), or a number from a to b inclusive |
-| [`choice(list)`](#choice) | random item |
-| [`shuffle(list)`](#shuffle) | shuffled copy |
+| [`rand() / rand(a: num, b: num)`](#rand) | float in [0, 1), or a number from a to b inclusive |
+| [`choice(xs: list)`](#choice) | random item |
+| [`shuffle(xs: list)`](#shuffle) | shuffled copy |
 | [`uuid()`](#uuid) | random v4 UUID |
 
 ### rand
 
-`rand() / rand(a, b)`: float in [0, 1), or a number from a to b inclusive
+`rand() / rand(a: num, b: num)`: float in [0, 1), or a number from a to b inclusive
 
 ```zil
 rand()
-# → 0.759919
+# → 0.197347
 rand(1, 6)
-# → 6
+# → 1
 ```
 
 See also: [choice](../math/random.md#choice), [shuffle](../math/random.md#shuffle)
 
 ### choice
 
-`choice(list)`: random item
+`choice(xs: list)`: random item
 
 ```zil
 ["rock", "paper", "scissors"].choice
-# → "paper"
+# → "scissors"
 ```
 
 See also: [rand](../math/random.md#rand), [shuffle](../math/random.md#shuffle)
 
 ### shuffle
 
-`shuffle(list)`: shuffled copy
+`shuffle(xs: list)`: shuffled copy
 
 ```zil
 (1..6).shuffle
-# → [3, 2, 1, 5, 4]
+# → [5, 4, 1, 3, 2]
 ```
 
 See also: [choice](../math/random.md#choice)
@@ -55,7 +55,7 @@ See also: [choice](../math/random.md#choice)
 
 ```zil
 uuid()
-# → "f9a63cf1-a3fe-4654-b0f2-5ee75dae7782"
+# → "4fa99054-9039-4305-868e-277db011d57c"
 ```
 
 See also: [rand](../math/random.md#rand)
@@ -67,20 +67,20 @@ See also: [rand](../math/random.md#rand)
 ```zil
 # roll a die
 rand(1, 6)
-# → 5
+# → 3
 # roll three
 (1..=3).map(|_| rand(1, 6))
-# → [5, 2, 1]
+# → [1, 5, 5]
 # float in a range
 rand(1.0, 2.0)
-# → 1.9238
+# → 1.89337
 # pick one
 ["rock", "paper", "scissors"].choice
-# → "rock"
+# → "scissors"
 # shuffle
 (1..=5).shuffle
-# → [5, 1, 4, 2, 3]
+# → [5, 4, 3, 2, 1]
 # UUID
 uuid()
-# → "b237106e-cc50-46d1-88ef-476571a7896b"
+# → "4793320e-4aa9-4d7a-a757-b1aaf6c6021d"
 ```

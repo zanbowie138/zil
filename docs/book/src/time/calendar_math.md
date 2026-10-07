@@ -2,43 +2,43 @@
 
 periods, weekdays, business days, week numbers, month grids; weeks start Monday
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ## Functions
 
 | function | description |
 |---|---|
-| [`weekday_num(d)`](#weekday_num) | weekday as a number, Monday = 1 ... Sunday = 7 |
-| [`day_of_year(d)`](#day_of_year) | day of the year, 1-366 |
-| [`iso_week(d)`](#iso_week) | ISO 8601 week number (weeks start Monday) |
-| [`quarter(d)`](#quarter) | quarter of the year, 1-4 |
-| [`leap_year(d or year)`](#leap_year) | whether the year is a leap year |
-| [`days_in_month(d)`](#days_in_month) | number of days in the date's month |
-| [`days_in_year(d)`](#days_in_year) | 365 or 366 |
-| [`start_of(d, period)`](#start_of) | start of the second/minute/hour/day/week/month/quarter/year |
-| [`end_of(d, period)`](#end_of) | last moment of the period |
-| [`next(d, weekday)`](#next) | the next given weekday strictly after d |
-| [`prev(d, weekday)`](#prev) | the last given weekday strictly before d |
-| [`nth_weekday(d, n, weekday)`](#nth_weekday) | nth weekday of d's month; negative counts from the end |
-| [`add_workdays(d, n)`](#add_workdays) | move n Monday-Friday days (no holidays); negative goes back |
-| [`workdays(a, b)`](#workdays) | Monday-Friday days from a up to (not including) b |
-| [`calendar(d) / calendar(year, month)`](#calendar) | month grid, weeks starting Monday |
+| [`weekday_num(d: date)`](#weekday_num) | weekday as a number, Monday = 1 ... Sunday = 7 |
+| [`day_of_year(d: date)`](#day_of_year) | day of the year, 1-366 |
+| [`iso_week(d: date)`](#iso_week) | ISO 8601 week number (weeks start Monday) |
+| [`quarter(d: date)`](#quarter) | quarter of the year, 1-4 |
+| [`leap_year(d: date\|int)`](#leap_year) | whether the year is a leap year |
+| [`days_in_month(d: date)`](#days_in_month) | number of days in the date's month |
+| [`days_in_year(d: date)`](#days_in_year) | 365 or 366 |
+| [`start_of(d: date, period: str)`](#start_of) | start of the second/minute/hour/day/week/month/quarter/year |
+| [`end_of(d: date, period: str)`](#end_of) | last moment of the period |
+| [`next(d: date, weekday: str)`](#next) | the next given weekday strictly after d |
+| [`prev(d: date, weekday: str)`](#prev) | the last given weekday strictly before d |
+| [`nth_weekday(d: date, n: int, weekday: str)`](#nth_weekday) | nth weekday of d's month; negative counts from the end |
+| [`add_workdays(d: date, n: int)`](#add_workdays) | move n Monday-Friday days (no holidays); negative goes back |
+| [`workdays(a: date, b: date)`](#workdays) | Monday-Friday days from a up to (not including) b |
+| [`calendar(d: date) / calendar(year: int, month: int)`](#calendar) | month grid, weeks starting Monday |
 
 ### weekday_num
 
-`weekday_num(d)`: weekday as a number, Monday = 1 ... Sunday = 7
+`weekday_num(d: date)`: weekday as a number, Monday = 1 ... Sunday = 7
 
 ```zil
 today.weekday_num
-# → 2
+# → 3
 ```
 
 See also: [weekday](../time.md#weekday)
 
 ### day_of_year
 
-`day_of_year(d)`: day of the year, 1-366
+`day_of_year(d: date)`: day of the year, 1-366
 
 ```zil
 date("2026-12-31").day_of_year
@@ -49,7 +49,7 @@ See also: [iso_week](../time/calendar_math.md#iso_week)
 
 ### iso_week
 
-`iso_week(d)`: ISO 8601 week number (weeks start Monday)
+`iso_week(d: date)`: ISO 8601 week number (weeks start Monday)
 
 ```zil
 date("2026-12-31").iso_week
@@ -60,7 +60,7 @@ See also: [day_of_year](../time/calendar_math.md#day_of_year), [quarter](../time
 
 ### quarter
 
-`quarter(d)`: quarter of the year, 1-4
+`quarter(d: date)`: quarter of the year, 1-4
 
 ```zil
 today.quarter
@@ -71,7 +71,7 @@ See also: [iso_week](../time/calendar_math.md#iso_week)
 
 ### leap_year
 
-`leap_year(d or year)`: whether the year is a leap year
+`leap_year(d: date|int)`: whether the year is a leap year
 
 ```zil
 leap_year(2028)
@@ -84,7 +84,7 @@ See also: [days_in_year](../time/calendar_math.md#days_in_year)
 
 ### days_in_month
 
-`days_in_month(d)`: number of days in the date's month
+`days_in_month(d: date)`: number of days in the date's month
 
 ```zil
 date("2028-02-10").days_in_month
@@ -95,7 +95,7 @@ See also: [days_in_year](../time/calendar_math.md#days_in_year)
 
 ### days_in_year
 
-`days_in_year(d)`: 365 or 366
+`days_in_year(d: date)`: 365 or 366
 
 ```zil
 today.days_in_year
@@ -106,7 +106,7 @@ See also: [leap_year](../time/calendar_math.md#leap_year)
 
 ### start_of
 
-`start_of(d, period)`: start of the second/minute/hour/day/week/month/quarter/year
+`start_of(d: date, period: str)`: start of the second/minute/hour/day/week/month/quarter/year
 
 ```zil
 now.start_of("week")
@@ -119,33 +119,33 @@ See also: [end_of](../time/calendar_math.md#end_of), [with](../time.md#with)
 
 ### end_of
 
-`end_of(d, period)`: last moment of the period
+`end_of(d: date, period: str)`: last moment of the period
 
 ```zil
 now.end_of("month")
 # → 2026-10-31 23:59:59 -05:00
 (today.end_of("year") - now).parts
-# → "86 d 1 h 29 min"
+# → "85 d 16 h 39 min"
 ```
 
 See also: [start_of](../time/calendar_math.md#start_of)
 
 ### next
 
-`next(d, weekday)`: the next given weekday strictly after d
+`next(d: date, weekday: str)`: the next given weekday strictly after d
 
 ```zil
 today.next("friday")
 # → 2026-10-09
 now.next("mon")
-# → 2026-10-12 23:30:59 -05:00
+# → 2026-10-12 08:21:11 -05:00
 ```
 
 See also: [prev](../time/calendar_math.md#prev), [nth_weekday](../time/calendar_math.md#nth_weekday)
 
 ### prev
 
-`prev(d, weekday)`: the last given weekday strictly before d
+`prev(d: date, weekday: str)`: the last given weekday strictly before d
 
 ```zil
 today.prev("sunday")
@@ -156,7 +156,7 @@ See also: [next](../time/calendar_math.md#next)
 
 ### nth_weekday
 
-`nth_weekday(d, n, weekday)`: nth weekday of d's month; negative counts from the end
+`nth_weekday(d: date, n: int, weekday: str)`: nth weekday of d's month; negative counts from the end
 
 ```zil
 date(2026, 11, 1).nth_weekday(4, "thu")
@@ -169,29 +169,29 @@ See also: [next](../time/calendar_math.md#next)
 
 ### add_workdays
 
-`add_workdays(d, n)`: move n Monday-Friday days (no holidays); negative goes back
+`add_workdays(d: date, n: int)`: move n Monday-Friday days (no holidays); negative goes back
 
 ```zil
 today.add_workdays(10)
-# → 2026-10-20
+# → 2026-10-21
 ```
 
 See also: [workdays](../time/calendar_math.md#workdays), [is_weekend](../time.md#is_weekend)
 
 ### workdays
 
-`workdays(a, b)`: Monday-Friday days from a up to (not including) b
+`workdays(a: date, b: date)`: Monday-Friday days from a up to (not including) b
 
 ```zil
 workdays(today, date("2026-12-25"))
-# → 58
+# → 57
 ```
 
 See also: [add_workdays](../time/calendar_math.md#add_workdays)
 
 ### calendar
 
-`calendar(d) / calendar(year, month)`: month grid, weeks starting Monday
+`calendar(d: date) / calendar(year: int, month: int)`: month grid, weeks starting Monday
 
 ```zil
 calendar(2026, 12)

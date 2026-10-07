@@ -2,7 +2,7 @@
 
 dates: parsing, fields, date math, durations, relative text
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ### types
@@ -52,30 +52,30 @@ date("2026-12-25") to unix
 
 | function | description |
 |---|---|
-| [`date(s) / date(s, fmt) / date(y, m, d, h?, min?, s?) / date(unix)`](#date) | parse ISO, US (12/25/2026), written (Dec 25 2026) or natural language dates |
-| [`year(d)`](#year) | year of a date |
-| [`month(d)`](#month) | month of a date (1-12) |
-| [`day(d)`](#day) | day of the month |
-| [`hour(d)`](#hour) | hour of a date |
-| [`minute(d)`](#minute) | minute of a date |
-| [`second(d)`](#second) | second of a date |
-| [`weekday(d)`](#weekday) | day name |
-| [`format(d, fmt) / format(fmt, args...)`](#format) | format a date with strftime codes, or numbers printf-style |
-| [`with(d, fields)`](#with) | same date with fields replaced: year month day hour minute second |
-| [`is_weekend(d)`](#is_weekend) | Saturday or Sunday |
-| [`is_weekday(d)`](#is_weekday) | Monday through Friday |
-| [`is_today(d)`](#is_today) | same calendar day as now |
-| [`is_past(d)`](#is_past) | before now |
-| [`is_future(d)`](#is_future) | after now |
-| [`age(d)`](#age) | whole years since d |
-| [`diff(a, b)`](#diff) | calendar difference from a to b |
-| [`relative(d)`](#relative) | "in 3 days", "2 hours ago" |
-| [`parts(duration)`](#parts) | duration in up to three of d, h, min, s; or `to d h min` for chosen units |
-| [`unix(d)`](#unix) | seconds since 1970-01-01 UTC; same as `d to unix` |
+| [`date(s: str) / date(s: str, fmt: str) / date(y: int, m: int, d: int, h?: int, min?: int, s?: int) / date(unix: int)`](#date) | parse ISO, US (12/25/2026), written (Dec 25 2026) or natural language dates |
+| [`year(d: date)`](#year) | year of a date |
+| [`month(d: date)`](#month) | month of a date (1-12) |
+| [`day(d: date)`](#day) | day of the month |
+| [`hour(d: date)`](#hour) | hour of a date |
+| [`minute(d: date)`](#minute) | minute of a date |
+| [`second(d: date)`](#second) | second of a date |
+| [`weekday(d: date)`](#weekday) | day name |
+| [`format(d: date, fmt: str) / format(fmt: str, args?: any, ...)`](#format) | format a date with strftime codes, or numbers printf-style |
+| [`with(d: date, fields: map)`](#with) | same date with fields replaced: year month day hour minute second |
+| [`is_weekend(d: date)`](#is_weekend) | Saturday or Sunday |
+| [`is_weekday(d: date)`](#is_weekday) | Monday through Friday |
+| [`is_today(d: date)`](#is_today) | same calendar day as now |
+| [`is_past(d: date)`](#is_past) | before now |
+| [`is_future(d: date)`](#is_future) | after now |
+| [`age(d: date)`](#age) | whole years since d |
+| [`diff(a: date, b: date)`](#diff) | calendar difference from a to b |
+| [`relative(d: date)`](#relative) | "in 3 days", "2 hours ago" |
+| [`parts(duration: quantity)`](#parts) | duration in up to three of d, h, min, s; or `to d h min` for chosen units |
+| [`unix(d: date)`](#unix) | seconds since 1970-01-01 UTC; same as `d to unix` |
 
 ### date
 
-`date(s) / date(s, fmt) / date(y, m, d, h?, min?, s?) / date(unix)`: parse ISO, US (12/25/2026), written (Dec 25 2026) or natural language dates
+`date(s: str) / date(s: str, fmt: str) / date(y: int, m: int, d: int, h?: int, min?: int, s?: int) / date(unix: int)`: parse ISO, US (12/25/2026), written (Dec 25 2026) or natural language dates
 
 ```zil
 date("2026-12-25")
@@ -83,7 +83,7 @@ date("2026-12-25")
 date("next friday at 5pm")
 # → 2026-10-09 17:00:00 -05:00
 date("3 days ago")
-# → 2026-10-03 23:30:59 -05:00
+# → 2026-10-04 08:21:11 -05:00
 date("25.12.2026", "%d.%m.%Y")
 # → 2026-12-25
 date(2026, 12, 25, 18, 30)
@@ -96,7 +96,7 @@ See also: [format](time.md#format), [with](time.md#with), [start_of](time/calend
 
 ### year
 
-`year(d)`: year of a date
+`year(d: date)`: year of a date
 
 ```zil
 now.year
@@ -107,7 +107,7 @@ See also: [month](time.md#month), [day](time.md#day)
 
 ### month
 
-`month(d)`: month of a date (1-12)
+`month(d: date)`: month of a date (1-12)
 
 ```zil
 now.month
@@ -118,51 +118,51 @@ See also: [year](time.md#year), [day](time.md#day)
 
 ### day
 
-`day(d)`: day of the month
+`day(d: date)`: day of the month
 
 ```zil
 now.day
-# → 6
+# → 7
 ```
 
 See also: [month](time.md#month), [weekday](time.md#weekday)
 
 ### hour
 
-`hour(d)`: hour of a date
+`hour(d: date)`: hour of a date
 
 ```zil
 now.hour
-# → 23
+# → 8
 ```
 
 See also: [minute](time.md#minute), [second](time.md#second)
 
 ### minute
 
-`minute(d)`: minute of a date
+`minute(d: date)`: minute of a date
 
 ```zil
 now.minute
-# → 30
+# → 21
 ```
 
 See also: [hour](time.md#hour), [second](time.md#second)
 
 ### second
 
-`second(d)`: second of a date
+`second(d: date)`: second of a date
 
 ```zil
 now.second
-# → 59
+# → 11
 ```
 
 See also: [hour](time.md#hour), [minute](time.md#minute)
 
 ### weekday
 
-`weekday(d)`: day name
+`weekday(d: date)`: day name
 
 ```zil
 date("2026-12-25").weekday
@@ -173,13 +173,13 @@ See also: [day](time.md#day), [format](time.md#format)
 
 ### format
 
-`format(d, fmt) / format(fmt, args...)`: format a date with strftime codes, or numbers printf-style
+`format(d: date, fmt: str) / format(fmt: str, args?: any, ...)`: format a date with strftime codes, or numbers printf-style
 
 ```zil
 now.format("%B %d, %Y")
-# → "October 06, 2026"
+# → "October 07, 2026"
 now.format("%H:%M")
-# → "23:30"
+# → "08:21"
 format("%5.2f%%", 12.345)
 # → "12.35%"
 ```
@@ -188,20 +188,20 @@ See also: [date](time.md#date), [fixed](math/formatting.md#fixed)
 
 ### with
 
-`with(d, fields)`: same date with fields replaced: year month day hour minute second
+`with(d: date, fields: map)`: same date with fields replaced: year month day hour minute second
 
 ```zil
 today.with({day: 1})
 # → 2026-10-01
 now.with({hour: 9, minute: 0})
-# → 2026-10-06 09:00:59 -05:00
+# → 2026-10-07 09:00:11 -05:00
 ```
 
 See also: [start_of](time/calendar_math.md#start_of), [date](time.md#date)
 
 ### is_weekend
 
-`is_weekend(d)`: Saturday or Sunday
+`is_weekend(d: date)`: Saturday or Sunday
 
 ```zil
 date("2026-10-10").is_weekend
@@ -212,7 +212,7 @@ See also: [is_weekday](time.md#is_weekday), [add_workdays](time/calendar_math.md
 
 ### is_weekday
 
-`is_weekday(d)`: Monday through Friday
+`is_weekday(d: date)`: Monday through Friday
 
 ```zil
 today.is_weekday
@@ -223,7 +223,7 @@ See also: [is_weekend](time.md#is_weekend)
 
 ### is_today
 
-`is_today(d)`: same calendar day as now
+`is_today(d: date)`: same calendar day as now
 
 ```zil
 now.is_today
@@ -236,7 +236,7 @@ See also: [is_past](time.md#is_past)
 
 ### is_past
 
-`is_past(d)`: before now
+`is_past(d: date)`: before now
 
 ```zil
 yesterday.is_past
@@ -247,7 +247,7 @@ See also: [is_future](time.md#is_future), [is_today](time.md#is_today)
 
 ### is_future
 
-`is_future(d)`: after now
+`is_future(d: date)`: after now
 
 ```zil
 tomorrow.is_future
@@ -258,7 +258,7 @@ See also: [is_past](time.md#is_past)
 
 ### age
 
-`age(d)`: whole years since d
+`age(d: date)`: whole years since d
 
 ```zil
 date("1990-06-15").age
@@ -269,7 +269,7 @@ See also: [diff](time.md#diff)
 
 ### diff
 
-`diff(a, b)`: calendar difference from a to b
+`diff(a: date, b: date)`: calendar difference from a to b
 
 ```zil
 diff(date("2025-08-03"), date("2026-10-06 04:00"))
@@ -280,7 +280,7 @@ See also: [age](time.md#age), [relative](time.md#relative), [parts](time.md#part
 
 ### relative
 
-`relative(d)`: "in 3 days", "2 hours ago"
+`relative(d: date)`: "in 3 days", "2 hours ago"
 
 ```zil
 date("2026-12-25").relative
@@ -293,7 +293,7 @@ See also: [diff](time.md#diff), [parts](time.md#parts)
 
 ### parts
 
-`parts(duration)`: duration in up to three of d, h, min, s; or `to d h min` for chosen units
+`parts(duration: quantity)`: duration in up to three of d, h, min, s; or `to d h min` for chosen units
 
 ```zil
 (date("2026-12-25") - date("2026-10-06 14:24")).parts
@@ -306,7 +306,7 @@ See also: [relative](time.md#relative), [diff](time.md#diff)
 
 ### unix
 
-`unix(d)`: seconds since 1970-01-01 UTC; same as `d to unix`
+`unix(d: date)`: seconds since 1970-01-01 UTC; same as `d to unix`
 
 ```zil
 date(0).unix
@@ -333,7 +333,7 @@ date("next friday")
 # → 2026-10-09
 # countdown
 (date("2027-01-01") - now).parts
-# → "86 d 1 h 29 min"
+# → "85 d 16 h 39 min"
 # relative time
 (now - 3 h).relative
 # → "3 hours ago"

@@ -40,15 +40,15 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("len", "len(v)", "length of a string, list or map", &[r#""héllo".len"#, "[1, 2, 3].len", "{a: 1}.len"], &[]),
-    doc("contains", "contains(v, x)", "substring/regex in a string, item in a list, key in a map", &[r#""price: $12".contains(r"\$\d+")"#, "[1, 2].contains(2)"], &["find", "starts_with"]),
-    doc("find", "find(v, x)", "index of the first match, or nil", &[r#""hello".find("l")"#, "[5, 6].find(6)", r#""abc".find("z")"#], &["contains", "count"]),
-    doc("count", "count(v, x)", "number of matches in a string or list", &[r#""banana".count("a")"#, "[1, 2, 1].count(1)"], &["find"]),
-    doc("reverse", "reverse(v)", "reverse a string or list", &[r#""abc".reverse"#, "[1, 2, 3].reverse"], &["sort"]),
-    doc("sort", "sort(list, key?)", "sorted copy, optionally by key function", &["[3, 1, 2].sort", r#"["ccc", "a", "bb"].sort(|w| w.len)"#], &["reverse", "unique"]),
-    doc("unique", "unique(list)", "drop duplicates, keeping first occurrences", &["[1, 2, 1, 3].unique"], &["sort", "count"]),
-    doc("first", "first(list)", "first item, or nil", &["[7, 8].first"], &["last"]),
-    doc("last", "last(list)", "last item, or nil", &["[7, 8].last"], &["first"]),
+    doc("len", "len(v: str|list|map)", "length of a string, list or map", &[r#""héllo".len"#, "[1, 2, 3].len", "{a: 1}.len"], &[]),
+    doc("contains", "contains(v: str|list|map, x: any)", "substring/regex in a string, item in a list, key in a map", &[r#""price: $12".contains(r"\$\d+")"#, "[1, 2].contains(2)"], &["find", "starts_with"]),
+    doc("find", "find(v: str|list, x: any)", "index of the first match, or nil", &[r#""hello".find("l")"#, "[5, 6].find(6)", r#""abc".find("z")"#], &["contains", "count"]),
+    doc("count", "count(v: str|list, x: any)", "number of matches in a string or list", &[r#""banana".count("a")"#, "[1, 2, 1].count(1)"], &["find"]),
+    doc("reverse", "reverse(v: str|list)", "reverse a string or list", &[r#""abc".reverse"#, "[1, 2, 3].reverse"], &["sort"]),
+    doc("sort", "sort(xs: list, key?: fn)", "sorted copy, optionally by key function", &["[3, 1, 2].sort", r#"["ccc", "a", "bb"].sort(|w| w.len)"#], &["reverse", "unique"]),
+    doc("unique", "unique(xs: list)", "drop duplicates, keeping first occurrences", &["[1, 2, 1, 3].unique"], &["sort", "count"]),
+    doc("first", "first(xs: list)", "first item, or nil", &["[7, 8].first"], &["last"]),
+    doc("last", "last(xs: list)", "last item, or nil", &["[7, 8].last"], &["first"]),
 ];
 
 fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Call {
@@ -104,7 +104,7 @@ fn sort_keyed(keyed: &mut [(Value, Value)]) -> Result<Value, String> {
     let mut bad = None;
     keyed.sort_by(|(a, _), (b, _)| {
         compare(a, b).unwrap_or_else(|| {
-            bad = Some(format!("cannot compare {a:?} and {b:?}"));
+            bad = Some(format!("cannot compare {} and {}", crate::modules::short(a), crate::modules::short(b)));
             Ordering::Equal
         })
     });

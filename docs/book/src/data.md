@@ -2,7 +2,7 @@
 
 length, search, sorting and picking across strings, lists and maps; lists and maps below
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ### types
@@ -33,19 +33,19 @@ length, search, sorting and picking across strings, lists and maps; lists and ma
 
 | function | description |
 |---|---|
-| [`len(v)`](#len) | length of a string, list or map |
-| [`contains(v, x)`](#contains) | substring/regex in a string, item in a list, key in a map |
-| [`find(v, x)`](#find) | index of the first match, or nil |
-| [`count(v, x)`](#count) | number of matches in a string or list |
-| [`reverse(v)`](#reverse) | reverse a string or list |
-| [`sort(list, key?)`](#sort) | sorted copy, optionally by key function |
-| [`unique(list)`](#unique) | drop duplicates, keeping first occurrences |
-| [`first(list)`](#first) | first item, or nil |
-| [`last(list)`](#last) | last item, or nil |
+| [`len(v: str\|list\|map)`](#len) | length of a string, list or map |
+| [`contains(v: str\|list\|map, x: any)`](#contains) | substring/regex in a string, item in a list, key in a map |
+| [`find(v: str\|list, x: any)`](#find) | index of the first match, or nil |
+| [`count(v: str\|list, x: any)`](#count) | number of matches in a string or list |
+| [`reverse(v: str\|list)`](#reverse) | reverse a string or list |
+| [`sort(xs: list, key?: fn)`](#sort) | sorted copy, optionally by key function |
+| [`unique(xs: list)`](#unique) | drop duplicates, keeping first occurrences |
+| [`first(xs: list)`](#first) | first item, or nil |
+| [`last(xs: list)`](#last) | last item, or nil |
 
 ### len
 
-`len(v)`: length of a string, list or map
+`len(v: str|list|map)`: length of a string, list or map
 
 ```zil
 "héllo".len
@@ -58,7 +58,7 @@ length, search, sorting and picking across strings, lists and maps; lists and ma
 
 ### contains
 
-`contains(v, x)`: substring/regex in a string, item in a list, key in a map
+`contains(v: str|list|map, x: any)`: substring/regex in a string, item in a list, key in a map
 
 ```zil
 "price: $12".contains(r"\$\d+")
@@ -71,7 +71,7 @@ See also: [find](data.md#find), [starts_with](text.md#starts_with)
 
 ### find
 
-`find(v, x)`: index of the first match, or nil
+`find(v: str|list, x: any)`: index of the first match, or nil
 
 ```zil
 "hello".find("l")
@@ -86,7 +86,7 @@ See also: [contains](data.md#contains), [count](data.md#count)
 
 ### count
 
-`count(v, x)`: number of matches in a string or list
+`count(v: str|list, x: any)`: number of matches in a string or list
 
 ```zil
 "banana".count("a")
@@ -99,7 +99,7 @@ See also: [find](data.md#find)
 
 ### reverse
 
-`reverse(v)`: reverse a string or list
+`reverse(v: str|list)`: reverse a string or list
 
 ```zil
 "abc".reverse
@@ -112,7 +112,7 @@ See also: [sort](data.md#sort)
 
 ### sort
 
-`sort(list, key?)`: sorted copy, optionally by key function
+`sort(xs: list, key?: fn)`: sorted copy, optionally by key function
 
 ```zil
 [3, 1, 2].sort
@@ -125,7 +125,7 @@ See also: [reverse](data.md#reverse), [unique](data.md#unique)
 
 ### unique
 
-`unique(list)`: drop duplicates, keeping first occurrences
+`unique(xs: list)`: drop duplicates, keeping first occurrences
 
 ```zil
 [1, 2, 1, 3].unique
@@ -136,7 +136,7 @@ See also: [sort](data.md#sort), [count](data.md#count)
 
 ### first
 
-`first(list)`: first item, or nil
+`first(xs: list)`: first item, or nil
 
 ```zil
 [7, 8].first
@@ -147,7 +147,7 @@ See also: [last](data.md#last)
 
 ### last
 
-`last(list)`: last item, or nil
+`last(xs: list)`: last item, or nil
 
 ```zil
 [7, 8].last

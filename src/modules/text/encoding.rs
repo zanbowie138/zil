@@ -28,14 +28,14 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("base64", "base64(s)", "base64-encode a string; same as `s to base64`", &[r#"base64("hi there")"#, r#""hi" to base64"#], &["encode", "decode"]),
-    doc("encode", "encode(s, fmt)", "encode as \"base64\", \"url\" or \"hex\"", &[r#""hi there".encode("base64")"#, r#""a b&c".encode("url")"#], &["decode"]),
-    doc("decode", "decode(s, fmt)", "decode \"base64\", \"url\" or \"hex\"", &[r#""aGk=".decode("base64")"#, r#""6869".decode("hex")"#], &["encode"]),
-    doc("ord", "ord(c)", "Unicode code point of a single character", &[r#""A".ord"#, r#""A".ord to hex"#], &["chr", "bytes"]),
-    doc("chr", "chr(n)", "character for a Unicode code point", &["97.chr", "(65..70).map(chr).join"], &["ord"]),
-    doc("bytes", "bytes(s)", "list of the string's UTF-8 bytes", &[r#""hé".bytes"#], &["from_bytes", "ord"]),
-    doc("from_bytes", "from_bytes(list)", "string from a list of UTF-8 bytes", &["[104, 105].from_bytes"], &["bytes", "chr"]),
-    doc("byte_len", "byte_len(s)", "length in UTF-8 bytes rather than characters", &[r#""héllo".byte_len"#], &["len", "bytes"]),
+    doc("base64", "base64(s: str)", "base64-encode a string; same as `s to base64`", &[r#"base64("hi there")"#, r#""hi" to base64"#], &["encode", "decode"]),
+    doc("encode", "encode(s: str, fmt: str)", "encode as \"base64\", \"url\" or \"hex\"", &[r#""hi there".encode("base64")"#, r#""a b&c".encode("url")"#], &["decode"]),
+    doc("decode", "decode(s: str, fmt: str)", "decode \"base64\", \"url\" or \"hex\"", &[r#""aGk=".decode("base64")"#, r#""6869".decode("hex")"#], &["encode"]),
+    doc("ord", "ord(c: str)", "Unicode code point of a single character", &[r#""A".ord"#, r#""A".ord to hex"#], &["chr", "bytes"]),
+    doc("chr", "chr(n: int)", "character for a Unicode code point", &["97.chr", "(65..70).map(chr).join"], &["ord"]),
+    doc("bytes", "bytes(s: str)", "list of the string's UTF-8 bytes", &[r#""hé".bytes"#], &["from_bytes", "ord"]),
+    doc("from_bytes", "from_bytes(xs: list)", "string from a list of UTF-8 bytes", &["[104, 105].from_bytes"], &["bytes", "chr"]),
+    doc("byte_len", "byte_len(v: str|list)", "length in UTF-8 bytes rather than characters", &[r#""héllo".byte_len"#], &["len", "bytes"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -46,24 +46,27 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             "base64" => base64::engine::general_purpose::STANDARD.encode(s.as_bytes()),
             "url" => url_encode(s),
             "hex" => hex(s.as_bytes()),
-            _ => return Err(format!("unknown encoding {fmt:?} (base64, url, hex)").into()),
+            _ => return Err(Fail::Arg(1, unknown_encoding(fmt))),
         }),
         ("decode", [Str(s), Str(fmt)]) => {
             let bytes = match &**fmt {
                 "base64" => base64::engine::general_purpose::STANDARD.decode(s.trim()).map_err(|e| e.to_string())?,
                 "url" => url_decode(s).ok_or("invalid percent-encoding")?,
                 "hex" => unhex(s.trim()).ok_or("invalid hex")?,
-                _ => return Err(format!("unknown encoding {fmt:?} (base64, url, hex)").into()),
+                _ => return Err(Fail::Arg(1, unknown_encoding(fmt))),
             };
             Value::str(String::from_utf8(bytes).map_err(|_| "decoded bytes are not UTF-8")?)
         }
         ("ord", [Str(s)]) => match s.chars().collect::<Vec<_>>()[..] {
             [c] => Value::int(c as i64),
-            _ => return Err("expected a single character".into()),
+            ref cs => return Err(Fail::Arg(0, format!("expected a single character, got {}", cs.len()))),
         },
         ("chr", [Int(n, _)]) => {
             let c = u32::try_from(*n).ok().and_then(char::from_u32);
-            Value::str(c.ok_or_else(|| format!("{n} is not a valid code point"))?.to_string())
+            Value::str(
+                c.ok_or_else(|| Fail::Arg(0, format!("`{n}` is not a Unicode code point\nnote: code points go from 0 to 0x10ffff, skipping 0xd800-0xdfff")))?
+                    .to_string(),
+            )
         }
         ("bytes", [Str(s)]) => Value::list(s.bytes().map(|b| Value::int(b as i64)).collect()),
         ("from_bytes", [List(l)]) => {
@@ -78,6 +81,11 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("byte_len", [v]) => Value::int(bytes(v).ok_or(Fail::BadArgs)?.len() as i64),
         _ => return Err(Fail::BadArgs),
     })
+}
+
+fn unknown_encoding(fmt: &str) -> String {
+    let hint = crate::error::did_you_mean(fmt, ["base64", "url", "hex"]);
+    if hint.is_empty() { format!("unknown encoding {fmt:?}\nnote: encodings are base64, url and hex") } else { format!("unknown encoding {fmt:?}{hint}") }
 }
 
 /// A string's UTF-8 bytes, or a list of ints 0-255.

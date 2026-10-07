@@ -58,35 +58,37 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("date", "date(s) / date(s, fmt) / date(y, m, d, h?, min?, s?) / date(unix)", "parse ISO, US (12/25/2026), written (Dec 25 2026) or natural language dates", &[r#"date("2026-12-25")"#, r#"date("next friday at 5pm")"#, r#"date("3 days ago")"#, r#"date("25.12.2026", "%d.%m.%Y")"#, "date(2026, 12, 25, 18, 30)", "date(0)"], &["format", "with", "start_of"]),
-    doc("year", "year(d)", "year of a date", &["now.year"], &["month", "day"]),
-    doc("month", "month(d)", "month of a date (1-12)", &["now.month"], &["year", "day"]),
-    doc("day", "day(d)", "day of the month", &["now.day"], &["month", "weekday"]),
-    doc("hour", "hour(d)", "hour of a date", &["now.hour"], &["minute", "second"]),
-    doc("minute", "minute(d)", "minute of a date", &["now.minute"], &["hour", "second"]),
-    doc("second", "second(d)", "second of a date", &["now.second"], &["hour", "minute"]),
-    doc("weekday", "weekday(d)", "day name", &[r#"date("2026-12-25").weekday"#], &["day", "format"]),
-    doc("format", "format(d, fmt) / format(fmt, args...)", "format a date with strftime codes, or numbers printf-style", &[r#"now.format("%B %d, %Y")"#, r#"now.format("%H:%M")"#, r#"format("%5.2f%%", 12.345)"#], &["date", "fixed"]),
-    doc("with", "with(d, fields)", "same date with fields replaced: year month day hour minute second", &["today.with({day: 1})", "now.with({hour: 9, minute: 0})"], &["start_of", "date"]),
-    doc("is_weekend", "is_weekend(d)", "Saturday or Sunday", &[r#"date("2026-10-10").is_weekend"#], &["is_weekday", "add_workdays"]),
-    doc("is_weekday", "is_weekday(d)", "Monday through Friday", &["today.is_weekday"], &["is_weekend"]),
-    doc("is_today", "is_today(d)", "same calendar day as now", &["now.is_today", "tomorrow.is_today"], &["is_past"]),
-    doc("is_past", "is_past(d)", "before now", &["yesterday.is_past"], &["is_future", "is_today"]),
-    doc("is_future", "is_future(d)", "after now", &["tomorrow.is_future"], &["is_past"]),
-    doc("age", "age(d)", "whole years since d", &[r#"date("1990-06-15").age"#], &["diff"]),
-    doc("diff", "diff(a, b)", "calendar difference from a to b", &[r#"diff(date("2025-08-03"), date("2026-10-06 04:00"))"#], &["age", "relative", "parts"]),
-    doc("relative", "relative(d)", "\"in 3 days\", \"2 hours ago\"", &[r#"date("2026-12-25").relative"#, "(now - 3 h).relative"], &["diff", "parts"]),
-    doc("parts", "parts(duration)", "duration in up to three of d, h, min, s; or `to d h min` for chosen units", &[r#"(date("2026-12-25") - date("2026-10-06 14:24")).parts"#, "5000 s.parts"], &["relative", "diff"]),
-    doc("unix", "unix(d)", "seconds since 1970-01-01 UTC; same as `d to unix`", &["date(0).unix", "date(86400) to unix"], &["date"]),
+    doc("date", "date(s: str) / date(s: str, fmt: str) / date(y: int, m: int, d: int, h?: int, min?: int, s?: int) / date(unix: int)", "parse ISO, US (12/25/2026), written (Dec 25 2026) or natural language dates", &[r#"date("2026-12-25")"#, r#"date("next friday at 5pm")"#, r#"date("3 days ago")"#, r#"date("25.12.2026", "%d.%m.%Y")"#, "date(2026, 12, 25, 18, 30)", "date(0)"], &["format", "with", "start_of"]),
+    doc("year", "year(d: date)", "year of a date", &["now.year"], &["month", "day"]),
+    doc("month", "month(d: date)", "month of a date (1-12)", &["now.month"], &["year", "day"]),
+    doc("day", "day(d: date)", "day of the month", &["now.day"], &["month", "weekday"]),
+    doc("hour", "hour(d: date)", "hour of a date", &["now.hour"], &["minute", "second"]),
+    doc("minute", "minute(d: date)", "minute of a date", &["now.minute"], &["hour", "second"]),
+    doc("second", "second(d: date)", "second of a date", &["now.second"], &["hour", "minute"]),
+    doc("weekday", "weekday(d: date)", "day name", &[r#"date("2026-12-25").weekday"#], &["day", "format"]),
+    doc("format", "format(d: date, fmt: str) / format(fmt: str, args?: any, ...)", "format a date with strftime codes, or numbers printf-style", &[r#"now.format("%B %d, %Y")"#, r#"now.format("%H:%M")"#, r#"format("%5.2f%%", 12.345)"#], &["date", "fixed"]),
+    doc("with", "with(d: date, fields: map)", "same date with fields replaced: year month day hour minute second", &["today.with({day: 1})", "now.with({hour: 9, minute: 0})"], &["start_of", "date"]),
+    doc("is_weekend", "is_weekend(d: date)", "Saturday or Sunday", &[r#"date("2026-10-10").is_weekend"#], &["is_weekday", "add_workdays"]),
+    doc("is_weekday", "is_weekday(d: date)", "Monday through Friday", &["today.is_weekday"], &["is_weekend"]),
+    doc("is_today", "is_today(d: date)", "same calendar day as now", &["now.is_today", "tomorrow.is_today"], &["is_past"]),
+    doc("is_past", "is_past(d: date)", "before now", &["yesterday.is_past"], &["is_future", "is_today"]),
+    doc("is_future", "is_future(d: date)", "after now", &["tomorrow.is_future"], &["is_past"]),
+    doc("age", "age(d: date)", "whole years since d", &[r#"date("1990-06-15").age"#], &["diff"]),
+    doc("diff", "diff(a: date, b: date)", "calendar difference from a to b", &[r#"diff(date("2025-08-03"), date("2026-10-06 04:00"))"#], &["age", "relative", "parts"]),
+    doc("relative", "relative(d: date)", "\"in 3 days\", \"2 hours ago\"", &[r#"date("2026-12-25").relative"#, "(now - 3 h).relative"], &["diff", "parts"]),
+    doc("parts", "parts(duration: quantity)", "duration in up to three of d, h, min, s; or `to d h min` for chosen units", &[r#"(date("2026-12-25") - date("2026-10-06 14:24")).parts"#, "5000 s.parts"], &["relative", "diff"]),
+    doc("unix", "unix(d: date)", "seconds since 1970-01-01 UTC; same as `d to unix`", &["date(0).unix", "date(86400) to unix"], &["date"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &crate::lexer::Span) -> Call {
     use Value::*;
     Ok(match (name, args) {
-        ("date", [Str(s)]) => Value::date(parse(s, &Zoned::now()).ok_or_else(|| format!("cannot parse date {s:?}"))?),
+        ("date", [Str(s)]) => Value::date(parse(s, &Zoned::now()).ok_or_else(|| {
+            Fail::Arg(0, format!("cannot read {s:?} as a date\nhelp: try \"2026-12-25 18:30\", \"12/25/2026\", \"Dec 25 2026\" or \"next friday\", or give a format: date(s, \"%d.%m.%Y\")"))
+        })?),
         ("date", [Str(s), Str(f)]) => {
             let z = with_format(s, f, &TimeZone::system());
-            Value::date(z.ok_or_else(|| format!("{s:?} does not match {f:?}"))?)
+            Value::date(z.ok_or_else(|| Fail::Arg(0, format!("{s:?} does not match the format {f:?}")))?)
         }
         ("date", [Int(y, _), Int(m, _), Int(d, _), rest @ ..]) if rest.len() <= 3 => {
             let mut t = [0i64; 3];
@@ -121,7 +123,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &crate::lexer::Sp
             let mut fields = Vec::new();
             for (k, v) in m.borrow().iter() {
                 let Int(n, _) = v else {
-                    return Err(format!("{k} must be an integer").into());
+                    return Err(Fail::Arg(1, format!("`{k}` must be an integer, got {}", v.type_name())));
                 };
                 fields.push((k.clone(), *n));
             }
@@ -192,11 +194,16 @@ pub fn e(x: impl ToString) -> String {
 
 pub const PERIODS: &str = "second, minute, hour, day, week, month, quarter, year";
 
+fn unknown_period(p: &str) -> String {
+    let hint = crate::error::did_you_mean(p, PERIODS.split(", "));
+    if hint.is_empty() { format!("unknown period {p:?}\nnote: periods are {PERIODS}") } else { format!("unknown period {p:?}{hint}") }
+}
+
 /// `z + v u`; whole days, weeks, months and years follow the calendar (Jan 31 + 1 mo = Feb 28, and a
 /// day keeps the clock time across a DST change), not a fixed length.
 pub fn add(z: &Zoned, v: f64, u: &Unit) -> R<Zoned> {
     if u.dim() != units::unit("s")?.dim() {
-        return Err(format!("cannot add {u} to a date"));
+        return Err(format!("cannot add {} to a date\nhelp: dates take durations, like `date + 3 d` or `date - 2 h`", units::describe(u, None)));
     }
     let n = v as i64;
     let span = match () {
@@ -388,9 +395,15 @@ fn time(t: &str) -> Option<Time> {
     Time::new(h, m, s, 0).ok()
 }
 
+const WEEKDAYS: [&str; 7] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+
+pub fn unknown_weekday(w: &str) -> String {
+    format!("unknown weekday {w:?}{}", crate::error::did_you_mean(&w.to_lowercase(), WEEKDAYS))
+}
+
 /// "monday", "Mon", "thurs" (any prefix of 3+ letters).
 pub fn weekday(w: &str) -> Option<Weekday> {
-    const NAMES: [&str; 7] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+    const NAMES: [&str; 7] = WEEKDAYS;
     let w = w.to_lowercase();
     let i = NAMES.iter().position(|n| w.len() >= 3 && n.starts_with(&w))?;
     Weekday::from_monday_one_offset(i as i8 + 1).ok()
@@ -409,7 +422,7 @@ pub fn start_of(z: &Zoned, period: &str) -> R<Zoned> {
         "month" => d.first_of_month(),
         "quarter" => Date::new(d.year(), (d.month() - 1) / 3 * 3 + 1, 1).map_err(e)?,
         "year" => d.first_of_year(),
-        _ => return Err(format!("unknown period {period:?} ({PERIODS})")),
+        _ => return Err(unknown_period(period)),
     };
     day.to_zoned(z.time_zone().clone()).map_err(e)
 }
@@ -430,7 +443,7 @@ fn add_period(z: &Zoned, period: &str, n: i64) -> R<Zoned> {
         "month" => Span::new().try_months(n),
         "quarter" => Span::new().try_months(3 * n),
         "year" => Span::new().try_years(n),
-        _ => return Err(format!("unknown period {period:?} ({PERIODS})")),
+        _ => return Err(unknown_period(period)),
     };
     z.checked_add(span.map_err(e)?).map_err(e)
 }
@@ -448,7 +461,13 @@ pub fn with(z: &Zoned, fields: &[(String, i64)]) -> R<Zoned> {
             "minute" => w.minute(small(n)?),
             "second" => w.second(small(n)?),
             _ => {
-                return Err(format!("unknown field {k:?} (year, month, day, hour, minute, second)"));
+                const FIELDS: [&str; 6] = ["year", "month", "day", "hour", "minute", "second"];
+                let hint = crate::error::did_you_mean(k, FIELDS);
+                return Err(if hint.is_empty() {
+                    format!("unknown field `{k}`\nnote: fields are {}", FIELDS.join(", "))
+                } else {
+                    format!("unknown field `{k}`{hint}")
+                });
             }
         };
     }

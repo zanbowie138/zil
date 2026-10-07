@@ -44,13 +44,13 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("hex", "hex(v, bits?)", "same as `v to hex` / `v to hex(bits)`; strings become hex bytes", &["hex(255)", "hex(-1, 16)", r#"hex("hi")"#], &["bin", "base", "int"]),
-    doc("bin", "bin(v, bits?)", "same as `v to bin` / `v to bin(bits)`", &["bin(10)", "bin(5, 8)"], &["hex", "oct"]),
-    doc("oct", "oct(v, bits?)", "same as `v to oct`", &["oct(8)"], &["hex", "bin"]),
-    doc("dec", "dec(v, bits?)", "same as `v to dec`; with bits, reads two's complement as unsigned", &["dec(0xff)", "dec(-1, 8)"], &["hex", "int"]),
-    doc("base", "base(v, b)", "same as `v to base(b)`, any base 2-36", &["base(35, 36)", "base(10, 3)"], &["hex", "digits"]),
-    doc("digits", "digits(n)", "list of digits in the number's own base", &["1234.digits", "0b1011.digits"], &["from_digits"]),
-    doc("from_digits", "from_digits(list, base?)", "build a number from digits, kept in that base", &["[1, 2, 3].from_digits", "[1, 0, 1, 1].from_digits(2)"], &["digits"]),
+    doc("hex", "hex(v: int|float|str, bits?: int)", "same as `v to hex` / `v to hex(bits)`; strings become hex bytes", &["hex(255)", "hex(-1, 16)", r#"hex("hi")"#], &["bin", "base", "int"]),
+    doc("bin", "bin(v: int|float, bits?: int)", "same as `v to bin` / `v to bin(bits)`", &["bin(10)", "bin(5, 8)"], &["hex", "oct"]),
+    doc("oct", "oct(v: int|float, bits?: int)", "same as `v to oct`", &["oct(8)"], &["hex", "bin"]),
+    doc("dec", "dec(v: int|float, bits?: int)", "same as `v to dec`; with bits, reads two's complement as unsigned", &["dec(0xff)", "dec(-1, 8)"], &["hex", "int"]),
+    doc("base", "base(v: int|float, b: int)", "same as `v to base(b)`, any base 2-36", &["base(35, 36)", "base(10, 3)"], &["hex", "digits"]),
+    doc("digits", "digits(n: int)", "list of digits in the number's own base", &["1234.digits", "0b1011.digits"], &["from_digits"]),
+    doc("from_digits", "from_digits(xs: list, base?: int)", "build a number from digits, kept in that base", &["[1, 2, 3].from_digits", "[1, 0, 1, 1].from_digits(2)"], &["digits"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -64,15 +64,17 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
                 "dec" => 10,
                 _ => match rest {
                     [Int(b, _)] if (2..=36).contains(b) => *b as u32,
-                    _ => return Err("expected base(v, 2-36)".into()),
+                    [Int(b, _)] => return Err(Fail::Arg(1, format!("base {b} is out of range\nnote: bases go from 2 to 36"))),
+                    _ => return Err(Fail::BadArgs),
                 },
             };
             let width = match (name, rest) {
                 ("base", _) | (_, []) => 0,
                 (_, [Int(w, _)]) if (1..=64).contains(w) => *w as u32,
-                _ => return Err("width must be 1-64 bits".into()),
+                (_, [Int(w, _)]) => return Err(Fail::Arg(1, format!("width {w} is out of range\nnote: widths go from 1 to 64 bits"))),
+                _ => return Err(Fail::BadArgs),
             };
-            to_radix(v, Radix { base, width })?
+            to_radix(v, Radix { base, width }).map_err(|m| Fail::Arg(0, m))?
         }
         ("digits", [Int(n, r)]) => {
             let (mut m, b) = (n.unsigned_abs(), r.base as u64);
@@ -100,7 +102,8 @@ fn to_radix(v: &Value, r: Radix) -> Result<Value, String> {
         Value::Big(n, _) => return Err(format!("{n} does not fit in {} bits", r.width)),
         Value::Float(x) if x.fract() == 0.0 && x.abs() < 9.2e18 => to_radix(&Value::int(*x as i64), r)?,
         Value::Str(s) if r == (Radix { base: 16, width: 0 }) => Value::str(hex(s.as_bytes())),
-        v => return Err(format!("cannot convert {} like that", v.type_name())),
+        Value::Float(x) => return Err(format!("`{x}` is not a whole number")),
+        v => return Err(format!("expected an integer, got {}", v.type_name())),
     })
 }
 
@@ -109,7 +112,7 @@ fn from_digits(l: &[Value], base: u32) -> Result<Value, String> {
     for v in l {
         let d = match v {
             Value::Int(d, _) if (0..base as i64).contains(d) => *d,
-            _ => return Err(format!("{v:?} is not a base-{base} digit")),
+            _ => return Err(format!("`{v:?}` is not a base-{base} digit\nnote: base-{base} digits go from 0 to {}", base - 1)),
         };
         acc = acc * base + d;
     }

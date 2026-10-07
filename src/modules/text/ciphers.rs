@@ -26,13 +26,13 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("caesar", "caesar(s, shift)", "shift each letter by shift places; negative shifts decode", &[r#""hello".caesar(3)"#, r#""khoor".caesar(-3)"#], &["rot13", "vigenere"]),
-    doc("rot13", "rot13(s)", "Caesar by 13; applying it twice gives the original", &[r#""hello".rot13"#], &["caesar"]),
-    doc("atbash", "atbash(s)", "mirror the alphabet: a <-> z, b <-> y", &[r#""wizard".atbash"#], &["caesar"]),
-    doc("vigenere", "vigenere(s, key)", "Caesar with a shift per letter from a key word", &[r#""attack at dawn".vigenere("lemon")"#], &["unvigenere", "caesar"]),
-    doc("unvigenere", "unvigenere(s, key)", "undo vigenere", &[r#""lxfopv ef rnhr".unvigenere("lemon")"#], &["vigenere"]),
-    doc("morse", "morse(s)", "text to Morse code, or Morse (dots, dashes, / between words) back to text", &[r#""sos".morse"#, r#"".... .. / - .... . .-. .".morse"#], &["braille"]),
-    doc("braille", "braille(s)", "text to Grade 1 Braille cells, or Braille back to text", &[r#""hello world".braille"#, r#""⠓⠊".braille"#], &["morse"]),
+    doc("caesar", "caesar(s: str, shift: int)", "shift each letter by shift places; negative shifts decode", &[r#""hello".caesar(3)"#, r#""khoor".caesar(-3)"#], &["rot13", "vigenere"]),
+    doc("rot13", "rot13(s: str)", "Caesar by 13; applying it twice gives the original", &[r#""hello".rot13"#], &["caesar"]),
+    doc("atbash", "atbash(s: str)", "mirror the alphabet: a <-> z, b <-> y", &[r#""wizard".atbash"#], &["caesar"]),
+    doc("vigenere", "vigenere(s: str, key: str)", "Caesar with a shift per letter from a key word", &[r#""attack at dawn".vigenere("lemon")"#], &["unvigenere", "caesar"]),
+    doc("unvigenere", "unvigenere(s: str, key: str)", "undo vigenere", &[r#""lxfopv ef rnhr".unvigenere("lemon")"#], &["vigenere"]),
+    doc("morse", "morse(s: str)", "text to Morse code, or Morse (dots, dashes, / between words) back to text", &[r#""sos".morse"#, r#"".... .. / - .... . .-. .".morse"#], &["braille"]),
+    doc("braille", "braille(s: str)", "text to Grade 1 Braille cells, or Braille back to text", &[r#""hello world".braille"#, r#""⠓⠊".braille"#], &["morse"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {

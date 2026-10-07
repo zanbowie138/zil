@@ -236,15 +236,44 @@ pub fn lex_at(src: &str, offset: usize) -> Result<Vec<(Tok, Span)>, Error> {
         let span = span.start + offset..span.end + offset;
         match tok {
             Ok(t) => toks.push((t, span)),
-            Err(()) => match big(&src[span.start - offset..span.end - offset]) {
-                Some(b) => toks.push((Tok::Big(b), span)),
-                None => return Err(Error::new("unexpected character", span)),
-            },
+            Err(()) => {
+                let text = &src[span.start - offset..span.end - offset];
+                match big(text) {
+                    Some(b) => toks.push((Tok::Big(b), span)),
+                    None if text == "\"" => return Err(unclosed_string(src, span.start - offset, offset)),
+                    None => return Err(Error::new(format!("unexpected character `{text}`"), span)),
+                }
+            }
         }
     }
     let end = src.len() + offset;
     toks.push((Tok::Eof, end..end));
     Ok(toks)
+}
+
+/// The string opened at byte `at` never closes: either a `{` inside it doesn't, or the closing quote is missing.
+fn unclosed_string(src: &str, at: usize, offset: usize) -> Error {
+    let quote = at + offset..at + offset + 1;
+    let (mut opens, mut esc) = (Vec::new(), false);
+    for (i, c) in src[at + 1..].char_indices() {
+        let i = at + 1 + i + offset;
+        match (esc, c) {
+            (true, _) => esc = false,
+            (_, '\\') => esc = true,
+            (_, '{') => opens.push(i),
+            (_, '}') => drop(opens.pop()),
+            (_, '"') if !opens.is_empty() => {
+                let brace = opens[0]..opens[0] + 1;
+                return Error::new("unclosed `{` in a string", brace.clone())
+                    .label(brace, "opened here")
+                    .label(i..i + 1, "string ends here")
+                    .help("close it with `}`, or write `\\{` for a literal brace");
+            }
+            _ => {}
+        }
+    }
+    let end = src.len() + offset;
+    Error::new("unclosed string", quote.clone()).label(quote, "opened here").label(end..end, "expected `\"` here")
 }
 
 pub fn lex(src: &str) -> Result<Vec<(Tok, Span)>, Error> {

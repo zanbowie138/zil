@@ -41,18 +41,18 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("print", "print(a, b, ...)", "print values separated by spaces", &[], &["str"]).shown(&[r#"print("total:", 5 km)"#]),
-    doc("type", "type(v)", "the type name of a value", &["type(5 km)", r#"type("hi")"#, "type([1])"], &["str", "int", "float"]),
-    doc("str", "str(v)", "convert to a string (full float precision)", &["str(1/3)", "str(5 km)"], &["int", "float"]),
-    doc("int", "int(v, base?)", "convert to an integer, parsing strings in an optional base", &["int(3.9)", r#""ff".int(16)"#, r#""0b101".int"#], &["float", "str"]),
-    doc("float", "float(v)", "convert to a float; drops a quantity's unit", &[r#"float("2.5")"#, "float(5 km)"], &["int", "str"]),
-    doc("frac", "frac(v)", "show as a fraction; floats become the simplest fraction within 1e-12", &["7/2 to frac", "1/3 + 1/6 to frac", "0.75.frac"], &["float"]),
-    doc("bool", "bool(v)", "truthiness: false only for nil and false", &["bool(0)", "nil to bool"], &["str"]),
-    doc("list", "list(v)", "convert to a list: characters, a copy, or [key, value] pairs", &[r#"list("abc")"#, r#""abc" to list"#, "{a: 1, b: 2}.list"], &["chars", "parse"]),
-    doc("parse", "parse(s)", "read a zil literal (number, string, list, map, quantity); never runs code", &[r#""[1, 2.5, 0xff]".parse"#, r#""5 km".parse to m"#], &["str", "nums"]),
-    doc("read_file", "read_file(path)", "file contents as a string", &[], &["write_file", "lines"]).shown(&[r#"read_file("notes.txt").lines.len"#]),
-    doc("write_file", "write_file(path, v)", "write v to a file as text", &[], &["read_file"]).shown(&[r#"write_file("out.txt", [1, 2, 3])"#]),
-    doc("help", "help(topic?)", "this help; topic is a function, module (\"trig\" or \"math.trig\"), unit, or any value to list functions for its type", &[], &[]).shown(&["help(upper)", r#"help("math.trig")"#, "help(today)"]),
+    doc("print", "print(a?: any, ...)", "print values separated by spaces", &[], &["str"]).shown(&[r#"print("total:", 5 km)"#]),
+    doc("type", "type(v: any)", "the type name of a value", &["type(5 km)", r#"type("hi")"#, "type([1])"], &["str", "int", "float"]),
+    doc("str", "str(v: any)", "convert to a string (full float precision)", &["str(1/3)", "str(5 km)"], &["int", "float"]),
+    doc("int", "int(v: num|str) / int(s: str, base: int)", "convert to an integer, parsing strings in an optional base", &["int(3.9)", r#""ff".int(16)"#, r#""0b101".int"#], &["float", "str"]),
+    doc("float", "float(v: num|quantity|str)", "convert to a float; drops a quantity's unit", &[r#"float("2.5")"#, "float(5 km)"], &["int", "str"]),
+    doc("frac", "frac(v: num)", "show as a fraction; floats become the simplest fraction within 1e-12", &["7/2 to frac", "1/3 + 1/6 to frac", "0.75.frac"], &["float"]),
+    doc("bool", "bool(v: any)", "truthiness: false only for nil and false", &["bool(0)", "nil to bool"], &["str"]),
+    doc("list", "list(v: str|list|map)", "convert to a list: characters, a copy, or [key, value] pairs", &[r#"list("abc")"#, r#""abc" to list"#, "{a: 1, b: 2}.list"], &["chars", "parse"]),
+    doc("parse", "parse(s: str)", "read a zil literal (number, string, list, map, quantity); never runs code", &[r#""[1, 2.5, 0xff]".parse"#, r#""5 km".parse to m"#], &["str", "nums"]),
+    doc("read_file", "read_file(path: str)", "file contents as a string", &[], &["write_file", "lines"]).shown(&[r#"read_file("notes.txt").lines.len"#]),
+    doc("write_file", "write_file(path: str, v: any)", "write v to a file as text", &[], &["read_file"]).shown(&[r#"write_file("out.txt", [1, 2, 3])"#]),
+    doc("help", "help(topic?: any)", "this help; topic is a function, module (\"trig\" or \"math.trig\"), unit, or any value to list functions for its type", &[], &[]).shown(&["help(upper)", r#"help("math.trig")"#, "help(today)"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -76,7 +76,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             help(Some(f));
             Nil
         }
-        ("help", [Fn(_)]) => return Err("user-defined function; no help available".into()),
+        ("help", [Fn(_)]) => return Err(Fail::Arg(0, "no help for user-defined functions".into())),
         ("help", [v]) => {
             if !crate::help::type_page(v.type_name()) {
                 println!("no functions take a {} first; help() for an overview", v.type_name());
@@ -90,26 +90,39 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("int", [Big(n, _)]) => Big(n.clone(), Radix::DEC),
         ("int", [Frac(r, _)]) => exact(BigRational::from_integer(r.to_integer()), Radix::DEC, false),
         ("int", [Float(n)]) => Value::int(*n as i64),
-        ("int", [Str(s)]) => parse_int(s, None).ok_or_else(|| format!("cannot parse {s:?}"))?,
-        ("int", [Str(s), Int(b, _)]) if (2..=36).contains(b) => parse_int(s, Some(*b as u32)).ok_or_else(|| format!("cannot parse {s:?} in base {b}"))?,
+        ("int", [Str(s)]) => parse_int(s, None).ok_or_else(|| Fail::Arg(0, format!("cannot read {s:?} as an integer")))?,
+        ("int", [Str(s), Int(b, _)]) if (2..=36).contains(b) => {
+            parse_int(s, Some(*b as u32)).ok_or_else(|| Fail::Arg(0, format!("cannot read {s:?} as a base-{b} integer")))?
+        }
+        ("int", [Str(_), Int(b, _)]) => return Err(Fail::Arg(1, format!("base {b} is out of range\nnote: bases go from 2 to 36"))),
         ("float", [v]) if num(v).is_some() => Float(num(v).unwrap()),
         ("float", [Qty(n, _)]) => Float(*n),
-        ("float", [Str(s)]) => Float(s.trim().parse().map_err(|_| format!("cannot parse {s:?}"))?),
+        ("float", [Str(s)]) => Float(s.trim().parse().map_err(|_| Fail::Arg(0, format!("cannot read {s:?} as a number")))?),
         ("frac", [v @ (Int(..) | Big(..))]) => v.clone(),
         ("frac", [Frac(r, _)]) => Frac(r.clone(), true),
-        ("frac", [Float(x)]) => exact(simplest(*x).ok_or("not a finite number")?, Radix::DEC, true),
+        ("frac", [Float(x)]) => exact(simplest(*x).ok_or_else(|| format!("`{x}` has no fraction"))?, Radix::DEC, true),
         ("bool", [v]) => Bool(v.truthy()),
         ("list", [Str(s)]) => Value::list(s.chars().map(|c| Value::str(c.to_string())).collect()),
         ("list", [List(l)]) => Value::list(l.borrow().clone()),
         ("list", [Map(m)]) => Value::list(m.borrow().iter().map(|(k, v)| Value::list(vec![Value::str(k.as_str()), v.clone()])).collect()),
         ("parse", [Str(s)]) => parse_literal(s)?,
-        ("read_file", [Str(path)]) => Value::str(std::fs::read_to_string(&**path).map_err(|e| e.to_string())?),
+        ("read_file", [Str(path)]) => {
+            Value::str(std::fs::read_to_string(&**path).map_err(|e| Fail::Arg(0, format!("cannot read {path:?}: {}", io_reason(&e))))?)
+        }
         ("write_file", [Str(path), v]) => {
-            std::fs::write(&**path, v.to_string()).map_err(|e| e.to_string())?;
+            std::fs::write(&**path, v.to_string()).map_err(|e| Fail::Arg(0, format!("cannot write {path:?}: {}", io_reason(&e))))?;
             Nil
         }
         _ => return Err(Fail::BadArgs),
     })
+}
+
+/// An io error in lowercase with no OS code: `no such file or directory`.
+fn io_reason(e: &std::io::Error) -> String {
+    let s = e.to_string();
+    let s = s.split(" (os error").next().unwrap_or(&s).trim_end_matches('.');
+    let mut c = s.chars();
+    c.next().map_or(String::new(), |f| f.to_lowercase().chain(c).collect())
 }
 
 /// `input`: all of stdin, read once.
@@ -195,7 +208,7 @@ fn parse_literal(s: &str) -> Result<Value, String> {
             _ => false,
         }
     }
-    let ast = crate::lexer::lex(s).and_then(crate::parser::parse).map_err(|e| e.msg)?;
+    let ast = crate::parser::parse(s).map_err(|e| e.msg)?;
     match &ast[..] {
         [e] if literal(e) => Interp::new().run(&ast).map_err(|e| e.msg),
         _ => Err(format!("not a literal value: {s:?}")),

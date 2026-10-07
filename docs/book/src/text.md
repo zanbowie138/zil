@@ -2,7 +2,7 @@
 
 case, splitting, search and regex; encodings, hashes and ciphers below
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ### types
@@ -37,26 +37,26 @@ r"\d+"
 
 | function | description |
 |---|---|
-| [`upper(s)`](#upper) | uppercase a string |
-| [`lower(s)`](#lower) | lowercase a string |
-| [`trim(s)`](#trim) | strip leading and trailing whitespace |
-| [`capitalize(s)`](#capitalize) | uppercase the first character |
-| [`split(s, sep?)`](#split) | split on sep (string or regex); whitespace if omitted |
-| [`lines(s)`](#lines) | split into lines |
-| [`chars(s)`](#chars) | list of characters |
-| [`join(list, sep?)`](#join) | join items into a string |
-| [`replace(s, pat, with)`](#replace) | replace all matches; regex replacements can use $1 |
-| [`starts_with(s, prefix)`](#starts_with) | whether s starts with prefix |
-| [`ends_with(s, suffix)`](#ends_with) | whether s ends with suffix |
-| [`match(s, regex)`](#match) | first match, its capture groups, or nil |
-| [`find_all(s, pat)`](#find_all) | list of all matches |
-| [`grep(v, pat)`](#grep) | lines of a string (or items of a list) containing pat |
-| [`repeat(s, n)`](#repeat) | repeat a string n times |
-| [`nums(s)`](#nums) | every number in a string |
+| [`upper(s: str)`](#upper) | uppercase a string |
+| [`lower(s: str)`](#lower) | lowercase a string |
+| [`trim(s: str)`](#trim) | strip leading and trailing whitespace |
+| [`capitalize(s: str)`](#capitalize) | uppercase the first character |
+| [`split(s: str, sep?: str\|regex)`](#split) | split on sep (string or regex); whitespace if omitted |
+| [`lines(s: str)`](#lines) | split into lines |
+| [`chars(s: str)`](#chars) | list of characters |
+| [`join(xs: list, sep?: str)`](#join) | join items into a string |
+| [`replace(s: str, pat: str\|regex, with: str)`](#replace) | replace all matches; regex replacements can use $1 |
+| [`starts_with(s: str, prefix: str)`](#starts_with) | whether s starts with prefix |
+| [`ends_with(s: str, suffix: str)`](#ends_with) | whether s ends with suffix |
+| [`match(s: str, re: regex)`](#match) | first match, its capture groups, or nil |
+| [`find_all(s: str, pat: str\|regex)`](#find_all) | list of all matches |
+| [`grep(v: str\|list, pat: str\|regex)`](#grep) | lines of a string (or items of a list) containing pat |
+| [`repeat(s: str, n: int)`](#repeat) | repeat a string n times |
+| [`nums(s: str)`](#nums) | every number in a string |
 
 ### upper
 
-`upper(s)`: uppercase a string
+`upper(s: str)`: uppercase a string
 
 ```zil
 "hello".upper
@@ -69,7 +69,7 @@ See also: [lower](text.md#lower), [capitalize](text.md#capitalize)
 
 ### lower
 
-`lower(s)`: lowercase a string
+`lower(s: str)`: lowercase a string
 
 ```zil
 "HeLLo".lower
@@ -80,7 +80,7 @@ See also: [upper](text.md#upper), [capitalize](text.md#capitalize)
 
 ### trim
 
-`trim(s)`: strip leading and trailing whitespace
+`trim(s: str)`: strip leading and trailing whitespace
 
 ```zil
 "  hi  ".trim
@@ -91,7 +91,7 @@ See also: [split](text.md#split)
 
 ### capitalize
 
-`capitalize(s)`: uppercase the first character
+`capitalize(s: str)`: uppercase the first character
 
 ```zil
 "hello world".capitalize
@@ -102,7 +102,7 @@ See also: [upper](text.md#upper)
 
 ### split
 
-`split(s, sep?)`: split on sep (string or regex); whitespace if omitted
+`split(s: str, sep?: str|regex)`: split on sep (string or regex); whitespace if omitted
 
 ```zil
 "a b  c".split
@@ -115,7 +115,7 @@ See also: [join](text.md#join), [lines](text.md#lines), [chars](text.md#chars)
 
 ### lines
 
-`lines(s)`: split into lines
+`lines(s: str)`: split into lines
 
 ```zil
 "a\nb".lines
@@ -126,7 +126,7 @@ See also: [split](text.md#split)
 
 ### chars
 
-`chars(s)`: list of characters
+`chars(s: str)`: list of characters
 
 ```zil
 "abc".chars
@@ -137,7 +137,7 @@ See also: [split](text.md#split)
 
 ### join
 
-`join(list, sep?)`: join items into a string
+`join(xs: list, sep?: str)`: join items into a string
 
 ```zil
 ["a", "b"].join("-")
@@ -150,7 +150,7 @@ See also: [split](text.md#split)
 
 ### replace
 
-`replace(s, pat, with)`: replace all matches; regex replacements can use $1
+`replace(s: str, pat: str|regex, with: str)`: replace all matches; regex replacements can use $1
 
 ```zil
 "a.b".replace(".", "-")
@@ -163,7 +163,7 @@ See also: [find_all](text.md#find_all), [match](text.md#match)
 
 ### starts_with
 
-`starts_with(s, prefix)`: whether s starts with prefix
+`starts_with(s: str, prefix: str)`: whether s starts with prefix
 
 ```zil
 "abc".starts_with("a")
@@ -174,7 +174,7 @@ See also: [ends_with](text.md#ends_with), [contains](data.md#contains)
 
 ### ends_with
 
-`ends_with(s, suffix)`: whether s ends with suffix
+`ends_with(s: str, suffix: str)`: whether s ends with suffix
 
 ```zil
 "file.zil".ends_with(".zil")
@@ -185,7 +185,7 @@ See also: [starts_with](text.md#starts_with)
 
 ### match
 
-`match(s, regex)`: first match, its capture groups, or nil
+`match(s: str, re: regex)`: first match, its capture groups, or nil
 
 ```zil
 "2026-10-06".match(r"(\d+)-(\d+)")
@@ -198,7 +198,7 @@ See also: [find_all](text.md#find_all), [replace](text.md#replace)
 
 ### find_all
 
-`find_all(s, pat)`: list of all matches
+`find_all(s: str, pat: str|regex)`: list of all matches
 
 ```zil
 "a1b22c333".find_all(r"\d+")
@@ -209,7 +209,7 @@ See also: [match](text.md#match), [count](data.md#count)
 
 ### grep
 
-`grep(v, pat)`: lines of a string (or items of a list) containing pat
+`grep(v: str|list, pat: str|regex)`: lines of a string (or items of a list) containing pat
 
 ```zil
 "ok\nERROR 1\nERROR 2".grep("ERROR")
@@ -222,7 +222,7 @@ See also: [lines](text.md#lines), [filter](data/lists.md#filter), [contains](dat
 
 ### repeat
 
-`repeat(s, n)`: repeat a string n times
+`repeat(s: str, n: int)`: repeat a string n times
 
 ```zil
 "ab".repeat(3)
@@ -231,7 +231,7 @@ See also: [lines](text.md#lines), [filter](data/lists.md#filter), [contains](dat
 
 ### nums
 
-`nums(s)`: every number in a string
+`nums(s: str)`: every number in a string
 
 ```zil
 "x=3, y=-2.5; 1e3".nums

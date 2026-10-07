@@ -28,13 +28,13 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("gcd", "gcd(a, b, ...) / gcd(list)", "greatest common divisor", &["gcd(12, 18)", "[12, 18, 27].gcd"], &["lcm"]),
-    doc("lcm", "lcm(a, b, ...) / lcm(list)", "least common multiple", &["lcm(4, 6)", "(1..=20).lcm"], &["gcd"]),
-    doc("is_prime", "is_prime(n)", "primality (Miller-Rabin; exact below 3e24)", &["is_prime(97)", "is_prime(2 ** 61 - 1)"], &["factors"]),
-    doc("factors", "factors(n)", "prime factors, smallest first", &["360.factors", "factors(2 ** 32 + 1)"], &["is_prime", "gcd"]),
-    doc("factorial", "factorial(n)", "n!, exact", &["factorial(5)", "factorial(30)"], &["choose"]),
-    doc("choose", "choose(n, k)", "ways to pick k of n, exact", &["choose(5, 2)", "choose(52, 5)"], &["factorial"]),
-    doc("mod_pow", "mod_pow(b, e, m)", "b ** e % m without the huge power", &["mod_pow(2, 100, 7)", "mod_pow(3, 10 ** 18, 1000000007)"], &["gcd"]),
+    doc("gcd", "gcd(a: int, b: int, ...) / gcd(xs: list)", "greatest common divisor", &["gcd(12, 18)", "[12, 18, 27].gcd"], &["lcm"]),
+    doc("lcm", "lcm(a: int, b: int, ...) / lcm(xs: list)", "least common multiple", &["lcm(4, 6)", "(1..=20).lcm"], &["gcd"]),
+    doc("is_prime", "is_prime(n: int)", "primality (Miller-Rabin; exact below 3e24)", &["is_prime(97)", "is_prime(2 ** 61 - 1)"], &["factors"]),
+    doc("factors", "factors(n: int)", "prime factors, smallest first", &["360.factors", "factors(2 ** 32 + 1)"], &["is_prime", "gcd"]),
+    doc("factorial", "factorial(n: int)", "n!, exact", &["factorial(5)", "factorial(30)"], &["choose"]),
+    doc("choose", "choose(n: int, k: int)", "ways to pick k of n, exact", &["choose(5, 2)", "choose(52, 5)"], &["factorial"]),
+    doc("mod_pow", "mod_pow(b: int, e: int, m: int)", "b ** e % m without the huge power", &["mod_pow(2, 100, 7)", "mod_pow(3, 10 ** 18, 1000000007)"], &["gcd"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -46,7 +46,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("factors", [v]) => {
             let mut n = int(v)?;
             if !n.is_positive() {
-                return Err("expects a positive integer".into());
+                return Err(Fail::Arg(0, format!("expected a positive integer, got {n}")));
             }
             let mut out = Vec::new();
             for p in [2u32, 3, 5] {
@@ -60,7 +60,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             Value::list(out.into_iter().map(big).collect())
         }
         ("factorial", [Int(n, _)]) if (0..=20_000).contains(n) => big((1..=*n).map(BigInt::from).product()),
-        ("factorial", [Int(..)]) => return Err("n must be 0-20000".into()),
+        ("factorial", [Int(n, _)]) => return Err(Fail::Arg(0, format!("n must be from 0 to 20000, got {n}"))),
         ("choose", [Int(n, _), Int(k, _)]) if *n >= 0 && *k >= 0 => {
             if k > n {
                 return Ok(Value::int(0));
@@ -77,8 +77,11 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         }
         ("mod_pow", [b, e, m]) => {
             let (b, e, m) = (int(b)?, int(e)?, int(m)?);
-            if !m.is_positive() || e.is_negative() {
-                return Err("needs e >= 0 and m > 0".into());
+            if e.is_negative() {
+                return Err(Fail::Arg(1, format!("the exponent must be 0 or more, got {e}")));
+            }
+            if !m.is_positive() {
+                return Err(Fail::Arg(2, format!("the modulus must be positive, got {m}")));
             }
             big(b.modpow(&e, &m))
         }

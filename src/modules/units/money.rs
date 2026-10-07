@@ -64,20 +64,20 @@ const GUIDE: &[Section] = &[
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("salary", "salary(rate, opts?)", "pay per hour, day, week, month and year; opts {hours: 40 a week, weeks: 52 paid}", &["salary($25/h)", "salary(85000 USD/yr, {hours: 37.5})"], &["grow"]),
-    doc("grow", "grow(sum, rate, time, payment?, compounding?)", "future value: a sum and/or payments growing at a rate", &["grow($10000, 7%/yr, 30 yr)", "grow($0, 7%/yr, 30 yr, $500/mo)", r#"grow($1000, 5%/yr, 1 yr, "daily")"#], &["cagr", "payment"]),
-    doc("cagr", "cagr(start, end, time)", "compound annual growth rate", &["cagr($1000, $2500, 8 yr)"], &["grow", "change"]),
-    doc("doubling", "doubling(rate, compounding?)", "time for money to double", &["doubling(7%/yr)"], &["grow"]),
-    doc("apy", "apy(rate, compounding)", "effective yearly rate after compounding", &[r#"apy(5%/yr, "daily")"#, r#"apy(5%/yr, "monthly")"#], &["grow"]),
-    doc("real_rate", "real_rate(rate, inflation)", "return after inflation", &["real_rate(7%/yr, 3%/yr)"], &["grow"]),
-    doc("payment", "payment(loan, rate, time, compounding?)", "monthly payment that pays off a loan", &["payment($400000, 6.5%/yr, 30 yr)", "payment($25000, 7%/yr, 5 yr) * 5 yr"], &["payoff", "amortize"]),
-    doc("payoff", "payoff(balance, rate, payment, compounding?)", "how long a payment takes to clear a balance, in whole payments", &["payoff($5000, 22%/yr, $200/mo)", "today + payoff($5000, 22%/yr, $200/mo)"], &["payment"]),
-    doc("amortize", "amortize(loan, rate, time, opts?)", "payment schedule: {n, payment, interest, principal, balance} per month; opts {extra: $200/mo}", &["amortize($1000, 12%/yr, 3 mo)", "amortize($400000, 6.5%/yr, 30 yr, {extra: $300/mo}).len * 1 mo to yr"], &["payment"]),
-    doc("share", "share(sum, n or weights)", "split into parts that add up exactly, to the cent", &["share($100, 3)", "share($100, [2, 1, 1])"], &["settle"]),
-    doc("settle", "settle({name: paid, ...})", "who pays whom so everyone paid the same", &["settle({ana: $120, ben: $0, cy: $30})"], &["share"]),
-    doc("change", "change(from, to)", "fractional change from one value to another", &["change($80, $100)", "change(80, 60).percent"], &["margin", "cagr"]),
-    doc("margin", "margin(cost, price)", "profit as a fraction of the price", &["margin($60, $100)"], &["markup"]),
-    doc("markup", "markup(cost, price)", "profit as a fraction of the cost", &["markup($60, $100)"], &["margin"]),
+    doc("salary", "salary(rate: quantity, opts?: map)", "pay per hour, day, week, month and year; opts {hours: 40 a week, weeks: 52 paid}", &["salary($25/h)", "salary(85000 USD/yr, {hours: 37.5})"], &["grow"]),
+    doc("grow", "grow(sum: num|quantity, rate: quantity, time: quantity, payment?: quantity|str, compounding?: str)", "future value: a sum and/or payments growing at a rate", &["grow($10000, 7%/yr, 30 yr)", "grow($0, 7%/yr, 30 yr, $500/mo)", r#"grow($1000, 5%/yr, 1 yr, "daily")"#], &["cagr", "payment"]),
+    doc("cagr", "cagr(start: num|quantity, end: num|quantity, time: quantity)", "compound annual growth rate", &["cagr($1000, $2500, 8 yr)"], &["grow", "change"]),
+    doc("doubling", "doubling(rate: quantity, compounding?: str)", "time for money to double", &["doubling(7%/yr)"], &["grow"]),
+    doc("apy", "apy(rate: quantity, compounding: str)", "effective yearly rate after compounding", &[r#"apy(5%/yr, "daily")"#, r#"apy(5%/yr, "monthly")"#], &["grow"]),
+    doc("real_rate", "real_rate(rate: quantity|num, inflation: quantity|num)", "return after inflation", &["real_rate(7%/yr, 3%/yr)"], &["grow"]),
+    doc("payment", "payment(loan: num|quantity, rate: quantity, time: quantity, compounding?: str)", "monthly payment that pays off a loan", &["payment($400000, 6.5%/yr, 30 yr)", "payment($25000, 7%/yr, 5 yr) * 5 yr"], &["payoff", "amortize"]),
+    doc("payoff", "payoff(balance: num|quantity, rate: quantity, payment: quantity, compounding?: str)", "how long a payment takes to clear a balance, in whole payments", &["payoff($5000, 22%/yr, $200/mo)", "today + payoff($5000, 22%/yr, $200/mo)"], &["payment"]),
+    doc("amortize", "amortize(loan: num|quantity, rate: quantity, time: quantity, opts?: map)", "payment schedule: {n, payment, interest, principal, balance} per month; opts {extra: $200/mo}", &["amortize($1000, 12%/yr, 3 mo)", "amortize($400000, 6.5%/yr, 30 yr, {extra: $300/mo}).len * 1 mo to yr"], &["payment"]),
+    doc("share", "share(sum: num|quantity, parts: int|list)", "split into parts that add up exactly, to the cent", &["share($100, 3)", "share($100, [2, 1, 1])"], &["settle"]),
+    doc("settle", "settle(paid: map)", "who pays whom so everyone paid the same", &["settle({ana: $120, ben: $0, cy: $30})"], &["share"]),
+    doc("change", "change(from: num|quantity, to: num|quantity)", "fractional change from one value to another", &["change($80, $100)", "change(80, 60).percent"], &["margin", "cagr"]),
+    doc("margin", "margin(cost: num|quantity, price: num|quantity)", "profit as a fraction of the price", &["margin($60, $100)"], &["markup"]),
+    doc("markup", "markup(cost: num|quantity, price: num|quantity)", "profit as a fraction of the cost", &["markup($60, $100)"], &["margin"]),
 ];
 
 const YR: f64 = 31556952.0;
@@ -218,7 +218,15 @@ impl Args {
 
     fn only_opts(&self, keys: &[&str]) -> Result<(), Fail> {
         match self.opts.keys().find(|k| !keys.contains(&k.as_str())) {
-            Some(k) => Err(format!("unknown option {k}; expected one of {}", keys.join(", ")).into()),
+            Some(k) => {
+                let hint = crate::error::did_you_mean(k, keys.iter().copied());
+                Err(if hint.is_empty() {
+                    format!("unknown option `{k}`\nnote: options are {}", keys.join(", "))
+                } else {
+                    format!("unknown option `{k}`{hint}")
+                }
+                .into())
+            }
             None => Ok(()),
         }
     }
@@ -233,7 +241,12 @@ fn compounding(s: &str) -> Result<f64, Fail> {
         "weekly" => YR / 604800.0,
         "daily" => YR / 86400.0,
         "continuous" | "continuously" => f64::INFINITY,
-        _ => return Err(format!("unknown compounding {s:?}; use yearly, quarterly, monthly, weekly, daily or continuous").into()),
+        _ => {
+            const KINDS: [&str; 6] = ["yearly", "quarterly", "monthly", "weekly", "daily", "continuous"];
+            let hint = crate::error::did_you_mean(s, KINDS);
+            let more = if hint.is_empty() { format!("\nnote: compounding is {}", KINDS.join(", ")) } else { hint };
+            return Err(format!("unknown compounding {s:?}{more}").into());
+        }
     })
 }
 
@@ -277,7 +290,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("salary", [Qty(x, u), rest @ ..]) if rest.len() <= 1 => {
             let a = a()?;
             a.only_opts(&["hours", "weeks"])?;
-            let opt = |k: &str, default: f64| a.opts.get(k).map_or(Some(default), num).ok_or(format!("{k} must be a number"));
+            let opt = |k: &str, default: f64| a.opts.get(k).map_or(Some(default), num).ok_or(format!("option `{k}` must be a number"));
             let (hours, weeks) = (opt("hours", 40.0)?, opt("weeks", 52.0)?);
             let (x, cur, per) = match currency_of(*x, u) {
                 Some(c) => c,
@@ -294,7 +307,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
                 "wk" | "workwk" => hours,
                 "mo" | "workmo" => hours * weeks / 12.0,
                 "yr" | "workyr" => hours * weeks,
-                p => return Err(format!("can't tell how many hours are paid per {p}").into()),
+                p => return Err(Fail::Arg(0, format!("cannot tell how many hours are paid per `{p}`\nhelp: give pay per h, d, wk, mo or yr"))),
             };
             let hourly = x / hours_per;
             let rows = [("hour", 1.0), ("day", hours / 5.0), ("week", hours), ("month", hours * weeks / 12.0), ("year", hours * weeks)];

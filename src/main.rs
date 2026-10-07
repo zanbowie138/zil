@@ -1,5 +1,6 @@
 mod ast;
 mod docs;
+mod error;
 mod help;
 mod interp;
 mod lexer;
@@ -7,26 +8,15 @@ mod modules;
 mod parser;
 mod value;
 
-use ariadne::{Label, Report, ReportKind, Source};
 use interp::Interp;
-use lexer::{Span, Tok};
+use lexer::Tok;
 use rustyline::error::ReadlineError;
 use std::borrow::Cow;
 use std::path::PathBuf;
 use std::process::exit;
 use value::Value;
 
-#[derive(Debug)]
-pub struct Error {
-    pub msg: String,
-    pub span: Span,
-}
-
-impl Error {
-    pub fn new(msg: impl Into<String>, span: Span) -> Error {
-        Error { msg: msg.into(), span }
-    }
-}
+pub use error::Error;
 
 /// Per-user cache for currency rates and REPL history.
 pub fn cache_dir() -> Option<PathBuf> {
@@ -36,16 +26,13 @@ pub fn cache_dir() -> Option<PathBuf> {
 }
 
 fn run(interp: &mut Interp, src: &str) -> Result<Value, Error> {
-    let ast = parser::parse(lexer::lex(src)?)?;
-    interp.run(&ast)
+    interp.run(&parser::parse(src)?)
 }
 
 fn report(name: &str, src: &str, e: Error) {
-    let _ = Report::build(ReportKind::Error, (name, e.span.clone()))
-        .with_message(&e.msg)
-        .with_label(Label::new((name, e.span)).with_message(&e.msg))
-        .finish()
-        .eprint((name, Source::from(src)));
+    use std::io::IsTerminal;
+    let color = std::io::stderr().is_terminal() && std::env::var_os("NO_COLOR").is_none();
+    eprint!("{}", error::render(&e, name, src, color));
 }
 
 /// Run `src` and exit with status 1 on error.
@@ -112,7 +99,7 @@ impl Names {
             return None;
         };
         // Longest parseable tail, so `print(5 km to` looks at `5 km`.
-        let ast = toks.iter().find_map(|(_, s)| parser::parse(lexer::lex(&before[s.start..to.start]).ok()?).ok())?;
+        let ast = toks.iter().find_map(|(_, s)| parser::parse(&before[s.start..to.start]).ok())?;
         let mut e = ast.last()?;
         while let ast::ExprKind::Assign(_, rhs) = &e.kind {
             e = rhs;

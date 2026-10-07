@@ -2,27 +2,27 @@
 
 sine, cosine and friends; angles as units
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ## Functions
 
 | function | description |
 |---|---|
-| [`sin(x)`](#sin) | sine of radians or an angle unit |
-| [`cos(x)`](#cos) | cosine of radians or an angle unit |
-| [`tan(x)`](#tan) | tangent of radians or an angle unit |
-| [`asin(x)`](#asin) | arcsine, as an angle |
-| [`acos(x)`](#acos) | arccosine, as an angle |
-| [`atan(x)`](#atan) | arctangent, as an angle |
-| [`atan2(y, x)`](#atan2) | angle of the point (x, y), as an angle |
-| [`sinh(x)`](#sinh) | hyperbolic sine |
-| [`cosh(x)`](#cosh) | hyperbolic cosine |
-| [`tanh(x)`](#tanh) | hyperbolic tangent |
+| [`sin(x: num\|quantity)`](#sin) | sine of radians or an angle unit |
+| [`cos(x: num\|quantity)`](#cos) | cosine of radians or an angle unit |
+| [`tan(x: num\|quantity)`](#tan) | tangent of radians or an angle unit |
+| [`asin(x: num)`](#asin) | arcsine, as an angle |
+| [`acos(x: num)`](#acos) | arccosine, as an angle |
+| [`atan(x: num)`](#atan) | arctangent, as an angle |
+| [`atan2(y: num\|quantity, x: num\|quantity)`](#atan2) | angle of the point (x, y), as an angle |
+| [`sinh(x: num)`](#sinh) | hyperbolic sine |
+| [`cosh(x: num)`](#cosh) | hyperbolic cosine |
+| [`tanh(x: num)`](#tanh) | hyperbolic tangent |
 
 ### sin
 
-`sin(x)`: sine of radians or an angle unit
+`sin(x: num|quantity)`: sine of radians or an angle unit
 
 ```zil
 sin(30 deg)
@@ -35,7 +35,7 @@ See also: [cos](../math/trig.md#cos), [tan](../math/trig.md#tan), [asin](../math
 
 ### cos
 
-`cos(x)`: cosine of radians or an angle unit
+`cos(x: num|quantity)`: cosine of radians or an angle unit
 
 ```zil
 cos(60 deg)
@@ -46,7 +46,7 @@ See also: [sin](../math/trig.md#sin), [tan](../math/trig.md#tan), [acos](../math
 
 ### tan
 
-`tan(x)`: tangent of radians or an angle unit
+`tan(x: num|quantity)`: tangent of radians or an angle unit
 
 ```zil
 tan(45 deg)
@@ -57,7 +57,7 @@ See also: [sin](../math/trig.md#sin), [cos](../math/trig.md#cos), [atan](../math
 
 ### asin
 
-`asin(x)`: arcsine, as an angle
+`asin(x: num)`: arcsine, as an angle
 
 ```zil
 asin(1) to deg
@@ -68,7 +68,7 @@ See also: [sin](../math/trig.md#sin)
 
 ### acos
 
-`acos(x)`: arccosine, as an angle
+`acos(x: num)`: arccosine, as an angle
 
 ```zil
 acos(0) to deg
@@ -79,7 +79,7 @@ See also: [cos](../math/trig.md#cos)
 
 ### atan
 
-`atan(x)`: arctangent, as an angle
+`atan(x: num)`: arctangent, as an angle
 
 ```zil
 atan(1) to deg
@@ -90,7 +90,7 @@ See also: [tan](../math/trig.md#tan), [atan2](../math/trig.md#atan2)
 
 ### atan2
 
-`atan2(y, x)`: angle of the point (x, y), as an angle
+`atan2(y: num|quantity, x: num|quantity)`: angle of the point (x, y), as an angle
 
 ```zil
 atan2(1, -1) to deg
@@ -101,7 +101,7 @@ See also: [atan](../math/trig.md#atan), [hypot](../math.md#hypot)
 
 ### sinh
 
-`sinh(x)`: hyperbolic sine
+`sinh(x: num)`: hyperbolic sine
 
 ```zil
 sinh(1)
@@ -112,7 +112,7 @@ See also: [cosh](../math/trig.md#cosh), [tanh](../math/trig.md#tanh)
 
 ### cosh
 
-`cosh(x)`: hyperbolic cosine
+`cosh(x: num)`: hyperbolic cosine
 
 ```zil
 cosh(1)
@@ -123,7 +123,7 @@ See also: [sinh](../math/trig.md#sinh), [tanh](../math/trig.md#tanh)
 
 ### tanh
 
-`tanh(x)`: hyperbolic tangent
+`tanh(x: num)`: hyperbolic tangent
 
 ```zil
 tanh(1)

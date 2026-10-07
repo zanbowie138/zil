@@ -31,24 +31,26 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("color", "color(c)", "a color as \"#rrggbb\" from a name, \"#rgb\", \"#rrggbb\" or [r, g, b]", &[r#"color("tomato")"#, r##"color("#f80")"##, "color([255, 0, 128])"], &["rgb", "hsl"]),
-    doc("rgb", "rgb(r, g, b) / rgb(c)", "make a color from 0-255 channels, or get a color's channels", &["rgb(255, 136, 0)", r#""orange".rgb"#], &["hsl", "color"]),
-    doc("hsl", "hsl(h, s, l) / hsl(c)", "make a color from hue (degrees), saturation and lightness (0-100), or get them", &["hsl(210, 80, 50)", r#""teal".hsl"#], &["rgb", "color"]),
-    doc("mix", "mix(a, b, t?)", "blend from a (t = 0) to b (t = 1), halfway by default", &[r#"mix("red", "blue")"#, r#"mix("white", "black", 25%)"#], &["lighten", "darken"]),
-    doc("lighten", "lighten(c, amount)", "raise HSL lightness by amount (0-1)", &[r##"lighten("#3478f6", 20%)"##], &["darken", "mix"]),
-    doc("darken", "darken(c, amount)", "lower HSL lightness by amount (0-1)", &[r##"darken("#3478f6", 20%)"##], &["lighten", "mix"]),
-    doc("invert", "invert(c)", "the opposite color", &[r#"invert("navy")"#], &["grayscale"]),
-    doc("grayscale", "grayscale(c)", "the gray with the same perceived brightness", &[r#"grayscale("tomato")"#], &["invert"]),
-    doc("contrast", "contrast(a, b)", "WCAG contrast ratio, 1 to 21; text wants 4.5+", &[r#"contrast("white", "black")"#, r##"contrast("#777", "white")"##], &["swatch"]),
-    doc("swatch", "swatch(c)", "a colored block plus the hex, for truecolor terminals", &[r#"swatch("tomato")"#, r#"["red", "gold", "teal"].map(swatch).join(" ")"#], &["color"]),
+    doc("color", "color(c: str|list)", "a color as \"#rrggbb\" from a name, \"#rgb\", \"#rrggbb\" or [r, g, b]", &[r#"color("tomato")"#, r##"color("#f80")"##, "color([255, 0, 128])"], &["rgb", "hsl"]),
+    doc("rgb", "rgb(r: num, g: num, b: num) / rgb(c: str|list)", "make a color from 0-255 channels, or get a color's channels", &["rgb(255, 136, 0)", r#""orange".rgb"#], &["hsl", "color"]),
+    doc("hsl", "hsl(h: num, s: num, l: num) / hsl(c: str|list)", "make a color from hue (degrees), saturation and lightness (0-100), or get them", &["hsl(210, 80, 50)", r#""teal".hsl"#], &["rgb", "color"]),
+    doc("mix", "mix(a: str|list, b: str|list, t?: num)", "blend from a (t = 0) to b (t = 1), halfway by default", &[r#"mix("red", "blue")"#, r#"mix("white", "black", 25%)"#], &["lighten", "darken"]),
+    doc("lighten", "lighten(c: str|list, amount: num)", "raise HSL lightness by amount (0-1)", &[r##"lighten("#3478f6", 20%)"##], &["darken", "mix"]),
+    doc("darken", "darken(c: str|list, amount: num)", "lower HSL lightness by amount (0-1)", &[r##"darken("#3478f6", 20%)"##], &["lighten", "mix"]),
+    doc("invert", "invert(c: str|list)", "the opposite color", &[r#"invert("navy")"#], &["grayscale"]),
+    doc("grayscale", "grayscale(c: str|list)", "the gray with the same perceived brightness", &[r#"grayscale("tomato")"#], &["invert"]),
+    doc("contrast", "contrast(a: str|list, b: str|list)", "WCAG contrast ratio, 1 to 21; text wants 4.5+", &[r#"contrast("white", "black")"#, r##"contrast("#777", "white")"##], &["swatch"]),
+    doc("swatch", "swatch(c: str|list)", "a colored block plus the hex, for truecolor terminals", &[r#"swatch("tomato")"#, r#"["red", "gold", "teal"].map(swatch).join(" ")"#], &["color"]),
 ];
 
 type Rgb = [f64; 3];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
-    let c = |v: &Value| parse(v).ok_or_else(|| Fail::from(format!("not a color: {v}")));
-    let amount = |v: &Value| num(v).filter(|t| (0.0..=1.0).contains(t)).ok_or(Fail::from("amount must be 0-1, like 0.2 or 20%"));
+    let c = |v: &Value| {
+        parse(v).ok_or_else(|| Fail::from(format!("{v:?} is not a color\nhelp: use a name like \"tomato\", \"#f80\", \"#ff8800\" or [255, 136, 0]")))
+    };
+    let amount = |v: &Value| num(v).filter(|t| (0.0..=1.0).contains(t)).ok_or(Fail::from("amount must be from 0 to 1, like 0.2 or 20%"));
     Ok(match (name, args) {
         ("color", [v]) => hex(c(v)?),
         ("rgb", [r, g, b]) => hex(c(&Value::list(vec![r.clone(), g.clone(), b.clone()]))?),

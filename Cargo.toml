@@ -20,3 +20,6 @@ rustyline = "18.0.1"
 serde_json = { version = "1.0.151", features = ["preserve_order"] }
 sha2 = "0.11.0"
 ureq = "3.4.2"
+
+[lints.clippy]
+mod_module_files = "deny"

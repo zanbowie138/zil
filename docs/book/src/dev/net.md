@@ -2,22 +2,22 @@
 
 IP addresses, CIDR blocks, subnets
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ## Functions
 
 | function | description |
 |---|---|
-| [`ip(v)`](#ip) | an IPv4 or IPv6 address as an integer, or an integer as an address |
-| [`cidr(s)`](#cidr) | an IPv4 block's network, broadcast, netmask, host range and count |
-| [`in_cidr(ip, block)`](#in_cidr) | whether an IPv4 address is inside a CIDR block |
-| [`subnets(block, prefix)`](#subnets) | split an IPv4 block into smaller blocks |
-| [`ip_kind(ip)`](#ip_kind) | loopback, private, link-local, multicast, unspecified or public |
+| [`ip(v: str\|int)`](#ip) | an IPv4 or IPv6 address as an integer, or an integer as an address |
+| [`cidr(s: str)`](#cidr) | an IPv4 block's network, broadcast, netmask, host range and count |
+| [`in_cidr(ip: str, block: str)`](#in_cidr) | whether an IPv4 address is inside a CIDR block |
+| [`subnets(block: str, prefix: int)`](#subnets) | split an IPv4 block into smaller blocks |
+| [`ip_kind(ip: str)`](#ip_kind) | loopback, private, link-local, multicast, unspecified or public |
 
 ### ip
 
-`ip(v)`: an IPv4 or IPv6 address as an integer, or an integer as an address
+`ip(v: str|int)`: an IPv4 or IPv6 address as an integer, or an integer as an address
 
 ```zil
 ip("192.168.1.5")
@@ -32,7 +32,7 @@ See also: [cidr](../dev/net.md#cidr), [ip_kind](../dev/net.md#ip_kind)
 
 ### cidr
 
-`cidr(s)`: an IPv4 block's network, broadcast, netmask, host range and count
+`cidr(s: str)`: an IPv4 block's network, broadcast, netmask, host range and count
 
 ```zil
 cidr("192.168.1.77/26")
@@ -43,7 +43,7 @@ See also: [in_cidr](../dev/net.md#in_cidr), [subnets](../dev/net.md#subnets)
 
 ### in_cidr
 
-`in_cidr(ip, block)`: whether an IPv4 address is inside a CIDR block
+`in_cidr(ip: str, block: str)`: whether an IPv4 address is inside a CIDR block
 
 ```zil
 in_cidr("10.0.3.7", "10.0.0.0/22")
@@ -54,7 +54,7 @@ See also: [cidr](../dev/net.md#cidr)
 
 ### subnets
 
-`subnets(block, prefix)`: split an IPv4 block into smaller blocks
+`subnets(block: str, prefix: int)`: split an IPv4 block into smaller blocks
 
 ```zil
 subnets("10.0.0.0/24", 26)
@@ -65,7 +65,7 @@ See also: [cidr](../dev/net.md#cidr)
 
 ### ip_kind
 
-`ip_kind(ip)`: loopback, private, link-local, multicast, unspecified or public
+`ip_kind(ip: str)`: loopback, private, link-local, multicast, unspecified or public
 
 ```zil
 ip_kind("10.1.2.3")

@@ -34,13 +34,13 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("popcount", "popcount(n)", "number of 1 bits (two's complement for negatives)", &["popcount(0b1011)", "popcount(-1)"], &["bit"]),
-    doc("bit", "bit(n, i)", "bit i of n (0 is the lowest), as 0 or 1", &["bit(0b100, 2)"], &["set_bit", "clear_bit", "popcount"]),
-    doc("set_bit", "set_bit(n, i)", "n with bit i set", &["set_bit(0b1, 4)"], &["clear_bit", "bit"]),
-    doc("clear_bit", "clear_bit(n, i)", "n with bit i cleared", &["clear_bit(0xff, 0)"], &["set_bit", "bit"]),
-    doc("rotl", "rotl(n, k, width)", "rotate the low width bits left by k", &["rotl(0x81, 1, 8)", "rotl(0x80000000, 1, 32)"], &["rotr"]),
-    doc("rotr", "rotr(n, k, width)", "rotate the low width bits right by k", &["rotr(0x81, 1, 8)"], &["rotl"]),
-    doc("byteswap", "byteswap(n, width)", "reverse the bytes of a width-bit number", &["byteswap(0x1234, 16)", "byteswap(0x12345678, 32)"], &["rotl"]),
+    doc("popcount", "popcount(n: int)", "number of 1 bits (two's complement for negatives)", &["popcount(0b1011)", "popcount(-1)"], &["bit"]),
+    doc("bit", "bit(n: int, i: int)", "bit i of n (0 is the lowest), as 0 or 1", &["bit(0b100, 2)"], &["set_bit", "clear_bit", "popcount"]),
+    doc("set_bit", "set_bit(n: int, i: int)", "n with bit i set", &["set_bit(0b1, 4)"], &["clear_bit", "bit"]),
+    doc("clear_bit", "clear_bit(n: int, i: int)", "n with bit i cleared", &["clear_bit(0xff, 0)"], &["set_bit", "bit"]),
+    doc("rotl", "rotl(n: int, k: int, width: int)", "rotate the low width bits left by k", &["rotl(0x81, 1, 8)", "rotl(0x80000000, 1, 32)"], &["rotr"]),
+    doc("rotr", "rotr(n: int, k: int, width: int)", "rotate the low width bits right by k", &["rotr(0x81, 1, 8)"], &["rotl"]),
+    doc("byteswap", "byteswap(n: int, width: int)", "reverse the bytes of a width-bit number", &["byteswap(0x1234, 16)", "byteswap(0x12345678, 32)"], &["rotl"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -89,11 +89,11 @@ fn convert(v: &Value, t: &Target) -> Claim {
 /// `n` as its low `w` bits, unsigned; `n` must fit in `w` bits, signed or unsigned.
 fn low_bits(n: i64, w: i64) -> Result<(u64, u32), Fail> {
     if !(1..=64).contains(&w) {
-        return Err("width must be 1-64 bits".into());
+        return Err(format!("width {w} is out of range\nnote: widths go from 1 to 64 bits").into());
     }
     let w = w as u32;
     if !fits(n, w) {
-        return Err(format!("{n} does not fit in {w} bits").into());
+        return Err(Fail::Arg(0, format!("`{n}` does not fit in {w} bits")));
     }
     Ok((n as u64 & mask(w), w))
 }

@@ -2,19 +2,19 @@
 
 keys and values of maps
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ## Functions
 
 | function | description |
 |---|---|
-| [`keys(map)`](#keys) | list of map keys |
-| [`values(map)`](#values) | list of map values |
+| [`keys(m: map)`](#keys) | list of map keys |
+| [`values(m: map)`](#values) | list of map values |
 
 ### keys
 
-`keys(map)`: list of map keys
+`keys(m: map)`: list of map keys
 
 ```zil
 {a: 1, b: 2}.keys
@@ -25,7 +25,7 @@ See also: [values](../data/maps.md#values)
 
 ### values
 
-`values(map)`: list of map values
+`values(m: map)`: list of map values
 
 ```zil
 {a: 1, b: 2}.values

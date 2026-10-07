@@ -35,12 +35,12 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("range", "range(n) / range(a, b)", "integers in [0, n) or [a, b); same as a..b", &["range(4)", "range(2, 5)"], &["map"]),
-    doc("push", "push(list, v)", "append v in place and return the list", &["[1, 2].push(3)"], &[]),
-    doc("map", "map(list, f)", "apply f to every item", &[r"[1, 2, 3].map(|x| x * 10)"], &["filter", "reduce"]),
-    doc("filter", "filter(list, f)", "keep items where f is truthy", &[r"(1..10).filter(|x| x % 3 == 0)"], &["map", "reduce"]),
-    doc("reduce", "reduce(list, init, f)", "fold with f(acc, item)", &[r"[1, 2, 3].reduce(10, |acc, x| acc + x)"], &["sum", "map"]),
-    doc("step", "step(list, n)", "every nth item, starting with the first", &["(0..=20).step(5)", "(1..10).step(2)"], &["range"]),
+    doc("range", "range(n: int) / range(a: int, b: int)", "integers in [0, n) or [a, b); same as a..b", &["range(4)", "range(2, 5)"], &["map"]),
+    doc("push", "push(xs: list, v: any)", "append v in place and return the list", &["[1, 2].push(3)"], &[]),
+    doc("map", "map(xs: list, f: fn)", "apply f to every item", &[r"[1, 2, 3].map(|x| x * 10)"], &["filter", "reduce"]),
+    doc("filter", "filter(xs: list, f: fn)", "keep items where f is truthy", &[r"(1..10).filter(|x| x % 3 == 0)"], &["map", "reduce"]),
+    doc("reduce", "reduce(xs: list, init: any, f: fn)", "fold with f(acc, item)", &[r"[1, 2, 3].reduce(10, |acc, x| acc + x)"], &["sum", "map"]),
+    doc("step", "step(xs: list, n: int)", "every nth item, starting with the first", &["(0..=20).step(5)", "(1..10).step(2)"], &["range"]),
 ];
 
 fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Call {
@@ -79,7 +79,7 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Cal
             acc
         }
         ("step", [List(l), Int(n, _)]) if *n > 0 => Value::list(l.borrow().iter().step_by(*n as usize).cloned().collect()),
-        ("step", [List(_), Int(..)]) => return Err("step must be positive".into()),
+        ("step", [List(_), Int(n, _)]) => return Err(Fail::Arg(1, format!("step must be at least 1, got {n}"))),
         _ => return Err(Fail::BadArgs),
     })
 }
@@ -97,7 +97,7 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
 
 fn range(a: i64, b: i64) -> Result<Value, String> {
     if b.saturating_sub(a) > 10_000_000 {
-        return Err("range too large".into());
+        return Err(format!("range too large\nnote: ranges hold at most 10,000,000 items; this one has {}", b.saturating_sub(a)));
     }
     Ok(Value::list((a..b).map(Value::int).collect()))
 }

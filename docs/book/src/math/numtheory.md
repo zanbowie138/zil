@@ -2,24 +2,24 @@
 
 gcd, primes, factoring, factorials, modular powers; exact at any size
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ## Functions
 
 | function | description |
 |---|---|
-| [`gcd(a, b, ...) / gcd(list)`](#gcd) | greatest common divisor |
-| [`lcm(a, b, ...) / lcm(list)`](#lcm) | least common multiple |
-| [`is_prime(n)`](#is_prime) | primality (Miller-Rabin; exact below 3e24) |
-| [`factors(n)`](#factors) | prime factors, smallest first |
-| [`factorial(n)`](#factorial) | n!, exact |
-| [`choose(n, k)`](#choose) | ways to pick k of n, exact |
-| [`mod_pow(b, e, m)`](#mod_pow) | b ** e % m without the huge power |
+| [`gcd(a: int, b: int, ...) / gcd(xs: list)`](#gcd) | greatest common divisor |
+| [`lcm(a: int, b: int, ...) / lcm(xs: list)`](#lcm) | least common multiple |
+| [`is_prime(n: int)`](#is_prime) | primality (Miller-Rabin; exact below 3e24) |
+| [`factors(n: int)`](#factors) | prime factors, smallest first |
+| [`factorial(n: int)`](#factorial) | n!, exact |
+| [`choose(n: int, k: int)`](#choose) | ways to pick k of n, exact |
+| [`mod_pow(b: int, e: int, m: int)`](#mod_pow) | b ** e % m without the huge power |
 
 ### gcd
 
-`gcd(a, b, ...) / gcd(list)`: greatest common divisor
+`gcd(a: int, b: int, ...) / gcd(xs: list)`: greatest common divisor
 
 ```zil
 gcd(12, 18)
@@ -32,7 +32,7 @@ See also: [lcm](../math/numtheory.md#lcm)
 
 ### lcm
 
-`lcm(a, b, ...) / lcm(list)`: least common multiple
+`lcm(a: int, b: int, ...) / lcm(xs: list)`: least common multiple
 
 ```zil
 lcm(4, 6)
@@ -45,7 +45,7 @@ See also: [gcd](../math/numtheory.md#gcd)
 
 ### is_prime
 
-`is_prime(n)`: primality (Miller-Rabin; exact below 3e24)
+`is_prime(n: int)`: primality (Miller-Rabin; exact below 3e24)
 
 ```zil
 is_prime(97)
@@ -58,7 +58,7 @@ See also: [factors](../math/numtheory.md#factors)
 
 ### factors
 
-`factors(n)`: prime factors, smallest first
+`factors(n: int)`: prime factors, smallest first
 
 ```zil
 360.factors
@@ -71,7 +71,7 @@ See also: [is_prime](../math/numtheory.md#is_prime), [gcd](../math/numtheory.md#
 
 ### factorial
 
-`factorial(n)`: n!, exact
+`factorial(n: int)`: n!, exact
 
 ```zil
 factorial(5)
@@ -84,7 +84,7 @@ See also: [choose](../math/numtheory.md#choose)
 
 ### choose
 
-`choose(n, k)`: ways to pick k of n, exact
+`choose(n: int, k: int)`: ways to pick k of n, exact
 
 ```zil
 choose(5, 2)
@@ -97,7 +97,7 @@ See also: [factorial](../math/numtheory.md#factorial)
 
 ### mod_pow
 
-`mod_pow(b, e, m)`: b ** e % m without the huge power
+`mod_pow(b: int, e: int, m: int)`: b ** e % m without the huge power
 
 ```zil
 mod_pow(2, 100, 7)

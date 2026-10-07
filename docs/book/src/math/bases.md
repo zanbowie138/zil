@@ -2,7 +2,7 @@
 
 hex, binary, octal and any base 2-36; digits of a number
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ### conversions
@@ -20,17 +20,17 @@ hex, binary, octal and any base 2-36; digits of a number
 
 | function | description |
 |---|---|
-| [`hex(v, bits?)`](#hex) | same as `v to hex` / `v to hex(bits)`; strings become hex bytes |
-| [`bin(v, bits?)`](#bin) | same as `v to bin` / `v to bin(bits)` |
-| [`oct(v, bits?)`](#oct) | same as `v to oct` |
-| [`dec(v, bits?)`](#dec) | same as `v to dec`; with bits, reads two's complement as unsigned |
-| [`base(v, b)`](#base) | same as `v to base(b)`, any base 2-36 |
-| [`digits(n)`](#digits) | list of digits in the number's own base |
-| [`from_digits(list, base?)`](#from_digits) | build a number from digits, kept in that base |
+| [`hex(v: int\|float\|str, bits?: int)`](#hex) | same as `v to hex` / `v to hex(bits)`; strings become hex bytes |
+| [`bin(v: int\|float, bits?: int)`](#bin) | same as `v to bin` / `v to bin(bits)` |
+| [`oct(v: int\|float, bits?: int)`](#oct) | same as `v to oct` |
+| [`dec(v: int\|float, bits?: int)`](#dec) | same as `v to dec`; with bits, reads two's complement as unsigned |
+| [`base(v: int\|float, b: int)`](#base) | same as `v to base(b)`, any base 2-36 |
+| [`digits(n: int)`](#digits) | list of digits in the number's own base |
+| [`from_digits(xs: list, base?: int)`](#from_digits) | build a number from digits, kept in that base |
 
 ### hex
 
-`hex(v, bits?)`: same as `v to hex` / `v to hex(bits)`; strings become hex bytes
+`hex(v: int|float|str, bits?: int)`: same as `v to hex` / `v to hex(bits)`; strings become hex bytes
 
 ```zil
 hex(255)
@@ -45,7 +45,7 @@ See also: [bin](../math/bases.md#bin), [base](../math/bases.md#base), [int](../c
 
 ### bin
 
-`bin(v, bits?)`: same as `v to bin` / `v to bin(bits)`
+`bin(v: int|float, bits?: int)`: same as `v to bin` / `v to bin(bits)`
 
 ```zil
 bin(10)
@@ -58,7 +58,7 @@ See also: [hex](../math/bases.md#hex), [oct](../math/bases.md#oct)
 
 ### oct
 
-`oct(v, bits?)`: same as `v to oct`
+`oct(v: int|float, bits?: int)`: same as `v to oct`
 
 ```zil
 oct(8)
@@ -69,7 +69,7 @@ See also: [hex](../math/bases.md#hex), [bin](../math/bases.md#bin)
 
 ### dec
 
-`dec(v, bits?)`: same as `v to dec`; with bits, reads two's complement as unsigned
+`dec(v: int|float, bits?: int)`: same as `v to dec`; with bits, reads two's complement as unsigned
 
 ```zil
 dec(0xff)
@@ -82,7 +82,7 @@ See also: [hex](../math/bases.md#hex), [int](../core.md#int)
 
 ### base
 
-`base(v, b)`: same as `v to base(b)`, any base 2-36
+`base(v: int|float, b: int)`: same as `v to base(b)`, any base 2-36
 
 ```zil
 base(35, 36)
@@ -95,7 +95,7 @@ See also: [hex](../math/bases.md#hex), [digits](../math/bases.md#digits)
 
 ### digits
 
-`digits(n)`: list of digits in the number's own base
+`digits(n: int)`: list of digits in the number's own base
 
 ```zil
 1234.digits
@@ -108,7 +108,7 @@ See also: [from_digits](../math/bases.md#from_digits)
 
 ### from_digits
 
-`from_digits(list, base?)`: build a number from digits, kept in that base
+`from_digits(xs: list, base?: int)`: build a number from digits, kept in that base
 
 ```zil
 [1, 2, 3].from_digits

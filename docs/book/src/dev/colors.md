@@ -2,27 +2,27 @@
 
 colors as "#rrggbb": RGB/HSL, mixing, lightening, WCAG contrast
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ## Functions
 
 | function | description |
 |---|---|
-| [`color(c)`](#color) | a color as "#rrggbb" from a name, "#rgb", "#rrggbb" or [r, g, b] |
-| [`rgb(r, g, b) / rgb(c)`](#rgb) | make a color from 0-255 channels, or get a color's channels |
-| [`hsl(h, s, l) / hsl(c)`](#hsl) | make a color from hue (degrees), saturation and lightness (0-100), or get them |
-| [`mix(a, b, t?)`](#mix) | blend from a (t = 0) to b (t = 1), halfway by default |
-| [`lighten(c, amount)`](#lighten) | raise HSL lightness by amount (0-1) |
-| [`darken(c, amount)`](#darken) | lower HSL lightness by amount (0-1) |
-| [`invert(c)`](#invert) | the opposite color |
-| [`grayscale(c)`](#grayscale) | the gray with the same perceived brightness |
-| [`contrast(a, b)`](#contrast) | WCAG contrast ratio, 1 to 21; text wants 4.5+ |
-| [`swatch(c)`](#swatch) | a colored block plus the hex, for truecolor terminals |
+| [`color(c: str\|list)`](#color) | a color as "#rrggbb" from a name, "#rgb", "#rrggbb" or [r, g, b] |
+| [`rgb(r: num, g: num, b: num) / rgb(c: str\|list)`](#rgb) | make a color from 0-255 channels, or get a color's channels |
+| [`hsl(h: num, s: num, l: num) / hsl(c: str\|list)`](#hsl) | make a color from hue (degrees), saturation and lightness (0-100), or get them |
+| [`mix(a: str\|list, b: str\|list, t?: num)`](#mix) | blend from a (t = 0) to b (t = 1), halfway by default |
+| [`lighten(c: str\|list, amount: num)`](#lighten) | raise HSL lightness by amount (0-1) |
+| [`darken(c: str\|list, amount: num)`](#darken) | lower HSL lightness by amount (0-1) |
+| [`invert(c: str\|list)`](#invert) | the opposite color |
+| [`grayscale(c: str\|list)`](#grayscale) | the gray with the same perceived brightness |
+| [`contrast(a: str\|list, b: str\|list)`](#contrast) | WCAG contrast ratio, 1 to 21; text wants 4.5+ |
+| [`swatch(c: str\|list)`](#swatch) | a colored block plus the hex, for truecolor terminals |
 
 ### color
 
-`color(c)`: a color as "#rrggbb" from a name, "#rgb", "#rrggbb" or [r, g, b]
+`color(c: str|list)`: a color as "#rrggbb" from a name, "#rgb", "#rrggbb" or [r, g, b]
 
 ```zil
 color("tomato")
@@ -37,7 +37,7 @@ See also: [rgb](../dev/colors.md#rgb), [hsl](../dev/colors.md#hsl)
 
 ### rgb
 
-`rgb(r, g, b) / rgb(c)`: make a color from 0-255 channels, or get a color's channels
+`rgb(r: num, g: num, b: num) / rgb(c: str|list)`: make a color from 0-255 channels, or get a color's channels
 
 ```zil
 rgb(255, 136, 0)
@@ -50,7 +50,7 @@ See also: [hsl](../dev/colors.md#hsl), [color](../dev/colors.md#color)
 
 ### hsl
 
-`hsl(h, s, l) / hsl(c)`: make a color from hue (degrees), saturation and lightness (0-100), or get them
+`hsl(h: num, s: num, l: num) / hsl(c: str|list)`: make a color from hue (degrees), saturation and lightness (0-100), or get them
 
 ```zil
 hsl(210, 80, 50)
@@ -63,7 +63,7 @@ See also: [rgb](../dev/colors.md#rgb), [color](../dev/colors.md#color)
 
 ### mix
 
-`mix(a, b, t?)`: blend from a (t = 0) to b (t = 1), halfway by default
+`mix(a: str|list, b: str|list, t?: num)`: blend from a (t = 0) to b (t = 1), halfway by default
 
 ```zil
 mix("red", "blue")
@@ -76,7 +76,7 @@ See also: [lighten](../dev/colors.md#lighten), [darken](../dev/colors.md#darken)
 
 ### lighten
 
-`lighten(c, amount)`: raise HSL lightness by amount (0-1)
+`lighten(c: str|list, amount: num)`: raise HSL lightness by amount (0-1)
 
 ```zil
 lighten("#3478f6", 20%)
@@ -87,7 +87,7 @@ See also: [darken](../dev/colors.md#darken), [mix](../dev/colors.md#mix)
 
 ### darken
 
-`darken(c, amount)`: lower HSL lightness by amount (0-1)
+`darken(c: str|list, amount: num)`: lower HSL lightness by amount (0-1)
 
 ```zil
 darken("#3478f6", 20%)
@@ -98,7 +98,7 @@ See also: [lighten](../dev/colors.md#lighten), [mix](../dev/colors.md#mix)
 
 ### invert
 
-`invert(c)`: the opposite color
+`invert(c: str|list)`: the opposite color
 
 ```zil
 invert("navy")
@@ -109,7 +109,7 @@ See also: [grayscale](../dev/colors.md#grayscale)
 
 ### grayscale
 
-`grayscale(c)`: the gray with the same perceived brightness
+`grayscale(c: str|list)`: the gray with the same perceived brightness
 
 ```zil
 grayscale("tomato")
@@ -120,7 +120,7 @@ See also: [invert](../dev/colors.md#invert)
 
 ### contrast
 
-`contrast(a, b)`: WCAG contrast ratio, 1 to 21; text wants 4.5+
+`contrast(a: str|list, b: str|list)`: WCAG contrast ratio, 1 to 21; text wants 4.5+
 
 ```zil
 contrast("white", "black")
@@ -133,7 +133,7 @@ See also: [swatch](../dev/colors.md#swatch)
 
 ### swatch
 
-`swatch(c)`: a colored block plus the hex, for truecolor terminals
+`swatch(c: str|list)`: a colored block plus the hex, for truecolor terminals
 
 ```zil
 swatch("tomato")

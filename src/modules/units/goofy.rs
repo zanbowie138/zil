@@ -28,7 +28,7 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("for_scale", "for_scale(qty)", "the quantity in whichever goofy unit gives the most relatable count", &["1.8 m.for_scale", "70 kg.for_scale", "2 h.for_scale"], &[]),
+    doc("for_scale", "for_scale(q: quantity)", "the quantity in whichever goofy unit gives the most relatable count", &["1.8 m.for_scale", "70 kg.for_scale", "2 h.for_scale"], &[]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -41,7 +41,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
                 .filter(|row| row.3 == u.dim())
                 .map(|row| (row.0.split(' ').next().unwrap(), si / row.1))
                 .min_by(|a, b| (a.1.abs().log10() - 0.5).abs().total_cmp(&(b.1.abs().log10() - 0.5).abs()));
-            let (name, n) = best.ok_or_else(|| format!("no goofy unit for {u}"))?;
+            let (name, n) = best.ok_or_else(|| format!("no goofy unit measures `{u}`"))?;
             Ok(Value::Qty(n, unit(name)?))
         }
         _ => Err(Fail::BadArgs),

@@ -44,22 +44,22 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("upper", "upper(s)", "uppercase a string", &[r#""hello".upper"#, r#"upper("zil")"#], &["lower", "capitalize"]),
-    doc("lower", "lower(s)", "lowercase a string", &[r#""HeLLo".lower"#], &["upper", "capitalize"]),
-    doc("trim", "trim(s)", "strip leading and trailing whitespace", &[r#""  hi  ".trim"#], &["split"]),
-    doc("capitalize", "capitalize(s)", "uppercase the first character", &[r#""hello world".capitalize"#], &["upper"]),
-    doc("split", "split(s, sep?)", "split on sep (string or regex); whitespace if omitted", &[r#""a b  c".split"#, r#""x,y;z".split(r"[,;]")"#], &["join", "lines", "chars"]),
-    doc("lines", "lines(s)", "split into lines", &[r#""a\nb".lines"#], &["split"]),
-    doc("chars", "chars(s)", "list of characters", &[r#""abc".chars"#], &["split"]),
-    doc("join", "join(list, sep?)", "join items into a string", &[r#"["a", "b"].join("-")"#, "[1, 2].join"], &["split"]),
-    doc("replace", "replace(s, pat, with)", "replace all matches; regex replacements can use $1", &[r#""a.b".replace(".", "-")"#, r#""a  b   c".replace(r"\s+", " ")"#], &["find_all", "match"]),
-    doc("starts_with", "starts_with(s, prefix)", "whether s starts with prefix", &[r#""abc".starts_with("a")"#], &["ends_with", "contains"]),
-    doc("ends_with", "ends_with(s, suffix)", "whether s ends with suffix", &[r#""file.zil".ends_with(".zil")"#], &["starts_with"]),
-    doc("match", "match(s, regex)", "first match, its capture groups, or nil", &[r#""2026-10-06".match(r"(\d+)-(\d+)")"#, r#""id 42".match(r"\d+")"#], &["find_all", "replace"]),
-    doc("find_all", "find_all(s, pat)", "list of all matches", &[r#""a1b22c333".find_all(r"\d+")"#], &["match", "count"]),
-    doc("grep", "grep(v, pat)", "lines of a string (or items of a list) containing pat", &[r#""ok\nERROR 1\nERROR 2".grep("ERROR")"#, r#"["a1", "b", "c22"].grep(r"\d")"#], &["lines", "filter", "contains"]),
-    doc("repeat", "repeat(s, n)", "repeat a string n times", &[r#""ab".repeat(3)"#], &[]),
-    doc("nums", "nums(s)", "every number in a string", &[r#""x=3, y=-2.5; 1e3".nums"#], &["find_all", "parse"]),
+    doc("upper", "upper(s: str)", "uppercase a string", &[r#""hello".upper"#, r#"upper("zil")"#], &["lower", "capitalize"]),
+    doc("lower", "lower(s: str)", "lowercase a string", &[r#""HeLLo".lower"#], &["upper", "capitalize"]),
+    doc("trim", "trim(s: str)", "strip leading and trailing whitespace", &[r#""  hi  ".trim"#], &["split"]),
+    doc("capitalize", "capitalize(s: str)", "uppercase the first character", &[r#""hello world".capitalize"#], &["upper"]),
+    doc("split", "split(s: str, sep?: str|regex)", "split on sep (string or regex); whitespace if omitted", &[r#""a b  c".split"#, r#""x,y;z".split(r"[,;]")"#], &["join", "lines", "chars"]),
+    doc("lines", "lines(s: str)", "split into lines", &[r#""a\nb".lines"#], &["split"]),
+    doc("chars", "chars(s: str)", "list of characters", &[r#""abc".chars"#], &["split"]),
+    doc("join", "join(xs: list, sep?: str)", "join items into a string", &[r#"["a", "b"].join("-")"#, "[1, 2].join"], &["split"]),
+    doc("replace", "replace(s: str, pat: str|regex, with: str)", "replace all matches; regex replacements can use $1", &[r#""a.b".replace(".", "-")"#, r#""a  b   c".replace(r"\s+", " ")"#], &["find_all", "match"]),
+    doc("starts_with", "starts_with(s: str, prefix: str)", "whether s starts with prefix", &[r#""abc".starts_with("a")"#], &["ends_with", "contains"]),
+    doc("ends_with", "ends_with(s: str, suffix: str)", "whether s ends with suffix", &[r#""file.zil".ends_with(".zil")"#], &["starts_with"]),
+    doc("match", "match(s: str, re: regex)", "first match, its capture groups, or nil", &[r#""2026-10-06".match(r"(\d+)-(\d+)")"#, r#""id 42".match(r"\d+")"#], &["find_all", "replace"]),
+    doc("find_all", "find_all(s: str, pat: str|regex)", "list of all matches", &[r#""a1b22c333".find_all(r"\d+")"#], &["match", "count"]),
+    doc("grep", "grep(v: str|list, pat: str|regex)", "lines of a string (or items of a list) containing pat", &[r#""ok\nERROR 1\nERROR 2".grep("ERROR")"#, r#"["a1", "b", "c22"].grep(r"\d")"#], &["lines", "filter", "contains"]),
+    doc("repeat", "repeat(s: str, n: int)", "repeat a string n times", &[r#""ab".repeat(3)"#], &[]),
+    doc("nums", "nums(s: str)", "every number in a string", &[r#""x=3, y=-2.5; 1e3".nums"#], &["find_all", "parse"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {

@@ -2,7 +2,7 @@
 
 ranges, map/filter/reduce, building lists
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ### operators
@@ -23,16 +23,16 @@ ranges, map/filter/reduce, building lists
 
 | function | description |
 |---|---|
-| [`range(n) / range(a, b)`](#range) | integers in [0, n) or [a, b); same as a..b |
-| [`push(list, v)`](#push) | append v in place and return the list |
-| [`map(list, f)`](#map) | apply f to every item |
-| [`filter(list, f)`](#filter) | keep items where f is truthy |
-| [`reduce(list, init, f)`](#reduce) | fold with f(acc, item) |
-| [`step(list, n)`](#step) | every nth item, starting with the first |
+| [`range(n: int) / range(a: int, b: int)`](#range) | integers in [0, n) or [a, b); same as a..b |
+| [`push(xs: list, v: any)`](#push) | append v in place and return the list |
+| [`map(xs: list, f: fn)`](#map) | apply f to every item |
+| [`filter(xs: list, f: fn)`](#filter) | keep items where f is truthy |
+| [`reduce(xs: list, init: any, f: fn)`](#reduce) | fold with f(acc, item) |
+| [`step(xs: list, n: int)`](#step) | every nth item, starting with the first |
 
 ### range
 
-`range(n) / range(a, b)`: integers in [0, n) or [a, b); same as a..b
+`range(n: int) / range(a: int, b: int)`: integers in [0, n) or [a, b); same as a..b
 
 ```zil
 range(4)
@@ -45,7 +45,7 @@ See also: [map](../data/lists.md#map)
 
 ### push
 
-`push(list, v)`: append v in place and return the list
+`push(xs: list, v: any)`: append v in place and return the list
 
 ```zil
 [1, 2].push(3)
@@ -54,7 +54,7 @@ See also: [map](../data/lists.md#map)
 
 ### map
 
-`map(list, f)`: apply f to every item
+`map(xs: list, f: fn)`: apply f to every item
 
 ```zil
 [1, 2, 3].map(|x| x * 10)
@@ -65,7 +65,7 @@ See also: [filter](../data/lists.md#filter), [reduce](../data/lists.md#reduce)
 
 ### filter
 
-`filter(list, f)`: keep items where f is truthy
+`filter(xs: list, f: fn)`: keep items where f is truthy
 
 ```zil
 (1..10).filter(|x| x % 3 == 0)
@@ -76,7 +76,7 @@ See also: [map](../data/lists.md#map), [reduce](../data/lists.md#reduce)
 
 ### reduce
 
-`reduce(list, init, f)`: fold with f(acc, item)
+`reduce(xs: list, init: any, f: fn)`: fold with f(acc, item)
 
 ```zil
 [1, 2, 3].reduce(10, |acc, x| acc + x)
@@ -87,7 +87,7 @@ See also: [sum](../math/stats.md#sum), [map](../data/lists.md#map)
 
 ### step
 
-`step(list, n)`: every nth item, starting with the first
+`step(xs: list, n: int)`: every nth item, starting with the first
 
 ```zil
 (0..=20).step(5)

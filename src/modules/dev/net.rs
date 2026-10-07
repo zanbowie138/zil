@@ -30,11 +30,11 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("ip", "ip(v)", "an IPv4 or IPv6 address as an integer, or an integer as an address", &[r#"ip("192.168.1.5")"#, "ip(3232235781)", r#"ip("::1")"#], &["cidr", "ip_kind"]),
-    doc("cidr", "cidr(s)", "an IPv4 block's network, broadcast, netmask, host range and count", &[r#"cidr("192.168.1.77/26")"#], &["in_cidr", "subnets"]),
-    doc("in_cidr", "in_cidr(ip, block)", "whether an IPv4 address is inside a CIDR block", &[r#"in_cidr("10.0.3.7", "10.0.0.0/22")"#], &["cidr"]),
-    doc("subnets", "subnets(block, prefix)", "split an IPv4 block into smaller blocks", &[r#"subnets("10.0.0.0/24", 26)"#], &["cidr"]),
-    doc("ip_kind", "ip_kind(ip)", "loopback, private, link-local, multicast, unspecified or public", &[r#"ip_kind("10.1.2.3")"#, r#"ip_kind("8.8.8.8")"#], &["ip"]),
+    doc("ip", "ip(v: str|int)", "an IPv4 or IPv6 address as an integer, or an integer as an address", &[r#"ip("192.168.1.5")"#, "ip(3232235781)", r#"ip("::1")"#], &["cidr", "ip_kind"]),
+    doc("cidr", "cidr(s: str)", "an IPv4 block's network, broadcast, netmask, host range and count", &[r#"cidr("192.168.1.77/26")"#], &["in_cidr", "subnets"]),
+    doc("in_cidr", "in_cidr(ip: str, block: str)", "whether an IPv4 address is inside a CIDR block", &[r#"in_cidr("10.0.3.7", "10.0.0.0/22")"#], &["cidr"]),
+    doc("subnets", "subnets(block: str, prefix: int)", "split an IPv4 block into smaller blocks", &[r#"subnets("10.0.0.0/24", 26)"#], &["cidr"]),
+    doc("ip_kind", "ip_kind(ip: str)", "loopback, private, link-local, multicast, unspecified or public", &[r#"ip_kind("10.1.2.3")"#, r#"ip_kind("8.8.8.8")"#], &["ip"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -67,15 +67,18 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("in_cidr", [Str(ip), Str(b)]) => {
             let (net, prefix) = block(b)?;
             let IpAddr::V4(a) = addr(ip)? else {
-                return Err("in_cidr: IPv4 only".into());
+                return Err(Fail::Arg(0, "only IPv4 addresses are supported".into()));
             };
             Bool(u32::from(a) & mask(prefix) == net)
         }
         ("subnets", [Str(b), Int(p, _)]) => {
             let (net, prefix) = block(b)?;
-            let p = u32::try_from(*p).ok().filter(|p| (prefix..=32).contains(p)).ok_or_else(|| format!("prefix must be {prefix}-32"))?;
+            let p = u32::try_from(*p)
+                .ok()
+                .filter(|q| (prefix..=32).contains(q))
+                .ok_or_else(|| Fail::Arg(1, format!("prefix must be from {prefix} to 32, got {p}")))?;
             if p - prefix > 12 {
-                return Err(format!("{} subnets is too many to list", 1u64 << (p - prefix)).into());
+                return Err(Fail::Arg(1, format!("{} subnets is too many to list\nnote: at most 4096 are listed", 1u64 << (p - prefix))));
             }
             let step = 1u64 << (32 - p);
             Value::list((0..1u64 << (p - prefix)).map(|i| Value::str(format!("{}/{p}", Ipv4Addr::from((net as u64 + i * step) as u32)))).collect())

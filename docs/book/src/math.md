@@ -2,7 +2,7 @@
 
 rounding, roots, logs, constants; exact fractions and big ints
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ### constants
@@ -41,24 +41,24 @@ rounding, roots, logs, constants; exact fractions and big ints
 
 | function | description |
 |---|---|
-| [`sqrt(x)`](#sqrt) | square root |
-| [`abs(x)`](#abs) | absolute value; keeps units |
-| [`round(x, digits?) / round(x, step)`](#round) | round to nearest; keeps units. A non-int second arg rounds to a multiple of it |
-| [`floor(x)`](#floor) | round down |
-| [`ceil(x)`](#ceil) | round up |
-| [`trunc(x)`](#trunc) | round toward zero; keeps units |
-| [`sign(x)`](#sign) | -1, 0 or 1 |
-| [`clamp(x, lo, hi)`](#clamp) | limit x to [lo, hi] |
-| [`cbrt(x)`](#cbrt) | cube root |
-| [`exp(x)`](#exp) | e to the power x |
-| [`ln(x)`](#ln) | natural log |
-| [`log(x, base?)`](#log) | log base 10, or another base |
-| [`hypot(x, y)`](#hypot) | sqrt(x² + y²) without overflow; keeps units |
-| [`is_nan(x)`](#is_nan) | whether x is nan (nan != nan) |
+| [`sqrt(x: num)`](#sqrt) | square root |
+| [`abs(x: num\|quantity)`](#abs) | absolute value; keeps units |
+| [`round(x: num\|quantity, digits?: int) / round(x: num\|quantity, step: num\|quantity)`](#round) | round to nearest; keeps units. A non-int second arg rounds to a multiple of it |
+| [`floor(x: num\|quantity)`](#floor) | round down |
+| [`ceil(x: num\|quantity)`](#ceil) | round up |
+| [`trunc(x: num\|quantity)`](#trunc) | round toward zero; keeps units |
+| [`sign(x: num\|quantity)`](#sign) | -1, 0 or 1 |
+| [`clamp(x: any, lo: any, hi: any)`](#clamp) | limit x to [lo, hi] |
+| [`cbrt(x: num)`](#cbrt) | cube root |
+| [`exp(x: num)`](#exp) | e to the power x |
+| [`ln(x: num)`](#ln) | natural log |
+| [`log(x: num, base?: num)`](#log) | log base 10, or another base |
+| [`hypot(x: num\|quantity, y: num\|quantity)`](#hypot) | sqrt(x² + y²) without overflow; keeps units |
+| [`is_nan(x: any)`](#is_nan) | whether x is nan (nan != nan) |
 
 ### sqrt
 
-`sqrt(x)`: square root
+`sqrt(x: num)`: square root
 
 ```zil
 sqrt(2)
@@ -69,7 +69,7 @@ See also: [cbrt](math.md#cbrt)
 
 ### abs
 
-`abs(x)`: absolute value; keeps units
+`abs(x: num|quantity)`: absolute value; keeps units
 
 ```zil
 abs(-3)
@@ -82,7 +82,7 @@ See also: [round](math.md#round), [sign](math.md#sign)
 
 ### round
 
-`round(x, digits?) / round(x, step)`: round to nearest; keeps units. A non-int second arg rounds to a multiple of it
+`round(x: num|quantity, digits?: int) / round(x: num|quantity, step: num|quantity)`: round to nearest; keeps units. A non-int second arg rounds to a multiple of it
 
 ```zil
 round(pi, 2)
@@ -99,7 +99,7 @@ See also: [floor](math.md#floor), [ceil](math.md#ceil), [trunc](math.md#trunc)
 
 ### floor
 
-`floor(x)`: round down
+`floor(x: num|quantity)`: round down
 
 ```zil
 floor(2.7)
@@ -110,7 +110,7 @@ See also: [ceil](math.md#ceil), [round](math.md#round)
 
 ### ceil
 
-`ceil(x)`: round up
+`ceil(x: num|quantity)`: round up
 
 ```zil
 ceil(2.1)
@@ -121,7 +121,7 @@ See also: [floor](math.md#floor), [round](math.md#round)
 
 ### trunc
 
-`trunc(x)`: round toward zero; keeps units
+`trunc(x: num|quantity)`: round toward zero; keeps units
 
 ```zil
 trunc(-2.7)
@@ -132,7 +132,7 @@ See also: [floor](math.md#floor), [round](math.md#round)
 
 ### sign
 
-`sign(x)`: -1, 0 or 1
+`sign(x: num|quantity)`: -1, 0 or 1
 
 ```zil
 sign(-5 km)
@@ -145,7 +145,7 @@ See also: [abs](math.md#abs)
 
 ### clamp
 
-`clamp(x, lo, hi)`: limit x to [lo, hi]
+`clamp(x: any, lo: any, hi: any)`: limit x to [lo, hi]
 
 ```zil
 clamp(15, 0, 10)
@@ -158,7 +158,7 @@ See also: [min](math/stats.md#min), [max](math/stats.md#max)
 
 ### cbrt
 
-`cbrt(x)`: cube root
+`cbrt(x: num)`: cube root
 
 ```zil
 cbrt(27)
@@ -169,7 +169,7 @@ See also: [sqrt](math.md#sqrt)
 
 ### exp
 
-`exp(x)`: e to the power x
+`exp(x: num)`: e to the power x
 
 ```zil
 exp(1)
@@ -180,7 +180,7 @@ See also: [ln](math.md#ln)
 
 ### ln
 
-`ln(x)`: natural log
+`ln(x: num)`: natural log
 
 ```zil
 ln(e)
@@ -191,7 +191,7 @@ See also: [log](math.md#log), [exp](math.md#exp)
 
 ### log
 
-`log(x, base?)`: log base 10, or another base
+`log(x: num, base?: num)`: log base 10, or another base
 
 ```zil
 log(1000)
@@ -204,7 +204,7 @@ See also: [ln](math.md#ln)
 
 ### hypot
 
-`hypot(x, y)`: sqrt(x² + y²) without overflow; keeps units
+`hypot(x: num|quantity, y: num|quantity)`: sqrt(x² + y²) without overflow; keeps units
 
 ```zil
 hypot(3, 4)
@@ -217,7 +217,7 @@ See also: [sqrt](math.md#sqrt), [atan2](math/trig.md#atan2)
 
 ### is_nan
 
-`is_nan(x)`: whether x is nan (nan != nan)
+`is_nan(x: any)`: whether x is nan (nan != nan)
 
 ```zil
 is_nan(nan)

@@ -1,25 +1,27 @@
 use crate::Error;
 use crate::ast::{BinOp, Expr, ExprKind, FnDef, Target, UnOp, UnitSpec};
-use crate::lexer::{Span, Tok, lex_at};
+use crate::lexer::{Span, Tok, lex, lex_at};
 use std::rc::Rc;
 
 type PResult<T> = Result<T, Error>;
 
-pub fn parse(toks: Vec<(Tok, Span)>) -> PResult<Vec<Expr>> {
-    let mut p = Parser { toks, pos: 0, prev_end: 0, holes: 0 };
+pub fn parse(src: &str) -> PResult<Vec<Expr>> {
+    let mut p = Parser { src, toks: lex(src)?, pos: 0, prev_end: 0, holes: 0 };
     let mut stmts = Vec::new();
     p.skip_nl();
     while *p.peek() != Tok::Eof {
         stmts.push(p.expr(0)?);
         if *p.peek() != Tok::Eof {
-            p.expect(Tok::Newline, "newline")?;
+            p.expect(Tok::Newline, "a newline or `;` between statements")?;
         }
         p.skip_nl();
     }
     Ok(stmts)
 }
 
-struct Parser {
+struct Parser<'a> {
+    /// The whole source; spans index into it, interpolations included.
+    src: &'a str,
     toks: Vec<(Tok, Span)>,
     pos: usize,
     prev_end: usize,
@@ -80,7 +82,7 @@ fn binop(t: &Tok) -> BinOp {
     }
 }
 
-impl Parser {
+impl Parser<'_> {
     fn peek(&self) -> &Tok {
         &self.toks[self.pos].0
     }
@@ -112,15 +114,50 @@ impl Parser {
             self.bump();
             Ok(())
         } else {
-            Err(Error::new(format!("expected {what}, found {:?}", self.peek()), self.span()))
+            Err(self.unexpected(self.pos, what))
         }
     }
 
+    /// `expected {what}` at token `at`: "after `+`" when the input or line ran out there, else "found `x`".
+    fn unexpected(&self, at: usize, what: &str) -> Error {
+        let (tok, span) = &self.toks[at];
+        if matches!(tok, Tok::Eof | Tok::Newline) && at > 0 {
+            let prev = self.toks[at - 1].1.clone();
+            return Error::new(format!("expected {what} after `{}`", &self.src[prev.clone()]), prev);
+        }
+        let found = match tok {
+            Tok::Eof => "nothing".to_string(),
+            Tok::Newline if &self.src[span.clone()] == "\n" => "a newline".to_string(),
+            _ => format!("`{}`", &self.src[span.clone()]),
+        };
+        Error::new(format!("expected {what}, found {found}"), span.clone())
+    }
+
+    /// The `close` matching the opener at `open`; "unclosed" when the input ends first.
+    fn close(&mut self, close: Tok, open: &Span) -> PResult<()> {
+        if *self.peek() == close {
+            self.bump();
+            return Ok(());
+        }
+        let c = match close {
+            Tok::RParen => ")",
+            Tok::RBracket => "]",
+            _ => "}",
+        };
+        if *self.peek() == Tok::Eof {
+            let msg = format!("unclosed `{}`", &self.src[open.clone()]);
+            return Err(Error::new(msg, open.clone()).label(open.clone(), "opened here").label(self.span(), format!("expected `{c}` here")));
+        }
+        Err(self.unexpected(self.pos, &format!("`{c}`")).label(open.clone(), "opened here"))
+    }
+
     fn ident(&mut self) -> PResult<String> {
-        let span = self.span();
-        match self.bump() {
-            Tok::Ident(s) => Ok(s),
-            t => Err(Error::new(format!("expected identifier, found {t:?}"), span)),
+        match self.peek().clone() {
+            Tok::Ident(s) => {
+                self.bump();
+                Ok(s)
+            }
+            _ => Err(self.unexpected(self.pos, "a name")),
         }
     }
 
@@ -155,10 +192,11 @@ impl Parser {
                 if POSTFIX_BP < min_bp {
                     break;
                 }
+                let open = self.span();
                 self.bump();
                 let kind = match t {
-                    Tok::LParen => ExprKind::Call(Box::new(lhs), self.list(Tok::RParen)?),
-                    Tok::LBracket => self.index(lhs)?,
+                    Tok::LParen => ExprKind::Call(Box::new(lhs), self.list(Tok::RParen, &open)?),
+                    Tok::LBracket => self.index(lhs, &open)?,
                     _ => ExprKind::Field(Box::new(lhs), self.ident()?),
                 };
                 lhs = self.mk(kind, start);
@@ -186,7 +224,7 @@ impl Parser {
             let hole = outer_holes.is_some_and(|outer| std::mem::replace(&mut self.holes, outer) > 0);
             let kind = match t {
                 Tok::Assign | Tok::OpAssign(_) if !matches!(lhs.kind, ExprKind::Ident(_) | ExprKind::Field(..) | ExprKind::Index(..)) => {
-                    return Err(Error::new("invalid assignment target", lhs.span));
+                    return Err(Error::new("cannot assign to this", lhs.span).help("assign to a name, field or index: `x = 1`, `m.k = 1`, `xs[0] = 1`"));
                 }
                 Tok::Assign => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
                 // ponytail: `xs[f()] += 1` evaluates `xs` and `f()` twice; desugar to a temp if side effects there ever matter.
@@ -227,6 +265,7 @@ impl Parser {
     fn prefix(&mut self) -> PResult<Expr> {
         let start = self.span().start;
         let tok_span = self.span();
+        let at = self.pos;
         if matches!(self.peek(), Tok::Ident(s) if s == "_") {
             self.holes += 1;
         }
@@ -266,7 +305,10 @@ impl Parser {
             Tok::Str(raw) => self.string(&raw, tok_span.start + 1)?,
             Tok::Regex(src) => match regex::Regex::new(&src) {
                 Ok(re) => ExprKind::Regex(Rc::new(re)),
-                Err(e) => return Err(Error::new(format!("bad regex: {e}"), tok_span)),
+                Err(e) => {
+                    let why = e.to_string().lines().last().unwrap_or_default().trim_start_matches("error: ").to_string();
+                    return Err(Error::new("invalid regex", tok_span).note(why));
+                }
             },
             // `a m`: a variable holding a number, given a unit.
             Tok::Ident(s) if self.unit_next() => {
@@ -278,7 +320,8 @@ impl Parser {
             Tok::Currency(code) => {
                 let n = self.prefix()?;
                 if !matches!(n.kind, ExprKind::Int(..) | ExprKind::Big(..) | ExprKind::Float(_) | ExprKind::Dec(_)) {
-                    return Err(Error::new(format!("expected a plain number after the currency symbol for {code}"), n.span));
+                    return Err(Error::new(format!("expected a number after the {code} symbol"), n.span)
+                        .help(format!("for a computed amount, write the code: `(x) {code}`")));
                 }
                 let mut spec = vec![(code.to_string(), 1)];
                 self.unit_rest(&mut spec, true)?;
@@ -288,11 +331,11 @@ impl Parser {
                 self.skip_nl();
                 let e = self.expr(0)?;
                 self.skip_nl();
-                self.expect(Tok::RParen, "`)`")?;
+                self.close(Tok::RParen, &tok_span)?;
                 return Ok(e);
             }
-            Tok::LBracket => ExprKind::List(self.list(Tok::RBracket)?),
-            Tok::LBrace => ExprKind::Map(self.map_body()?),
+            Tok::LBracket => ExprKind::List(self.list(Tok::RBracket, &tok_span)?),
+            Tok::LBrace => ExprKind::Map(self.map_body(&tok_span)?),
             Tok::Minus => ExprKind::Unary(UnOp::Neg, Box::new(self.expr(PREFIX_BP)?)),
             Tok::Bang => ExprKind::Unary(UnOp::Not, Box::new(self.expr(PREFIX_BP)?)),
             Tok::Tilde => ExprKind::Unary(UnOp::BitNot, Box::new(self.expr(PREFIX_BP)?)),
@@ -343,7 +386,8 @@ impl Parser {
                 };
                 ExprKind::Return(val)
             }
-            t => return Err(Error::new(format!("unexpected {t:?}"), tok_span)),
+            Tok::RParen | Tok::RBracket | Tok::RBrace => return Err(Error::new(format!("unmatched `{}`", &self.src[tok_span.clone()]), tok_span)),
+            _ => return Err(self.unexpected(at, "an expression")),
         };
         Ok(self.mk(kind, start))
     }
@@ -384,7 +428,7 @@ impl Parser {
     }
 
     /// After `[`: `x[i]`, `x[a..b]`, `x[a..]`, `x[..b]`.
-    fn index(&mut self, lhs: Expr) -> PResult<ExprKind> {
+    fn index(&mut self, lhs: Expr, open: &Span) -> PResult<ExprKind> {
         let bound = |p: &mut Self| -> PResult<Option<Box<Expr>>> {
             Ok(match p.peek() {
                 Tok::DotDot | Tok::RBracket => None,
@@ -396,10 +440,10 @@ impl Parser {
             self.bump();
             ExprKind::Slice(Box::new(lhs), from, bound(self)?)
         } else {
-            let idx = from.ok_or_else(|| Error::new("expected index", self.span()))?;
+            let idx = from.ok_or_else(|| self.unexpected(self.pos, "an index"))?;
             ExprKind::Index(Box::new(lhs), idx)
         };
-        self.expect(Tok::RBracket, "`]`")?;
+        self.close(Tok::RBracket, open)?;
         Ok(kind)
     }
 
@@ -430,12 +474,12 @@ impl Parser {
     }
 
     fn unit_term(&mut self, touching: bool, sign: i8) -> PResult<(String, i8)> {
-        let span = self.span();
-        let name = match self.bump() {
+        let name = match self.peek().clone() {
             Tok::Ident(s) => s,
             Tok::In => "in".into(),
-            t => return Err(Error::new(format!("expected unit, found {t:?}"), span)),
+            _ => return Err(self.unexpected(self.pos, "a unit")),
         };
+        self.bump();
         let mut pow = 1;
         if *self.peek() == Tok::Caret && (!touching || self.touching()) {
             self.bump();
@@ -446,7 +490,7 @@ impl Parser {
             let span = self.span();
             pow = match self.bump() {
                 Tok::Int(n) if (1..=9).contains(&n) => n as i8,
-                _ => return Err(Error::new("expected unit power 1-9", span)),
+                _ => return Err(Error::new("expected a unit power from 1 to 9", span)),
             };
             if neg {
                 pow = -pow;
@@ -461,13 +505,14 @@ impl Parser {
                 self.bump();
                 let mut arg = None;
                 if *self.peek() == Tok::LParen {
+                    let open = self.span();
                     self.bump();
-                    let span = self.span();
-                    arg = match self.bump() {
-                        Tok::Int(n) => Some(n),
-                        _ => return Err(Error::new("expected an integer", span)),
+                    arg = match self.peek() {
+                        Tok::Int(n) => Some(*n),
+                        _ => return Err(self.unexpected(self.pos, "an integer").help(format!("`to {s}(n)` takes a literal number, like `to {s}(8)`"))),
                     };
-                    self.expect(Tok::RParen, "`)`")?;
+                    self.bump();
+                    self.close(Tok::RParen, &open)?;
                 }
                 Ok(Target::Named(s, arg))
             }
@@ -509,8 +554,12 @@ impl Parser {
                     });
                 }
                 '{' => {
-                    let end = close_brace(raw, i + 1)
-                        .ok_or_else(|| Error::new("unclosed `{` in string (use `\\{` for a literal brace)", start + i..start + i + 1))?;
+                    let end = close_brace(raw, i + 1).ok_or_else(|| {
+                        let open = start + i..start + i + 1;
+                        Error::new("unclosed `{` in a string", open.clone())
+                            .label(open, "opened here")
+                            .help("close it with `}`, or write `\\{` for a literal brace")
+                    })?;
                     let (src_end, spec) = match spec_colon(&raw[i + 1..end]) {
                         Some(c) => (i + 1 + c, Some(&raw[i + 2 + c..end])),
                         None => (end, None),
@@ -519,7 +568,11 @@ impl Parser {
                         crate::modules::math::formatting::Spec::parse(spec).map_err(|m| Error::new(m, start + i..start + end + 1))?;
                     }
                     let inner_toks = lex_at(&raw[i + 1..src_end], start + i + 1)?;
-                    let mut p = Parser { toks: inner_toks, pos: 0, prev_end: 0, holes: 0 };
+                    if inner_toks.len() == 1 {
+                        return Err(Error::new("empty `{}` in a string", start + i..start + end + 1)
+                            .help("put an expression inside, or write `\\{` for a literal brace"));
+                    }
+                    let mut p = Parser { src: self.src, toks: inner_toks, pos: 0, prev_end: 0, holes: 0 };
                     p.skip_nl();
                     let e = p.expr(0)?;
                     p.skip_nl();
@@ -555,7 +608,7 @@ impl Parser {
     }
 
     /// Comma-separated exprs up to `close`; newlines and a trailing comma allowed.
-    fn list(&mut self, close: Tok) -> PResult<Vec<Expr>> {
+    fn list(&mut self, close: Tok, open: &Span) -> PResult<Vec<Expr>> {
         let mut items = Vec::new();
         self.skip_nl();
         while *self.peek() != close {
@@ -567,21 +620,21 @@ impl Parser {
             self.bump();
             self.skip_nl();
         }
-        self.expect(close, "closing delimiter")?;
+        self.close(close, open)?;
         Ok(items)
     }
 
     /// `{a: 1, "b c": 2}`; entries separated by commas and/or newlines.
-    fn map_body(&mut self) -> PResult<Vec<(String, Expr)>> {
+    fn map_body(&mut self, open: &Span) -> PResult<Vec<(String, Expr)>> {
         let mut entries = Vec::new();
         self.skip_nl();
-        while *self.peek() != Tok::RBrace {
-            let span = self.span();
-            let key = match self.bump() {
+        while !matches!(self.peek(), Tok::RBrace | Tok::Eof) {
+            let key = match self.peek().clone() {
                 Tok::Ident(s) => s,
                 Tok::Str(s) if !s.contains(['\\', '{']) => s,
-                t => return Err(Error::new(format!("expected map key, found {t:?}"), span)),
+                _ => return Err(self.unexpected(self.pos, "a map key")),
             };
+            self.bump();
             self.expect(Tok::Colon, "`:`")?;
             self.skip_nl();
             entries.push((key, self.expr(0)?));
@@ -590,23 +643,24 @@ impl Parser {
             }
             self.skip_nl();
         }
-        self.expect(Tok::RBrace, "`}`")?;
+        self.close(Tok::RBrace, open)?;
         Ok(entries)
     }
 
     fn block(&mut self) -> PResult<Expr> {
-        let start = self.span().start;
+        let open = self.span();
+        let start = open.start;
         self.expect(Tok::LBrace, "`{`")?;
         let mut stmts = Vec::new();
         self.skip_nl();
-        while *self.peek() != Tok::RBrace {
+        while !matches!(self.peek(), Tok::RBrace | Tok::Eof) {
             stmts.push(self.expr(0)?);
-            if *self.peek() != Tok::RBrace {
-                self.expect(Tok::Newline, "newline or `}`")?;
+            if !matches!(self.peek(), Tok::RBrace | Tok::Eof) {
+                self.expect(Tok::Newline, "a newline or `}`")?;
             }
             self.skip_nl();
         }
-        self.bump();
+        self.close(Tok::RBrace, &open)?;
         Ok(self.mk(ExprKind::Block(stmts), start))
     }
 }
@@ -705,10 +759,8 @@ fn close_brace(s: &str, from: usize) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
-    use crate::lexer::lex;
-
     fn sexp(src: &str) -> String {
-        let ast = super::parse(lex(src).unwrap()).unwrap();
+        let ast = super::parse(src).unwrap();
         format!("{:?}", ast[0].kind)
     }
 
@@ -744,7 +796,7 @@ mod tests {
     #[test]
     fn rejects_bad_input() {
         for src in ["1 = 2", r#""{1""#, "r\"(\"", "5 to hex(x)"] {
-            assert!(lex(src).and_then(super::parse).is_err(), "{src}");
+            assert!(super::parse(src).is_err(), "{src}");
         }
     }
 }

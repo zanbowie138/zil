@@ -2,7 +2,7 @@
 
 bananas for scale, smoots, fortnights; every item also works as item_for_scale
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ## Units
@@ -23,11 +23,11 @@ bananas for scale, smoots, fortnights; every item also works as item_for_scale
 
 | function | description |
 |---|---|
-| [`for_scale(qty)`](#for_scale) | the quantity in whichever goofy unit gives the most relatable count |
+| [`for_scale(q: quantity)`](#for_scale) | the quantity in whichever goofy unit gives the most relatable count |
 
 ### for_scale
 
-`for_scale(qty)`: the quantity in whichever goofy unit gives the most relatable count
+`for_scale(q: quantity)`: the quantity in whichever goofy unit gives the most relatable count
 
 ```zil
 1.8 m.for_scale

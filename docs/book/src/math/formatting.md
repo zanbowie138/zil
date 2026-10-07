@@ -2,7 +2,7 @@
 
 format specs in strings, printf, and fixed/sci/percent/commas
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ### format specs
@@ -32,14 +32,14 @@ format("%5.2f|%-4d|", pi, 7)
 
 | function | description |
 |---|---|
-| [`fixed(x, digits)`](#fixed) | string with exactly that many decimals; keeps units |
-| [`sci(x, digits?)`](#sci) | string in scientific notation |
-| [`percent(x, digits?)`](#percent) | string as a percentage |
-| [`commas(x, digits?)`](#commas) | string with thousands separators |
+| [`fixed(x: num\|quantity, digits: int)`](#fixed) | string with exactly that many decimals; keeps units |
+| [`sci(x: num\|quantity, digits?: int)`](#sci) | string in scientific notation |
+| [`percent(x: num\|quantity, digits?: int)`](#percent) | string as a percentage |
+| [`commas(x: num\|quantity, digits?: int)`](#commas) | string with thousands separators |
 
 ### fixed
 
-`fixed(x, digits)`: string with exactly that many decimals; keeps units
+`fixed(x: num|quantity, digits: int)`: string with exactly that many decimals; keeps units
 
 ```zil
 pi.fixed(2)
@@ -52,7 +52,7 @@ See also: [sci](../math/formatting.md#sci), [commas](../math/formatting.md#comma
 
 ### sci
 
-`sci(x, digits?)`: string in scientific notation
+`sci(x: num|quantity, digits?: int)`: string in scientific notation
 
 ```zil
 123456.sci
@@ -65,7 +65,7 @@ See also: [fixed](../math/formatting.md#fixed)
 
 ### percent
 
-`percent(x, digits?)`: string as a percentage
+`percent(x: num|quantity, digits?: int)`: string as a percentage
 
 ```zil
 0.256.percent
@@ -78,7 +78,7 @@ See also: [fixed](../math/formatting.md#fixed)
 
 ### commas
 
-`commas(x, digits?)`: string with thousands separators
+`commas(x: num|quantity, digits?: int)`: string with thousands separators
 
 ```zil
 1234567.commas

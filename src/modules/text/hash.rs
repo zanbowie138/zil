@@ -24,9 +24,9 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("sha256", "sha256(s)", "hex SHA-256 hash", &[r#""hello".sha256[..16]"#], &["md5"]),
-    doc("md5", "md5(s)", "hex MD5 hash", &[r#""hello".md5"#], &["sha256"]),
-    doc("crc32", "crc32(v)", "CRC-32 checksum (the zip/PNG one)", &[r#""hello".crc32"#, r#""hello".crc32 to hex"#], &["sha256", "md5"]),
+    doc("sha256", "sha256(s: str)", "hex SHA-256 hash", &[r#""hello".sha256[..16]"#], &["md5"]),
+    doc("md5", "md5(s: str)", "hex MD5 hash", &[r#""hello".md5"#], &["sha256"]),
+    doc("crc32", "crc32(v: str|list)", "CRC-32 checksum (the zip/PNG one)", &[r#""hello".crc32"#, r#""hello".crc32 to hex"#], &["sha256", "md5"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {

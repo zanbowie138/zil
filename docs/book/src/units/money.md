@@ -2,7 +2,7 @@
 
 currencies shown as money, pay, interest, loans, splitting bills
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ### types
@@ -53,24 +53,24 @@ $25/h to USD/workyr
 
 | function | description |
 |---|---|
-| [`salary(rate, opts?)`](#salary) | pay per hour, day, week, month and year; opts {hours: 40 a week, weeks: 52 paid} |
-| [`grow(sum, rate, time, payment?, compounding?)`](#grow) | future value: a sum and/or payments growing at a rate |
-| [`cagr(start, end, time)`](#cagr) | compound annual growth rate |
-| [`doubling(rate, compounding?)`](#doubling) | time for money to double |
-| [`apy(rate, compounding)`](#apy) | effective yearly rate after compounding |
-| [`real_rate(rate, inflation)`](#real_rate) | return after inflation |
-| [`payment(loan, rate, time, compounding?)`](#payment) | monthly payment that pays off a loan |
-| [`payoff(balance, rate, payment, compounding?)`](#payoff) | how long a payment takes to clear a balance, in whole payments |
-| [`amortize(loan, rate, time, opts?)`](#amortize) | payment schedule: {n, payment, interest, principal, balance} per month; opts {extra: $200/mo} |
-| [`share(sum, n or weights)`](#share) | split into parts that add up exactly, to the cent |
-| [`settle({name: paid, ...})`](#settle) | who pays whom so everyone paid the same |
-| [`change(from, to)`](#change) | fractional change from one value to another |
-| [`margin(cost, price)`](#margin) | profit as a fraction of the price |
-| [`markup(cost, price)`](#markup) | profit as a fraction of the cost |
+| [`salary(rate: quantity, opts?: map)`](#salary) | pay per hour, day, week, month and year; opts {hours: 40 a week, weeks: 52 paid} |
+| [`grow(sum: num\|quantity, rate: quantity, time: quantity, payment?: quantity\|str, compounding?: str)`](#grow) | future value: a sum and/or payments growing at a rate |
+| [`cagr(start: num\|quantity, end: num\|quantity, time: quantity)`](#cagr) | compound annual growth rate |
+| [`doubling(rate: quantity, compounding?: str)`](#doubling) | time for money to double |
+| [`apy(rate: quantity, compounding: str)`](#apy) | effective yearly rate after compounding |
+| [`real_rate(rate: quantity\|num, inflation: quantity\|num)`](#real_rate) | return after inflation |
+| [`payment(loan: num\|quantity, rate: quantity, time: quantity, compounding?: str)`](#payment) | monthly payment that pays off a loan |
+| [`payoff(balance: num\|quantity, rate: quantity, payment: quantity, compounding?: str)`](#payoff) | how long a payment takes to clear a balance, in whole payments |
+| [`amortize(loan: num\|quantity, rate: quantity, time: quantity, opts?: map)`](#amortize) | payment schedule: {n, payment, interest, principal, balance} per month; opts {extra: $200/mo} |
+| [`share(sum: num\|quantity, parts: int\|list)`](#share) | split into parts that add up exactly, to the cent |
+| [`settle(paid: map)`](#settle) | who pays whom so everyone paid the same |
+| [`change(from: num\|quantity, to: num\|quantity)`](#change) | fractional change from one value to another |
+| [`margin(cost: num\|quantity, price: num\|quantity)`](#margin) | profit as a fraction of the price |
+| [`markup(cost: num\|quantity, price: num\|quantity)`](#markup) | profit as a fraction of the cost |
 
 ### salary
 
-`salary(rate, opts?)`: pay per hour, day, week, month and year; opts {hours: 40 a week, weeks: 52 paid}
+`salary(rate: quantity, opts?: map)`: pay per hour, day, week, month and year; opts {hours: 40 a week, weeks: 52 paid}
 
 ```zil
 salary($25/h)
@@ -83,7 +83,7 @@ See also: [grow](../units/money.md#grow)
 
 ### grow
 
-`grow(sum, rate, time, payment?, compounding?)`: future value: a sum and/or payments growing at a rate
+`grow(sum: num|quantity, rate: quantity, time: quantity, payment?: quantity|str, compounding?: str)`: future value: a sum and/or payments growing at a rate
 
 ```zil
 grow($10000, 7%/yr, 30 yr)
@@ -98,7 +98,7 @@ See also: [cagr](../units/money.md#cagr), [payment](../units/money.md#payment)
 
 ### cagr
 
-`cagr(start, end, time)`: compound annual growth rate
+`cagr(start: num|quantity, end: num|quantity, time: quantity)`: compound annual growth rate
 
 ```zil
 cagr($1000, $2500, 8 yr)
@@ -109,7 +109,7 @@ See also: [grow](../units/money.md#grow), [change](../units/money.md#change)
 
 ### doubling
 
-`doubling(rate, compounding?)`: time for money to double
+`doubling(rate: quantity, compounding?: str)`: time for money to double
 
 ```zil
 doubling(7%/yr)
@@ -120,7 +120,7 @@ See also: [grow](../units/money.md#grow)
 
 ### apy
 
-`apy(rate, compounding)`: effective yearly rate after compounding
+`apy(rate: quantity, compounding: str)`: effective yearly rate after compounding
 
 ```zil
 apy(5%/yr, "daily")
@@ -133,7 +133,7 @@ See also: [grow](../units/money.md#grow)
 
 ### real_rate
 
-`real_rate(rate, inflation)`: return after inflation
+`real_rate(rate: quantity|num, inflation: quantity|num)`: return after inflation
 
 ```zil
 real_rate(7%/yr, 3%/yr)
@@ -144,7 +144,7 @@ See also: [grow](../units/money.md#grow)
 
 ### payment
 
-`payment(loan, rate, time, compounding?)`: monthly payment that pays off a loan
+`payment(loan: num|quantity, rate: quantity, time: quantity, compounding?: str)`: monthly payment that pays off a loan
 
 ```zil
 payment($400000, 6.5%/yr, 30 yr)
@@ -157,20 +157,20 @@ See also: [payoff](../units/money.md#payoff), [amortize](../units/money.md#amort
 
 ### payoff
 
-`payoff(balance, rate, payment, compounding?)`: how long a payment takes to clear a balance, in whole payments
+`payoff(balance: num|quantity, rate: quantity, payment: quantity, compounding?: str)`: how long a payment takes to clear a balance, in whole payments
 
 ```zil
 payoff($5000, 22%/yr, $200/mo)
 # → 34 mo
 today + payoff($5000, 22%/yr, $200/mo)
-# → 2029-08-06
+# → 2029-08-07
 ```
 
 See also: [payment](../units/money.md#payment)
 
 ### amortize
 
-`amortize(loan, rate, time, opts?)`: payment schedule: {n, payment, interest, principal, balance} per month; opts {extra: $200/mo}
+`amortize(loan: num|quantity, rate: quantity, time: quantity, opts?: map)`: payment schedule: {n, payment, interest, principal, balance} per month; opts {extra: $200/mo}
 
 ```zil
 amortize($1000, 12%/yr, 3 mo)
@@ -183,7 +183,7 @@ See also: [payment](../units/money.md#payment)
 
 ### share
 
-`share(sum, n or weights)`: split into parts that add up exactly, to the cent
+`share(sum: num|quantity, parts: int|list)`: split into parts that add up exactly, to the cent
 
 ```zil
 share($100, 3)
@@ -196,7 +196,7 @@ See also: [settle](../units/money.md#settle)
 
 ### settle
 
-`settle({name: paid, ...})`: who pays whom so everyone paid the same
+`settle(paid: map)`: who pays whom so everyone paid the same
 
 ```zil
 settle({ana: $120, ben: $0, cy: $30})
@@ -207,7 +207,7 @@ See also: [share](../units/money.md#share)
 
 ### change
 
-`change(from, to)`: fractional change from one value to another
+`change(from: num|quantity, to: num|quantity)`: fractional change from one value to another
 
 ```zil
 change($80, $100)
@@ -220,7 +220,7 @@ See also: [margin](../units/money.md#margin), [cagr](../units/money.md#cagr)
 
 ### margin
 
-`margin(cost, price)`: profit as a fraction of the price
+`margin(cost: num|quantity, price: num|quantity)`: profit as a fraction of the price
 
 ```zil
 margin($60, $100)
@@ -231,7 +231,7 @@ See also: [markup](../units/money.md#markup)
 
 ### markup
 
-`markup(cost, price)`: profit as a fraction of the cost
+`markup(cost: num|quantity, price: num|quantity)`: profit as a fraction of the cost
 
 ```zil
 markup($60, $100)
@@ -268,7 +268,7 @@ payment($400000, 6.5%/yr, 30 yr) * 30 yr - $400000
 # → $510,177.95
 # debt-free date
 today + payoff($5000, 22%/yr, $200/mo)
-# → 2029-08-06
+# → 2029-08-07
 # saving $500 a month
 grow($0, 7%/yr, 30 yr, $500/mo)
 # → $609,985.50

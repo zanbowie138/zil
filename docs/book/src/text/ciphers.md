@@ -2,24 +2,24 @@
 
 Caesar, ROT13, Atbash, Vigenère, Morse, Braille (for fun, not secrecy)
 
-> Example results generated on 2026-10-06.
+> Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
 
 ## Functions
 
 | function | description |
 |---|---|
-| [`caesar(s, shift)`](#caesar) | shift each letter by shift places; negative shifts decode |
-| [`rot13(s)`](#rot13) | Caesar by 13; applying it twice gives the original |
-| [`atbash(s)`](#atbash) | mirror the alphabet: a <-> z, b <-> y |
-| [`vigenere(s, key)`](#vigenere) | Caesar with a shift per letter from a key word |
-| [`unvigenere(s, key)`](#unvigenere) | undo vigenere |
-| [`morse(s)`](#morse) | text to Morse code, or Morse (dots, dashes, / between words) back to text |
-| [`braille(s)`](#braille) | text to Grade 1 Braille cells, or Braille back to text |
+| [`caesar(s: str, shift: int)`](#caesar) | shift each letter by shift places; negative shifts decode |
+| [`rot13(s: str)`](#rot13) | Caesar by 13; applying it twice gives the original |
+| [`atbash(s: str)`](#atbash) | mirror the alphabet: a <-> z, b <-> y |
+| [`vigenere(s: str, key: str)`](#vigenere) | Caesar with a shift per letter from a key word |
+| [`unvigenere(s: str, key: str)`](#unvigenere) | undo vigenere |
+| [`morse(s: str)`](#morse) | text to Morse code, or Morse (dots, dashes, / between words) back to text |
+| [`braille(s: str)`](#braille) | text to Grade 1 Braille cells, or Braille back to text |
 
 ### caesar
 
-`caesar(s, shift)`: shift each letter by shift places; negative shifts decode
+`caesar(s: str, shift: int)`: shift each letter by shift places; negative shifts decode
 
 ```zil
 "hello".caesar(3)
@@ -32,7 +32,7 @@ See also: [rot13](../text/ciphers.md#rot13), [vigenere](../text/ciphers.md#vigen
 
 ### rot13
 
-`rot13(s)`: Caesar by 13; applying it twice gives the original
+`rot13(s: str)`: Caesar by 13; applying it twice gives the original
 
 ```zil
 "hello".rot13
@@ -43,7 +43,7 @@ See also: [caesar](../text/ciphers.md#caesar)
 
 ### atbash
 
-`atbash(s)`: mirror the alphabet: a <-> z, b <-> y
+`atbash(s: str)`: mirror the alphabet: a <-> z, b <-> y
 
 ```zil
 "wizard".atbash
@@ -54,7 +54,7 @@ See also: [caesar](../text/ciphers.md#caesar)
 
 ### vigenere
 
-`vigenere(s, key)`: Caesar with a shift per letter from a key word
+`vigenere(s: str, key: str)`: Caesar with a shift per letter from a key word
 
 ```zil
 "attack at dawn".vigenere("lemon")
@@ -65,7 +65,7 @@ See also: [unvigenere](../text/ciphers.md#unvigenere), [caesar](../text/ciphers.
 
 ### unvigenere
 
-`unvigenere(s, key)`: undo vigenere
+`unvigenere(s: str, key: str)`: undo vigenere
 
 ```zil
 "lxfopv ef rnhr".unvigenere("lemon")
@@ -76,7 +76,7 @@ See also: [vigenere](../text/ciphers.md#vigenere)
 
 ### morse
 
-`morse(s)`: text to Morse code, or Morse (dots, dashes, / between words) back to text
+`morse(s: str)`: text to Morse code, or Morse (dots, dashes, / between words) back to text
 
 ```zil
 "sos".morse
@@ -89,7 +89,7 @@ See also: [braille](../text/ciphers.md#braille)
 
 ### braille
 
-`braille(s)`: text to Grade 1 Braille cells, or Braille back to text
+`braille(s: str)`: text to Grade 1 Braille cells, or Braille back to text
 
 ```zil
 "hello world".braille

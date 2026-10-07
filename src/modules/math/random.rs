@@ -21,9 +21,9 @@ const EXAMPLES: &[Section] = &[
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("rand", "rand() / rand(a, b)", "float in [0, 1), or a number from a to b inclusive", &["rand()", "rand(1, 6)"], &["choice", "shuffle"]),
-    doc("choice", "choice(list)", "random item", &[r#"["rock", "paper", "scissors"].choice"#], &["rand", "shuffle"]),
-    doc("shuffle", "shuffle(list)", "shuffled copy", &["(1..6).shuffle"], &["choice"]),
+    doc("rand", "rand() / rand(a: num, b: num)", "float in [0, 1), or a number from a to b inclusive", &["rand()", "rand(1, 6)"], &["choice", "shuffle"]),
+    doc("choice", "choice(xs: list)", "random item", &[r#"["rock", "paper", "scissors"].choice"#], &["rand", "shuffle"]),
+    doc("shuffle", "shuffle(xs: list)", "shuffled copy", &["(1..6).shuffle"], &["choice"]),
     doc("uuid", "uuid()", "random v4 UUID", &["uuid()"], &["rand"]),
 ];
 

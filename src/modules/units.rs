@@ -64,7 +64,7 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
     Some(Ok(match (op, a, b) {
         (BinOp::Add | BinOp::Sub, Qty(x, u), Qty(y, w)) => {
             if u.dim() != w.dim() {
-                return Some(Err(format!("cannot add {u} and {w}")));
+                return Some(Err(mismatch(op, a, b)));
             }
             let y = match convert_value(*y, w, u) {
                 Ok(y) => y,
@@ -78,7 +78,7 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
                 _ => Some((num(v)?, Unit::default())),
             };
             let (Some((x, u)), Some((y, w))) = (split(a), split(b)) else {
-                return Some(Err(mismatch(a, b)));
+                return Some(Err(mismatch(op, a, b)));
             };
             let u = u.mul(&w, if op == BinOp::Mul { 1 } else { -1 });
             // USD/EUR is a plain number, but only at today's rate.
@@ -120,15 +120,55 @@ fn convert(v: &Value, t: &Target) -> Claim {
     let r = match (v, t) {
         (Value::Qty(x, u), Target::Units(specs)) => {
             specs.iter().map(unit_of).collect::<Result<Vec<_>, _>>().and_then(|us| match us.iter().find(|t| t.dim() != u.dim()) {
-                Some(t) => Err(format!("cannot convert {u} to {t}")),
+                Some(t) => Err(format!("cannot convert {} to {}", describe(u, None), describe(t, None))),
                 None => Ok(Value::str(split(u.to_si(*x), &us))),
             })
         }
         (Value::Qty(x, u), Target::Unit(spec)) => unit_of(spec).and_then(|t| to_unit(*x, u, t)),
-        (v, Target::Unit(_) | Target::Units(_)) if num(v).is_some() => Err(format!("{v} has no unit; attach one like `{v} km`")),
+        (v, Target::Unit(_) | Target::Units(_)) if num(v).is_some() => {
+            if let Err(e) = match t {
+                Target::Unit(spec) => unit_of(spec).map(drop),
+                Target::Units(specs) => specs.iter().try_for_each(|s| unit_of(s).map(drop)),
+                _ => Ok(()),
+            } {
+                return Some(Err(e));
+            }
+            let to = match t {
+                Target::Unit(spec) => spec_name(spec),
+                Target::Units(specs) => specs.iter().map(spec_name).collect::<Vec<_>>().join(" "),
+                _ => unreachable!(),
+            };
+            Err(format!("cannot convert a plain number to `{to}`\nhelp: attach a unit first, like `{v} km to {to}`"))
+        }
         _ => return None,
     };
     Some(r)
+}
+
+/// `length (km)`, or just `` `km*kg` `` for a kind with no name.
+pub fn describe(u: &Unit, written: Option<&str>) -> String {
+    let name = written.map_or_else(|| u.to_string(), str::to_string);
+    match DIMS.iter().find(|d| d.1 == u.dim()) {
+        Some((kind, _)) => format!("{kind} ({name})"),
+        None => format!("`{name}`"),
+    }
+}
+
+/// A unit spec as written: `km/h`, `m^2`.
+pub fn spec_name(spec: &UnitSpec) -> String {
+    product(spec.iter().map(|(n, p)| (n.as_str(), *p)))
+}
+
+/// `a*b/c^2` from (name, power) terms.
+fn product<'a>(terms: impl Iterator<Item = (&'a str, i8)>) -> String {
+    let (num, den): (Vec<_>, Vec<_>) = terms.partition(|t| t.1 > 0);
+    let term = |(n, p): &(&str, i8)| if p.abs() == 1 { n.to_string() } else { format!("{n}^{}", p.abs()) };
+    let (num, den): (Vec<_>, Vec<_>) = (num.iter().map(term).collect(), den.iter().map(term).collect());
+    match (num.is_empty(), den.is_empty()) {
+        (_, true) => num.join("*"),
+        (true, false) => format!("1/{}", den.join("/")),
+        _ => format!("{}/{}", num.join("*"), den.join("/")),
+    }
 }
 
 pub fn unit_of(spec: &UnitSpec) -> Result<Unit, String> {
@@ -460,7 +500,7 @@ impl Unit {
 /// `x u` as a quantity in `t`, if the dimensions match.
 pub fn to_unit(x: f64, u: &Unit, t: Unit) -> Result<Value, String> {
     if u.dim() != t.dim() {
-        return Err(format!("cannot convert {u} to {t}"));
+        return Err(format!("cannot convert {} to {}", describe(u, None), describe(&t, None)));
     }
     Ok(Value::Qty(convert_value(x, u, &t)?, t))
 }
@@ -498,16 +538,7 @@ pub fn split(si: f64, units: &[Unit]) -> String {
 
 impl fmt::Display for Unit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let term = |u: &UnitDef, p: i8| {
-            if p == 1 { u.name.clone() } else { format!("{}^{p}", u.name) }
-        };
-        let num: Vec<_> = self.0.iter().filter(|(_, p)| *p > 0).map(|(u, p)| term(u, *p)).collect();
-        let den: Vec<_> = self.0.iter().filter(|(_, p)| *p < 0).map(|(u, p)| term(u, -p)).collect();
-        match (num.is_empty(), den.is_empty()) {
-            (_, true) => write!(f, "{}", num.join("*")),
-            (true, false) => write!(f, "1/{}", den.join("/")),
-            _ => write!(f, "{}/{}", num.join("*"), den.join("/")),
-        }
+        write!(f, "{}", product(self.0.iter().map(|(u, p)| (u.name.as_str(), *p))))
     }
 }
 
@@ -588,7 +619,9 @@ pub fn lookup(name: &str) -> Result<Rc<UnitDef>, String> {
         load_rates_once();
         return lookup(name);
     }
-    Err(format!("unknown unit `{name}`"))
+    let known: Vec<String> = REGISTRY.with(|r| r.borrow().keys().cloned().collect());
+    let targets = crate::modules::modules().flat_map(|m| m.targets.iter().map(|t| t.0));
+    Err(format!("unknown unit `{name}`{}", crate::error::did_you_mean(name, known.iter().map(String::as_str).chain(targets))))
 }
 
 /// Dimension of `spec` from already-loaded units only, so REPL completion never fetches rates.
