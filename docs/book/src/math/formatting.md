@@ -1,6 +1,6 @@
 # math.formatting
 
-format specs in strings, printf, and fixed/sci/percent/commas
+format specs in strings, printf, fixed/sci/percent/commas, and human_bytes
 
 > Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
@@ -36,6 +36,7 @@ format("%5.2f|%-4d|", pi, 7)
 | [`sci(x: num\|quantity, digits?: int)`](#sci) | string in scientific notation |
 | [`percent(x: num\|quantity, digits?: int)`](#percent) | string as a percentage |
 | [`commas(x: num\|quantity, digits?: int)`](#commas) | string with thousands separators |
+| [`human_bytes(n: num)`](#human_bytes) | a byte count in binary units (KiB = 1024 B), one decimal |
 
 ### fixed
 
@@ -85,6 +86,19 @@ See also: [fixed](../math/formatting.md#fixed)
 # → "1,234,567"
 1234.5.commas(2)
 # → "1,234.50"
+```
+
+See also: [fixed](../math/formatting.md#fixed)
+
+### human_bytes
+
+`human_bytes(n: num)`: a byte count in binary units (KiB = 1024 B), one decimal
+
+```zil
+123456789.human_bytes
+# → "117.7 MiB"
+1023.human_bytes
+# → "1023 B"
 ```
 
 See also: [fixed](../math/formatting.md#fixed)

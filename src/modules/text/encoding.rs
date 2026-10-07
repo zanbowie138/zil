@@ -92,8 +92,12 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
 }
 
 fn unknown_encoding(fmt: &str) -> String {
-    let hint = crate::error::did_you_mean(fmt, ["base64", "url", "hex"]);
-    if hint.is_empty() { format!("unknown encoding {fmt:?}\nnote: encodings are base64, url and hex") } else { format!("unknown encoding {fmt:?}{hint}") }
+    let hint = crate::error::did_you_mean(fmt, ["base64", "base32", "base58", "url", "hex"]);
+    if hint.is_empty() {
+        format!("unknown encoding {fmt:?}\nnote: encodings are base64, base32, base58, url and hex")
+    } else {
+        format!("unknown encoding {fmt:?}{hint}")
+    }
 }
 
 /// A string's UTF-8 bytes, or a list of ints 0-255.
@@ -167,7 +171,7 @@ fn unbase58(s: &str) -> Option<Vec<u8>> {
     Some([vec![0; zeros], rest].concat())
 }
 
-fn url_encode(s: &str) -> String {
+pub fn url_encode(s: &str) -> String {
     s.bytes()
         .map(|b| match b {
             b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => (b as char).to_string(),
@@ -176,7 +180,7 @@ fn url_encode(s: &str) -> String {
         .collect()
 }
 
-fn url_decode(s: &str) -> Option<Vec<u8>> {
+pub fn url_decode(s: &str) -> Option<Vec<u8>> {
     let b = s.as_bytes();
     let mut out = Vec::with_capacity(b.len());
     let mut i = 0;

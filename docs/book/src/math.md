@@ -34,7 +34,7 @@ rounding, roots, logs, constants; exact fractions and big ints
 | [numtheory](math/numtheory.md) | gcd, primes, factoring, factorials, modular powers; exact at any size |
 | [bits](math/bits.md) | count, test, set, rotate and swap bits |
 | [bases](math/bases.md) | hex, binary, octal and any base 2-36; digits of a number |
-| [formatting](math/formatting.md) | format specs in strings, printf, and fixed/sci/percent/commas |
+| [formatting](math/formatting.md) | format specs in strings, printf, fixed/sci/percent/commas, and human_bytes |
 | [random](math/random.md) | numbers, picks, shuffles, UUIDs |
 | [uncertainty](math/uncertainty.md) | measurements with an error, `5 ± 0.1 m`, propagated through arithmetic and math (first order, independent errors) |
 | [complex](math/complex.md) | complex numbers, `2 + 3i`; a number touching `i` is imaginary |

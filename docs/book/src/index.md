@@ -63,7 +63,7 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 | [math.numtheory](math/numtheory.md) | gcd, primes, factoring, factorials, modular powers; exact at any size |
 | [math.bits](math/bits.md) | count, test, set, rotate and swap bits |
 | [math.bases](math/bases.md) | hex, binary, octal and any base 2-36; digits of a number |
-| [math.formatting](math/formatting.md) | format specs in strings, printf, and fixed/sci/percent/commas |
+| [math.formatting](math/formatting.md) | format specs in strings, printf, fixed/sci/percent/commas, and human_bytes |
 | [math.random](math/random.md) | numbers, picks, shuffles, UUIDs |
 | [math.uncertainty](math/uncertainty.md) | measurements with an error, `5 ± 0.1 m`, propagated through arithmetic and math (first order, independent errors) |
 | [math.complex](math/complex.md) | complex numbers, `2 + 3i`; a number touching `i` is imaginary |
@@ -72,9 +72,9 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 | [units.money](units/money.md) | currencies shown as money, pay, interest, loans, splitting bills |
 | [units.goofy](units/goofy.md) | bananas for scale, smoots, fortnights; every item also works as item_for_scale |
 | [time](time.md) | dates: parsing, fields, date math, durations, relative text |
-| [time.calendar_math](time/calendar_math.md) | periods, weekdays, business days, week numbers, month grids; weeks start Monday |
+| [time.calendar_math](time/calendar_math.md) | periods, weekdays, business days, week numbers, month grids, cron schedules; weeks start Monday |
 | [time.zones](time/zones.md) | the same moment in UTC, local time, any IANA zone or a city; world clocks |
-| [dev](dev.md) | developer tools: JWTs, UUIDs, IP addresses and subnets, raw bytes, colors |
+| [dev](dev.md) | developer tools: JWTs, UUIDs, URLs, semver, file permissions, IP addresses and subnets, raw bytes, colors |
 | [dev.net](dev/net.md) | IP addresses, CIDR blocks, subnets |
 | [dev.binary](dev/binary.md) | hex dumps and entropy of strings and byte lists |
 | [dev.colors](dev/colors.md) | colors as "#rrggbb": RGB/HSL, mixing, lightening, WCAG contrast |

@@ -20,7 +20,7 @@ numbers, picks, shuffles, UUIDs
 
 ```zil
 rand()
-# → 0.141545
+# → 0.296748
 rand(1, 6)
 # → 2
 ```
@@ -33,7 +33,7 @@ See also: [choice](../math/random.md#choice), [shuffle](../math/random.md#shuffl
 
 ```zil
 ["rock", "paper", "scissors"].choice
-# → "paper"
+# → "rock"
 ```
 
 See also: [rand](../math/random.md#rand), [shuffle](../math/random.md#shuffle)
@@ -44,7 +44,7 @@ See also: [rand](../math/random.md#rand), [shuffle](../math/random.md#shuffle)
 
 ```zil
 (1..6).shuffle
-# → [5, 3, 4, 2, 1]
+# → [1, 3, 5, 2, 4]
 ```
 
 See also: [choice](../math/random.md#choice)
@@ -55,7 +55,7 @@ See also: [choice](../math/random.md#choice)
 
 ```zil
 uuid()
-# → "1e19adb6-7016-4d41-91d7-fb669c11c7ba"
+# → "312fb198-b897-4def-8ffe-1225b06c031c"
 ```
 
 See also: [rand](../math/random.md#rand)
@@ -67,20 +67,20 @@ See also: [rand](../math/random.md#rand)
 ```zil
 # roll a die
 rand(1, 6)
-# → 4
+# → 2
 # roll three
 (1..=3).map(|_| rand(1, 6))
-# → [4, 2, 1]
+# → [2, 1, 1]
 # float in a range
 rand(1.0, 2.0)
-# → 1.88735
+# → 1.40327
 # pick one
 ["rock", "paper", "scissors"].choice
-# → "paper"
+# → "rock"
 # shuffle
 (1..=5).shuffle
-# → [2, 5, 3, 1, 4]
+# → [1, 4, 5, 2, 3]
 # UUID
 uuid()
-# → "0a2b9c42-1d05-43ed-979f-390c4eef2299"
+# → "23dd2ab9-8524-4592-89f8-6e2192c8af0a"
 ```

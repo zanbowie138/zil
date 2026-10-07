@@ -291,6 +291,7 @@ pub const DISPATCH: &[&Module] = &[
     &time::zones::MODULE,
     &units::MODULE,
     &core::MODULE,
+    &dev::MODULE,
 ];
 
 /// Every module with its dotted path, each parent before its children, in tree order.

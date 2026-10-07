@@ -1,4 +1,4 @@
-//! Calendar math: periods, weekdays, business days, month grids. Weeks start Monday.
+//! Calendar math: periods, weekdays, business days, month grids, cron. Weeks start Monday.
 
 use super::{e, end_of, is_weekend, start_of, unknown_weekday, weekday};
 use crate::interp::Interp;
@@ -9,7 +9,7 @@ use jiff::{Span, Zoned};
 
 pub const MODULE: Module = Module {
     name: "calendar_math",
-    about: "periods, weekdays, business days, week numbers, month grids; weeks start Monday",
+    about: "periods, weekdays, business days, week numbers, month grids, cron schedules; weeks start Monday",
     #[rustfmt::skip]
     examples: &[
         ("calendar_math", &[
@@ -19,6 +19,8 @@ pub const MODULE: Module = Module {
             ("workdays in December", r#"workdays(date("2026-12-01"), date("2026-12-31"))"#),
             ("skipping US holidays", r#"date("2026-12-24").add_workdays(3, "US")"#),
             ("ISO week number", "today.iso_week"),
+            ("what does this cron line mean?", r#"cron("*/15 9-17 * * mon-fri")"#),
+            ("when does it run next?", r#""0 9 * * 1-5".next(3)"#),
         ]),
     ],
     fns: FNS,
@@ -27,6 +29,7 @@ pub const MODULE: Module = Module {
         ("fields", &["weekday_num", "day_of_year", "iso_week", "quarter"]),
         ("year", &["leap_year", "days_in_month", "days_in_year", "calendar"]),
         ("moving", &["start_of", "end_of", "next", "prev", "nth_weekday", "add_workdays", "workdays", "holidays"]),
+        ("cron", &["cron"]),
     ],
     call,
     ..Module::EMPTY
@@ -43,7 +46,8 @@ const FNS: &[Doc] = &[
     doc("days_in_year", "days_in_year(d: date)", "365 or 366", &["today.days_in_year"], &["leap_year"]),
     doc("start_of", "start_of(d: date, period: str)", "start of the second/minute/hour/day/week/month/quarter/year", &[r#"now.start_of("week")"#, r#"now.start_of("quarter")"#], &["end_of", "with"]),
     doc("end_of", "end_of(d: date, period: str)", "last moment of the period", &[r#"now.end_of("month")"#, r#"(today.end_of("year") - now).parts"#], &["start_of"]),
-    doc("next", "next(d: date, weekday: str)", "the next given weekday strictly after d", &[r#"today.next("friday")"#, r#"now.next("mon")"#], &["prev", "nth_weekday"]),
+    doc("next", "next(d: date, weekday: str) / next(cron: str, n?: int)", "the next given weekday strictly after d; or the next run of a cron expression, or a list of the next n",
+        &[r#"today.next("friday")"#, r#"now.next("mon")"#, r#""0 9 * * mon".next"#, r#""@monthly".next(2)"#], &["prev", "nth_weekday", "cron"]),
     doc("prev", "prev(d: date, weekday: str)", "the last given weekday strictly before d", &[r#"today.prev("sunday")"#], &["next"]),
     doc("nth_weekday", "nth_weekday(d: date, n: int, weekday: str)", "nth weekday of d's month; negative counts from the end", &[r#"date(2026, 11, 1).nth_weekday(4, "thu")"#, r#"date(2026, 5, 1).nth_weekday(-1, "mon")"#], &["next"]),
     doc("add_workdays", "add_workdays(d: date, n: int, holidays?: list|str)", "move n Monday-Friday days, skipping holidays (a list of dates, or \"US\"/\"UK\"); negative goes back",
@@ -52,6 +56,8 @@ const FNS: &[Doc] = &[
         &[r#"workdays(today, date("2026-12-25"))"#, r#"workdays(date("2026-12-01"), date("2027-01-01"), "UK")"#], &["add_workdays", "holidays"]),
     doc("holidays", "holidays(year: int, country: str)", "public holidays as observed (moved off weekends): \"US\" federal or \"UK\" England bank holidays",
         &[r#"holidays(2026, "US")"#, r#"holidays(2026, "UK").len"#], &["add_workdays", "workdays"]),
+    doc("cron", "cron(expr: str)", "a cron expression (minute hour day month weekday, or @daily etc.) in plain English",
+        &[r#"cron("0 9 * * 1-5")"#, r#"cron("30 4 1,15 * fri")"#, r#"cron("@hourly")"#], &["next"]),
     doc("calendar", "calendar(d: date) / calendar(year: int, month: int)", "month grid, weeks starting Monday", &["calendar(2026, 12)"], &["date"]),
 ];
 
@@ -73,6 +79,26 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &crate::lexer::Sp
             let nth = if name == "next" { 1 } else { -1 };
             Value::date(z.nth_weekday(nth, wd).map_err(|e| e.to_string())?)
         }
+        ("next", [Str(c), rest @ ..]) if rest.len() <= 1 => {
+            let n = match rest {
+                [] => 1,
+                [Int(n, _)] if (1..=1000).contains(n) => *n as usize,
+                [Int(n, _)] => {
+                    return Err(Fail::Arg(
+                        1,
+                        format!(
+                            "{n} is out of range
+note: ask for 1 to 1000 runs"
+                        ),
+                    ));
+                }
+                _ => return Err(Fail::BadArgs),
+            };
+            let runs = Cron::parse(c).map_err(|m| Fail::Arg(0, m))?.next(&Zoned::now(), n)?;
+            let mut runs = runs.into_iter().map(Value::date);
+            if rest.is_empty() { runs.next().expect("asked for one") } else { Value::list(runs.collect()) }
+        }
+        ("cron", [Str(c)]) => Value::str(Cron::parse(c).map_err(|m| Fail::Arg(0, m))?.explain()),
         ("nth_weekday", [Date(z), Int(n, _), Str(wd)]) => {
             let wd = weekday(wd).ok_or_else(|| Fail::Arg(2, unknown_weekday(wd)))?;
             let n = i8::try_from(*n)
@@ -90,6 +116,179 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &crate::lexer::Sp
         ("calendar", [Int(y, _), Int(m, _)]) => Value::str(calendar(*y, *m)?),
         _ => return Err(Fail::BadArgs),
     })
+}
+
+const MONTHS: [&str; 12] = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const DAYS: [&str; 8] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+/// A five-field cron expression: minute hour day-of-month month day-of-week.
+struct Cron {
+    /// Each field's text, after expanding `@daily` and friends.
+    text: [String; 5],
+    /// Bit i set when value i matches; weekday 7 folds into 0 (Sunday).
+    bits: [u64; 5],
+}
+
+/// (field, low, high, names); names start at `low`, matched by their first three letters.
+type Field = (&'static str, u32, u32, &'static [&'static str]);
+const FIELDS: [Field; 5] = [("minute", 0, 59, &[]), ("hour", 0, 23, &[]), ("day", 1, 31, &[]), ("month", 1, 12, &MONTHS), ("weekday", 0, 7, &DAYS)];
+
+impl Cron {
+    fn parse(expr: &str) -> Result<Cron, String> {
+        let expr = match expr.trim() {
+            "@yearly" | "@annually" => "0 0 1 1 *",
+            "@monthly" => "0 0 1 * *",
+            "@weekly" => "0 0 * * 0",
+            "@daily" | "@midnight" => "0 0 * * *",
+            "@hourly" => "0 * * * *",
+            e => e,
+        };
+        let text: [String; 5] = expr
+            .split_whitespace()
+            .map(String::from)
+            .collect::<Vec<_>>()
+            .try_into()
+            .map_err(|v: Vec<_>| format!("expected 5 fields (minute hour day month weekday), got {}\nnote: like \"*/15 9-17 * * mon-fri\"", v.len()))?;
+        let mut bits = [0; 5];
+        for (i, (t, f)) in text.iter().zip(&FIELDS).enumerate() {
+            bits[i] = field(t, f)?;
+        }
+        bits[4] |= bits[4] >> 7 & 1;
+        Ok(Cron { text, bits })
+    }
+
+    fn day_matches(&self, d: Date) -> bool {
+        let dom = self.bits[2] >> d.day() & 1 == 1;
+        let dow = self.bits[4] >> d.weekday().to_sunday_zero_offset() & 1 == 1;
+        // Classic cron: when both day fields are restricted, either one matching is enough.
+        if self.text[2] != "*" && self.text[4] != "*" { dom || dow } else { dom && dow }
+    }
+
+    /// The next `n` times strictly after `from`, giving up after 10 years without one (Feb 29 can take 8).
+    fn next(&self, from: &Zoned, n: usize) -> Result<Vec<Zoned>, String> {
+        let hit = |i: usize, v: i8| self.bits[i] >> v & 1 == 1;
+        let mut t = from.datetime().with().second(0).subsec_nanosecond(0).build().map_err(|e| e.to_string())? + Span::new().minutes(1);
+        let mut limit = t.year() + 10;
+        let mut out = vec![];
+        while out.len() < n {
+            if t.year() > limit {
+                return Err(format!("`{}` never runs", self.text.join(" ")));
+            }
+            t = if !hit(3, t.month()) {
+                t.first_of_month().start_of_day() + Span::new().months(1)
+            } else if !self.day_matches(t.date()) {
+                t.start_of_day() + Span::new().days(1)
+            } else if !hit(1, t.hour()) {
+                t.with().minute(0).build().map_err(|e| e.to_string())? + Span::new().hours(1)
+            } else if !hit(0, t.minute()) {
+                t + Span::new().minutes(1)
+            } else {
+                out.push(t.to_zoned(from.time_zone().clone()).map_err(|e| e.to_string())?);
+                limit = t.year() + 10;
+                t + Span::new().minutes(1)
+            };
+        }
+        Ok(out)
+    }
+
+    fn explain(&self) -> String {
+        let [min, hour, dom, month, dow] = &self.text;
+        let single = |t: &str| t.parse::<u32>().ok();
+        let hours: Option<Vec<u32>> = hour.split(',').map(single).collect();
+        let mut parts = vec![];
+        match (single(min), hours) {
+            (Some(m), Some(hs)) => parts.push(format!("at {}", list(&hs.iter().map(|h| format!("{h:02}:{m:02}")).collect::<Vec<_>>()))),
+            _ => {
+                let m = if min == "*" { "every minute".into() } else { phrase(min, "minute", &[], "at ") };
+                parts.push(match hour.as_str() {
+                    "*" if !m.starts_with("every") => format!("{m} of every hour"),
+                    "*" => m,
+                    _ => format!("{m}, {}", phrase(hour, "hour", &[], "during ")),
+                });
+            }
+        }
+        let days = match (dom != "*", dow != "*") {
+            (true, true) => Some(format!("{} of the month, or {}", phrase(dom, "day", &[], "on "), phrase(dow, "day", &DAYS, "on "))),
+            (true, false) => Some(format!("{} of the month", phrase(dom, "day", &[], "on "))),
+            (false, true) => Some(phrase(dow, "day", &DAYS, "on ")),
+            _ => None,
+        };
+        parts.extend(days);
+        if month != "*" {
+            parts.push(phrase(month, "month", &MONTHS, "in "));
+        }
+        parts.join(", ")
+    }
+}
+
+fn field(t: &str, &(fname, lo, hi, names): &Field) -> Result<u64, String> {
+    let val = |s: &str| -> Result<u32, String> {
+        let v = s.parse().ok().or_else(|| names.iter().position(|n| s.len() >= 3 && n.to_lowercase().starts_with(&s.to_lowercase())).map(|i| i as u32 + lo));
+        v.filter(|v| (lo..=hi).contains(v)).ok_or_else(|| format!("`{s}` is not a valid {fname}\nnote: the {fname} field takes {lo}-{hi}"))
+    };
+    let mut bits = 0;
+    for part in t.split(',') {
+        let (range, step) = match part.split_once('/') {
+            Some((r, s)) => {
+                (r, s.parse::<u32>().ok().filter(|&s| s > 0).ok_or_else(|| format!("`{s}` is not a step\nnote: a step is a positive number, like `*/15`"))?)
+            }
+            None => (part, 1),
+        };
+        let (a, b) = match range.split_once('-') {
+            _ if range == "*" => (lo, hi),
+            Some((a, b)) => (val(a)?, val(b)?),
+            None if step > 1 => (val(range)?, hi),
+            None => (val(range)?, val(range)?),
+        };
+        bits |= (a..=b).step_by(step as usize).fold(0, |m, v| m | 1u64 << v);
+    }
+    Ok(bits)
+}
+
+/// One field in words: `*/15` → "every 15 minutes", `1-5` → "on Monday through Friday".
+fn phrase(t: &str, unit: &str, names: &[&str], prefix: &str) -> String {
+    let lo = if names.len() == 12 { 1 } else { 0 };
+    let name = |v: &str| match v.parse::<usize>() {
+        Ok(n) if !names.is_empty() => names.get(n - lo).map_or(v.to_string(), |s| s.to_string()),
+        _ if !names.is_empty() => names.iter().find(|n| n.to_lowercase().starts_with(&v.to_lowercase())).map_or(v.to_string(), |s| s.to_string()),
+        _ => v.to_string(),
+    };
+    let unit = |plural: bool| match (names.is_empty(), plural) {
+        (false, _) => String::new(),
+        (true, false) => format!("{unit} "),
+        (true, true) => format!("{unit}s "),
+    };
+    let parts: Vec<String> = t
+        .split(',')
+        .map(|p| match p.split_once('/') {
+            Some((r, s)) => {
+                let from = match r.split_once('-') {
+                    _ if r == "*" => String::new(),
+                    Some((a, b)) => format!(" from {} through {}", name(a), name(b)),
+                    None => format!(" from {}", name(r)),
+                };
+                format!("every {s} {}{from}", unit(true).trim_end())
+            }
+            None => match p.split_once('-') {
+                Some((a, b)) => format!("{prefix}{}{} through {}", unit(true), name(a), name(b)),
+                None => format!("{prefix}{}{}", unit(false), name(p)),
+            },
+        })
+        .collect();
+    // `0,30` reads "at minutes 0 and 30", not "at minute 0 and at minute 30".
+    if t.split(',').count() > 1 && !t.contains(['-', '/']) {
+        return format!("{prefix}{}{}", unit(true), list(&t.split(',').map(name).collect::<Vec<_>>()));
+    }
+    list(&parts)
+}
+
+/// "a", "a and b", "a, b and c".
+fn list(xs: &[String]) -> String {
+    match xs {
+        [] => String::new(),
+        [x] => x.clone(),
+        [init @ .., last] => format!("{} and {last}", init.join(", ")),
+    }
 }
 
 /// Days off besides weekends: given dates, or a country's public holidays.
@@ -220,4 +419,33 @@ pub fn calendar(year: i64, month: i64) -> Result<String, String> {
     let rows: Vec<String> = cells.chunks(7).map(|c| c.join(" ")).collect();
     let title = first.strftime("%B %Y").to_string();
     Ok(format!("{title:^20}\nMo Tu We Th Fr Sa Su\n{}", rows.join("\n")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Cron;
+    use crate::interp::tests::{show, try_eval};
+
+    #[test]
+    fn cron() {
+        for (expr, text) in [
+            ("0 9 * * 1-5", "at 09:00, on Monday through Friday"),
+            ("*/15 9-17 * * mon-fri", "every 15 minutes, during hours 9 through 17, on Monday through Friday"),
+            ("30 4 1,15 * fri", "at 04:30, on days 1 and 15 of the month, or on Friday"),
+            ("0,30 * * * *", "at minutes 0 and 30 of every hour"),
+            ("0 0 1 jan *", "at 00:00, on day 1 of the month, in January"),
+            ("@hourly", "at minute 0 of every hour"),
+        ] {
+            assert_eq!(show(&format!("cron({expr:?})")), text);
+        }
+        let from: jiff::Zoned = "2026-10-07T10:31:20[UTC]".parse().unwrap();
+        let at = |expr: &str, n| Cron::parse(expr).unwrap().next(&from, n).unwrap().iter().map(|z| z.strftime("%F %R %a").to_string()).collect::<Vec<_>>();
+        assert_eq!(at("*/15 * * * *", 2), ["2026-10-07 10:45 Wed", "2026-10-07 11:00 Wed"]);
+        assert_eq!(at("0 9 * * 1-5", 3), ["2026-10-08 09:00 Thu", "2026-10-09 09:00 Fri", "2026-10-12 09:00 Mon"]);
+        assert_eq!(at("0 0 13 * 5", 2), ["2026-10-09 00:00 Fri", "2026-10-13 00:00 Tue"]);
+        assert_eq!(at("0 0 29 2 *", 2), ["2028-02-29 00:00 Tue", "2032-02-29 00:00 Sun"]);
+        assert!(Cron::parse("0 0 30 2 *").unwrap().next(&from, 1).is_err());
+        assert!(try_eval(r#"cron("61 * * * *")"#).is_err());
+        assert!(try_eval(r#""* *".next"#).is_err());
+    }
 }

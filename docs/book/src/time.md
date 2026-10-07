@@ -57,7 +57,7 @@ date("2026-12-25") to unix
 
 | module | about |
 |---|---|
-| [calendar_math](time/calendar_math.md) | periods, weekdays, business days, week numbers, month grids; weeks start Monday |
+| [calendar_math](time/calendar_math.md) | periods, weekdays, business days, week numbers, month grids, cron schedules; weeks start Monday |
 | [zones](time/zones.md) | the same moment in UTC, local time, any IANA zone or a city; world clocks |
 
 ## Functions
@@ -99,7 +99,7 @@ date("2026-12-25")
 date("next friday at 5pm")
 # → 2026-10-09 17:00:00 -05:00
 date("3 days ago")
-# → 2026-10-04 10:35:48 -05:00
+# → 2026-10-04 10:44:47 -05:00
 date("25.12.2026", "%d.%m.%Y")
 # → 2026-12-25
 date(2026, 12, 25, 18, 30)
@@ -160,7 +160,7 @@ See also: [minute](time.md#minute), [second](time.md#second)
 
 ```zil
 now.minute
-# → 35
+# → 44
 ```
 
 See also: [hour](time.md#hour), [second](time.md#second)
@@ -171,7 +171,7 @@ See also: [hour](time.md#hour), [second](time.md#second)
 
 ```zil
 now.second
-# → 48
+# → 47
 ```
 
 See also: [hour](time.md#hour), [minute](time.md#minute)
@@ -195,7 +195,7 @@ See also: [day](time.md#day), [format](time.md#format)
 now.format("%B %d, %Y")
 # → "October 07, 2026"
 now.format("%H:%M")
-# → "10:35"
+# → "10:44"
 format("%5.2f%%", 12.345)
 # → "12.35%"
 ```
@@ -210,7 +210,7 @@ See also: [date](time.md#date), [fixed](math/formatting.md#fixed)
 today.with({day: 1})
 # → 2026-10-01
 now.with({hour: 9, minute: 0})
-# → 2026-10-07 09:00:48 -05:00
+# → 2026-10-07 09:00:47 -05:00
 ```
 
 See also: [start_of](time/calendar_math.md#start_of), [date](time.md#date)
@@ -393,7 +393,7 @@ date("next friday")
 # → 2026-10-09
 # countdown
 (date("2027-01-01") - now).parts
-# → "85 d 14 h 24 min"
+# → "85 d 14 h 15 min"
 # relative time
 (now - 3 h).relative
 # → "3 hours ago"

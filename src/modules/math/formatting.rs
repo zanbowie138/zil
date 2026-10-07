@@ -1,4 +1,4 @@
-//! Number formatting: format specs, printf, fixed/sci/percent/commas.
+//! Number formatting: format specs, printf, fixed/sci/percent/commas, human_bytes.
 
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -8,7 +8,7 @@ use num_traits::Signed;
 
 pub const MODULE: Module = Module {
     name: "formatting",
-    about: "format specs in strings, printf, and fixed/sci/percent/commas",
+    about: "format specs in strings, printf, fixed/sci/percent/commas, and human_bytes",
     #[rustfmt::skip]
     examples: &[
         ("formatting", &[
@@ -39,6 +39,7 @@ const FNS: &[Doc] = &[
     doc("sci", "sci(x: num|quantity, digits?: int)", "string in scientific notation", &["123456.sci", "123456.sci(2)"], &["fixed"]),
     doc("percent", "percent(x: num|quantity, digits?: int)", "string as a percentage", &["0.256.percent", "(1/3).percent(1)"], &["fixed"]),
     doc("commas", "commas(x: num|quantity, digits?: int)", "string with thousands separators", &["1234567.commas", "1234.5.commas(2)"], &["fixed"]),
+    doc("human_bytes", "human_bytes(n: num)", "a byte count in binary units (KiB = 1024 B), one decimal", &["123456789.human_bytes", "1023.human_bytes"], &["fixed"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -57,8 +58,19 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             };
             Value::str(render(v, &Spec { kind, prec: digits, commas: name == "commas", ..Spec::PLAIN })?)
         }
+        ("human_bytes", [v]) if num(v).is_some() => Value::str(human_bytes(num(v).unwrap())),
         _ => return Err(Fail::BadArgs),
     })
+}
+
+fn human_bytes(mut n: f64) -> String {
+    const UNITS: [&str; 7] = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"];
+    let mut i = 0;
+    while n.abs() >= 1024.0 && i < UNITS.len() - 1 {
+        n /= 1024.0;
+        i += 1;
+    }
+    if i == 0 { format!("{n} B") } else { format!("{n:.1} {}", UNITS[i]) }
 }
 
 /// A format spec, as in Python: `[[fill]align][+][0][width][,][.precision][type]`, type one of
@@ -253,6 +265,12 @@ pub fn printf(f: &str, args: &[Value]) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use crate::interp::tests::{show, try_eval};
+
+    #[test]
+    fn human_bytes() {
+        assert_eq!(show("123456789.human_bytes"), "117.7 MiB");
+        assert_eq!(show("[0, 1023, 1024].map(human_bytes)"), r#"["0 B", "1023 B", "1.0 KiB"]"#);
+    }
 
     #[test]
     fn formatting() {
