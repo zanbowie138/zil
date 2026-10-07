@@ -29,8 +29,8 @@ r"\d+"
 
 | module | about |
 |---|---|
-| [encoding](text/encoding.md) | base64, URL and hex encodings, code points, UTF-8 bytes |
-| [hash](text/hash.md) | SHA-256, MD5 and CRC-32 of strings |
+| [encoding](text/encoding.md) | base64, base32, base58, URL and hex encodings, code points, UTF-8 bytes |
+| [hash](text/hash.md) | SHA-1/256/512, MD5, HMAC and CRC-32 of strings |
 | [ciphers](text/ciphers.md) | Caesar, ROT13, Atbash, Vigenère, Morse, Braille (for fun, not secrecy) |
 
 ## Functions

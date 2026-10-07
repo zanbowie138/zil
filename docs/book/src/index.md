@@ -50,8 +50,8 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 |---|---|
 | [core](core.md) | values, printing, type conversions, parsing, files, help |
 | [text](text.md) | case, splitting, search and regex; encodings, hashes and ciphers below |
-| [text.encoding](text/encoding.md) | base64, URL and hex encodings, code points, UTF-8 bytes |
-| [text.hash](text/hash.md) | SHA-256, MD5 and CRC-32 of strings |
+| [text.encoding](text/encoding.md) | base64, base32, base58, URL and hex encodings, code points, UTF-8 bytes |
+| [text.hash](text/hash.md) | SHA-1/256/512, MD5, HMAC and CRC-32 of strings |
 | [text.ciphers](text/ciphers.md) | Caesar, ROT13, Atbash, Vigenère, Morse, Braille (for fun, not secrecy) |
 | [data](data.md) | length, search, sorting and picking across strings, lists, maps and sets; lists, maps and sets below |
 | [data.lists](data/lists.md) | ranges, map/filter/reduce, building lists |
@@ -74,7 +74,7 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 | [time](time.md) | dates: parsing, fields, date math, durations, relative text |
 | [time.calendar_math](time/calendar_math.md) | periods, weekdays, business days, week numbers, month grids; weeks start Monday |
 | [time.zones](time/zones.md) | the same moment in UTC, local time, any IANA zone or a city; world clocks |
-| [dev](dev.md) | developer tools: IP addresses and subnets, raw bytes, colors |
+| [dev](dev.md) | developer tools: JWTs, UUIDs, IP addresses and subnets, raw bytes, colors |
 | [dev.net](dev/net.md) | IP addresses, CIDR blocks, subnets |
 | [dev.binary](dev/binary.md) | hex dumps and entropy of strings and byte lists |
 | [dev.colors](dev/colors.md) | colors as "#rrggbb": RGB/HSL, mixing, lightening, WCAG contrast |

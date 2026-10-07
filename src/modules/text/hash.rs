@@ -9,12 +9,13 @@ use sha2::Digest;
 
 pub const MODULE: Module = Module {
     name: "hash",
-    about: "SHA-256, MD5 and CRC-32 of strings",
+    about: "SHA-1/256/512, MD5, HMAC and CRC-32 of strings",
     #[rustfmt::skip]
     examples: &[
         ("hash", &[
             ("hashes", r#""hello".md5"#),
             ("checksum", r#""hello".crc32 to hex"#),
+            ("sign a message", r#"hmac("msg", "secret")"#),
         ]),
     ],
     fns: FNS,
@@ -24,18 +25,47 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("sha256", "sha256(s: str)", "hex SHA-256 hash", &[r#""hello".sha256[..16]"#], &["md5"]),
+    doc("sha1", "sha1(s: str)", "hex SHA-1 hash", &[r#""hello".sha1"#], &["sha256"]),
+    doc("sha256", "sha256(s: str)", "hex SHA-256 hash", &[r#""hello".sha256[..16]"#], &["md5", "hmac"]),
+    doc("sha512", "sha512(s: str)", "hex SHA-512 hash", &[r#""hello".sha512[..16]"#], &["sha256"]),
     doc("md5", "md5(s: str)", "hex MD5 hash", &[r#""hello".md5"#], &["sha256"]),
+    doc("hmac", "hmac(s: str, key: str, alg?: str)", "hex HMAC of s; alg is \"sha256\" (default), \"sha1\", \"sha512\" or \"md5\"", &[r#"hmac("msg", "secret")"#, r#"hmac("msg", "secret", "sha1")"#], &["sha256"]),
     doc("crc32", "crc32(v: str|list)", "CRC-32 checksum (the zip/PNG one)", &[r#""hello".crc32"#, r#""hello".crc32 to hex"#], &["sha256", "md5"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     Ok(match (name, args) {
-        ("sha256", [Value::Str(s)]) => Value::str(hex(&sha2::Sha256::digest(s.as_bytes()))),
-        ("md5", [Value::Str(s)]) => Value::str(hex(&md5::Md5::digest(s.as_bytes()))),
+        ("sha1" | "sha256" | "sha512" | "md5", [Value::Str(s)]) => Value::str(hex(&digest(name, s.as_bytes()).unwrap())),
+        ("hmac", [Value::Str(s), Value::Str(key)]) => Value::str(hex(&hmac("sha256", key.as_bytes(), s.as_bytes()).unwrap())),
+        ("hmac", [Value::Str(s), Value::Str(key), Value::Str(alg)]) => {
+            let mac = hmac(alg, key.as_bytes(), s.as_bytes());
+            Value::str(hex(&mac.ok_or_else(|| Fail::Arg(2, format!("unknown hash {alg:?}{}", crate::error::did_you_mean(alg, ALGS))))?))
+        }
         ("crc32", [v]) => Value::int(crc32(&bytes(v).ok_or(Fail::BadArgs)?) as i64),
         _ => return Err(Fail::BadArgs),
     })
+}
+
+const ALGS: [&str; 4] = ["sha256", "sha1", "sha512", "md5"];
+
+fn digest(alg: &str, b: &[u8]) -> Option<Vec<u8>> {
+    Some(match alg {
+        "sha1" => sha1::Sha1::digest(b).to_vec(),
+        "sha256" => sha2::Sha256::digest(b).to_vec(),
+        "sha512" => sha2::Sha512::digest(b).to_vec(),
+        "md5" => md5::Md5::digest(b).to_vec(),
+        _ => return None,
+    })
+}
+
+/// RFC 2104: H((K ^ opad) || H((K ^ ipad) || msg)), with K padded to the hash's block size.
+fn hmac(alg: &str, key: &[u8], msg: &[u8]) -> Option<Vec<u8>> {
+    let block = if alg == "sha512" { 128 } else { 64 };
+    let mut k = if key.len() > block { digest(alg, key)? } else { key.to_vec() };
+    k.resize(block, 0);
+    let pad = |x: u8| k.iter().map(|b| b ^ x).collect::<Vec<u8>>();
+    let inner = digest(alg, &[pad(0x36), msg.to_vec()].concat())?;
+    digest(alg, &[pad(0x5c), inner].concat())
 }
 
 fn crc32(b: &[u8]) -> u32 {
@@ -59,5 +89,12 @@ mod tests {
         assert_eq!(show(r#""abc".md5"#), "900150983cd24fb0d6963f7d28e17f72");
         assert_eq!(show(r#""123456789".crc32 to hex"#), "0xcbf43926");
         assert!(try_eval("[256].crc32").is_err());
+        assert_eq!(show(r#""abc".sha1"#), "a9993e364706816aba3e25717850c26c9cd0d89d");
+        assert_eq!(show(r#""abc".sha512[..16]"#), "ddaf35a193617aba");
+        // RFC 4231 test case 2
+        assert_eq!(show(r#"hmac("what do ya want for nothing?", "Jefe")"#), "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843");
+        assert_eq!(show(r#"hmac("what do ya want for nothing?", "Jefe", "md5")"#), "750c783e6ab0b503eaa86e310a5db738");
+        assert_eq!(show(r#"hmac("what do ya want for nothing?", "Jefe", "sha512")[..16]"#), "164b7a7bfcf819e2");
+        assert!(try_eval(r#"hmac("a", "b", "sha3")"#).is_err());
     }
 }

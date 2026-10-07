@@ -1,6 +1,6 @@
 # text.encoding
 
-base64, URL and hex encodings, code points, UTF-8 bytes
+base64, base32, base58, URL and hex encodings, code points, UTF-8 bytes
 
 > Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
@@ -18,8 +18,8 @@ base64, URL and hex encodings, code points, UTF-8 bytes
 | function | description |
 |---|---|
 | [`base64(s: str)`](#base64) | base64-encode a string; same as `s to base64` |
-| [`encode(s: str, fmt: str)`](#encode) | encode as "base64", "url" or "hex" |
-| [`decode(s: str, fmt: str)`](#decode) | decode "base64", "url" or "hex" |
+| [`encode(s: str, fmt: str)`](#encode) | encode as "base64", "base32", "base58", "url" or "hex" |
+| [`decode(s: str, fmt: str)`](#decode) | decode "base64", "base32", "base58", "url" or "hex"; bytes that aren't UTF-8 come back as a list |
 | [`ord(c: str)`](#ord) | Unicode code point of a single character |
 | [`chr(n: int)`](#chr) | character for a Unicode code point |
 | [`bytes(s: str)`](#bytes) | list of the string's UTF-8 bytes |
@@ -41,26 +41,30 @@ See also: [encode](../text/encoding.md#encode), [decode](../text/encoding.md#dec
 
 ### encode
 
-`encode(s: str, fmt: str)`: encode as "base64", "url" or "hex"
+`encode(s: str, fmt: str)`: encode as "base64", "base32", "base58", "url" or "hex"
 
 ```zil
 "hi there".encode("base64")
 # → "aGkgdGhlcmU="
 "a b&c".encode("url")
 # → "a%20b%26c"
+"hi".encode("base32")
+# → "NBUQ===="
 ```
 
 See also: [decode](../text/encoding.md#decode)
 
 ### decode
 
-`decode(s: str, fmt: str)`: decode "base64", "url" or "hex"
+`decode(s: str, fmt: str)`: decode "base64", "base32", "base58", "url" or "hex"; bytes that aren't UTF-8 come back as a list
 
 ```zil
 "aGk=".decode("base64")
 # → "hi"
 "6869".decode("hex")
 # → "hi"
+"Cn8eVZg".decode("base58")
+# → "hello"
 ```
 
 See also: [encode](../text/encoding.md#encode)
@@ -135,6 +139,9 @@ See also: [len](../data.md#len), [bytes](../text/encoding.md#bytes)
 # URL encoding
 "a b&c".encode("url")
 # → "a%20b%26c"
+# base58, as in Bitcoin
+"hello".encode("base58")
+# → "Cn8eVZg"
 # UTF-8 bytes
 "héllo".bytes
 # → [104, 195, 169, 108, 108, 111]

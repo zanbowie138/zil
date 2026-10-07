@@ -1,4 +1,4 @@
-//! Encodings: base64, URL and hex, code points, UTF-8 bytes.
+//! Encodings: base64/32/58, URL and hex, code points, UTF-8 bytes.
 
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -8,12 +8,13 @@ use base64::Engine;
 
 pub const MODULE: Module = Module {
     name: "encoding",
-    about: "base64, URL and hex encodings, code points, UTF-8 bytes",
+    about: "base64, base32, base58, URL and hex encodings, code points, UTF-8 bytes",
     #[rustfmt::skip]
     examples: &[
         ("encoding", &[
             ("base64", r#""hi" to base64"#),
             ("URL encoding", r#""a b&c".encode("url")"#),
+            ("base58, as in Bitcoin", r#""hello".encode("base58")"#),
             ("UTF-8 bytes", r#""héllo".bytes"#),
             ("code point to char", "chr(9731)"),
             ("bytes vs characters", r#"["😀".byte_len, "😀".len]"#),
@@ -29,8 +30,8 @@ pub const MODULE: Module = Module {
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
     doc("base64", "base64(s: str)", "base64-encode a string; same as `s to base64`", &[r#"base64("hi there")"#, r#""hi" to base64"#], &["encode", "decode"]),
-    doc("encode", "encode(s: str, fmt: str)", "encode as \"base64\", \"url\" or \"hex\"", &[r#""hi there".encode("base64")"#, r#""a b&c".encode("url")"#], &["decode"]),
-    doc("decode", "decode(s: str, fmt: str)", "decode \"base64\", \"url\" or \"hex\"", &[r#""aGk=".decode("base64")"#, r#""6869".decode("hex")"#], &["encode"]),
+    doc("encode", "encode(s: str, fmt: str)", "encode as \"base64\", \"base32\", \"base58\", \"url\" or \"hex\"", &[r#""hi there".encode("base64")"#, r#""a b&c".encode("url")"#, r#""hi".encode("base32")"#], &["decode"]),
+    doc("decode", "decode(s: str, fmt: str)", "decode \"base64\", \"base32\", \"base58\", \"url\" or \"hex\"; bytes that aren't UTF-8 come back as a list", &[r#""aGk=".decode("base64")"#, r#""6869".decode("hex")"#, r#""Cn8eVZg".decode("base58")"#], &["encode"]),
     doc("ord", "ord(c: str)", "Unicode code point of a single character", &[r#""A".ord"#, r#""A".ord to hex"#], &["chr", "bytes"]),
     doc("chr", "chr(n: int)", "character for a Unicode code point", &["97.chr", "(65..70).map(chr).join"], &["ord"]),
     doc("bytes", "bytes(s: str)", "list of the string's UTF-8 bytes", &[r#""hé".bytes"#], &["from_bytes", "ord"]),
@@ -44,6 +45,8 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("base64", [Str(s)]) => Value::str(base64::engine::general_purpose::STANDARD.encode(s.as_bytes())),
         ("encode", [Str(s), Str(fmt)]) => Value::str(match &**fmt {
             "base64" => base64::engine::general_purpose::STANDARD.encode(s.as_bytes()),
+            "base32" => base32(s.as_bytes()),
+            "base58" => base58(s.as_bytes()),
             "url" => url_encode(s),
             "hex" => hex(s.as_bytes()),
             _ => return Err(Fail::Arg(1, unknown_encoding(fmt))),
@@ -51,11 +54,16 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("decode", [Str(s), Str(fmt)]) => {
             let bytes = match &**fmt {
                 "base64" => base64::engine::general_purpose::STANDARD.decode(s.trim()).map_err(|e| e.to_string())?,
+                "base32" => unbase32(s.trim()).ok_or("invalid base32")?,
+                "base58" => unbase58(s.trim()).ok_or("invalid base58")?,
                 "url" => url_decode(s).ok_or("invalid percent-encoding")?,
                 "hex" => unhex(s.trim()).ok_or("invalid hex")?,
                 _ => return Err(Fail::Arg(1, unknown_encoding(fmt))),
             };
-            Value::str(String::from_utf8(bytes).map_err(|_| "decoded bytes are not UTF-8")?)
+            match String::from_utf8(bytes) {
+                Ok(s) => Value::str(s),
+                Err(e) => Value::list(e.into_bytes().into_iter().map(|b| Value::int(b as i64)).collect()),
+            }
         }
         ("ord", [Str(s)]) => match s.chars().collect::<Vec<_>>()[..] {
             [c] => Value::int(c as i64),
@@ -108,6 +116,57 @@ fn unhex(s: &str) -> Option<Vec<u8>> {
     (0..s.len()).step_by(2).map(|i| u8::from_str_radix(s.get(i..i + 2)?, 16).ok()).collect()
 }
 
+const B32: &[u8; 32] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+const B58: &[u8; 58] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+/// RFC 4648 base32, padded with `=` to a multiple of 8.
+fn base32(b: &[u8]) -> String {
+    let (mut out, mut acc, mut bits) = (String::new(), 0u32, 0);
+    for &x in b {
+        (acc, bits) = ((acc << 8 | x as u32) & 0xfff, bits + 8);
+        while bits >= 5 {
+            bits -= 5;
+            out.push(B32[(acc >> bits & 31) as usize] as char);
+        }
+    }
+    if bits > 0 {
+        out.push(B32[(acc << (5 - bits) & 31) as usize] as char);
+    }
+    while !out.len().is_multiple_of(8) {
+        out.push('=');
+    }
+    out
+}
+
+/// Case-insensitive; padding is optional.
+fn unbase32(s: &str) -> Option<Vec<u8>> {
+    let (mut out, mut acc, mut bits) = (Vec::new(), 0u32, 0);
+    for c in s.trim_end_matches('=').bytes() {
+        let v = B32.iter().position(|&a| a == c.to_ascii_uppercase())? as u32;
+        (acc, bits) = ((acc << 5 | v) & 0xfff, bits + 5);
+        if bits >= 8 {
+            bits -= 8;
+            out.push((acc >> bits) as u8);
+        }
+    }
+    Some(out)
+}
+
+/// Bitcoin's alphabet; each leading zero byte becomes a `1`.
+fn base58(b: &[u8]) -> String {
+    let zeros = b.iter().take_while(|&&x| x == 0).count();
+    let rest = &b[zeros..];
+    let digits = if rest.is_empty() { vec![] } else { num_bigint::BigUint::from_bytes_be(rest).to_radix_be(58) };
+    "1".repeat(zeros) + &digits.iter().map(|&d| B58[d as usize] as char).collect::<String>()
+}
+
+fn unbase58(s: &str) -> Option<Vec<u8>> {
+    let zeros = s.bytes().take_while(|&c| c == b'1').count();
+    let digits: Vec<u8> = s[zeros..].bytes().map(|c| B58.iter().position(|&a| a == c).map(|d| d as u8)).collect::<Option<_>>()?;
+    let rest = if digits.is_empty() { vec![] } else { num_bigint::BigUint::from_radix_be(&digits, 58)?.to_bytes_be() };
+    Some([vec![0; zeros], rest].concat())
+}
+
 fn url_encode(s: &str) -> String {
     s.bytes()
         .map(|b| match b {
@@ -157,6 +216,14 @@ mod tests {
         assert_eq!(show(r#""hé".bytes.from_bytes"#), "hé");
         assert_eq!(show(r#""héllo".byte_len"#), "6");
         assert!(try_eval(r#""ab".ord"#).is_err());
+        assert_eq!(show(r#""foobar".encode("base32")"#), "MZXW6YTBOI======");
+        assert_eq!(show(r#""fo".encode("base32")"#), "MZXQ====");
+        assert_eq!(show(r#""mzxw6ytboi".decode("base32")"#), "foobar");
+        assert_eq!(show(r#""hello world".encode("base58")"#), "StV1DL6CwTryKyV");
+        assert_eq!(show(r#""StV1DL6CwTryKyV".decode("base58")"#), "hello world");
+        assert_eq!(show(r#""11".decode("base58").bytes"#), "[0, 0]");
+        assert_eq!(show(r#""/w==".decode("base64")"#), "[255]");
+        assert!(try_eval(r#""0OIl".decode("base58")"#).is_err());
         assert!(try_eval("[256].from_bytes").is_err());
     }
 }
