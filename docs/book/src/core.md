@@ -54,7 +54,7 @@ true
 | [`parse(s: str)`](#parse) | read a zil literal (number, string, list, map, quantity); never runs code |
 | [`read_file(path: str)`](#read_file) | file contents as a string |
 | [`write_file(path: str, v: any)`](#write_file) | write v to a file as text |
-| [`help(topic?: any)`](#help) | this help; topic is a function, module ("trig" or "math.trig"), unit, or any value to list functions for its type |
+| [`help(topic?: any)`](#help) | this help, as text; topic is a function, module ("trig" or "math.trig"), unit, or any value to list functions for its type |
 
 ### print
 
@@ -200,12 +200,13 @@ See also: [read_file](core.md#read_file)
 
 ### help
 
-`help(topic?: any)`: this help; topic is a function, module ("trig" or "math.trig"), unit, or any value to list functions for its type
+`help(topic?: any)`: this help, as text; topic is a function, module ("trig" or "math.trig"), unit, or any value to list functions for its type
 
 ```zil
 help(upper)
 help("math.trig")
 help(today)
+help("text") |> grep("case")
 ```
 
 ## More examples

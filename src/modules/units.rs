@@ -181,18 +181,18 @@ pub fn unit_of(spec: &UnitSpec) -> Result<Unit, String> {
 
 /// `help("units")`, `help("length")`, `help("km")`, `help("currency")`.
 fn topic(topic: &str) -> bool {
-    use crate::help::show;
+    use crate::help::{out, show};
     if topic == "units" {
         let w = DIMS.iter().map(|d| d.0.len()).max().unwrap_or(0);
-        println!("  {:<w$}  3-letter codes (USD EUR GBP ...), live rates fetched when converting", "currency");
-        println!("help(\"length\") or help(\"km\") for details");
+        out!("  {:<w$}  3-letter codes (USD EUR GBP ...), live rates fetched when converting", "currency");
+        out!("help(\"length\") or help(\"km\") for details");
     } else if topic == "currency" {
-        println!("currency: 3-letter codes like USD, EUR, GBP, JPY. Rates come from frankfurter.dev,");
-        println!("are fetched (with a prompt) only when two currencies meet, and cached for a day.");
-        println!("  100 USD to EUR");
+        out!("currency: 3-letter codes like USD, EUR, GBP, JPY. Rates come from frankfurter.dev,");
+        out!("are fetched (with a prompt) only when two currencies meet, and cached for a day.");
+        out!("  100 USD to EUR");
     } else if let Some(kind) = DIMS.iter().map(|d| d.0).find(|k| *k == topic) {
         let units = units_of(kind);
-        println!("{kind} units: {}", units.join(" "));
+        out!("{kind} units: {}", units.join(" "));
         show(vec![format!("1 {} to {}", units[1], units[0]), format!("1 {} to {}", units[0], units[units.len() - 1])]);
     } else if let Some((names, _, _, dim)) = rows().find(|row| row.0.split(' ').any(|n| n == topic)) {
         let mut names = names.split(' ');
@@ -200,10 +200,10 @@ fn topic(topic: &str) -> bool {
         let kind = DIMS.iter().find(|d| d.1 == *dim).unwrap().0;
         let aliases: Vec<_> = names.collect();
         let aka = if aliases.is_empty() { String::new() } else { format!("  (also {})", aliases.join(", ")) };
-        println!("{name}: {kind}{aka}");
+        out!("{name}: {kind}{aka}");
         let other = units_of(kind).into_iter().find(|u| *u != name).unwrap();
         show(vec![format!("1 {name} to {other}"), format!("1 {other} to {name}")]);
-        println!("all {kind} units: help(\"{kind}\")");
+        out!("all {kind} units: help(\"{kind}\")");
     } else {
         return false;
     }

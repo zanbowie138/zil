@@ -59,15 +59,15 @@ fn unclosed(src: &str) -> bool {
     depth > 0
 }
 
-/// REPL `help` / `help topic` rewritten to a call; `None` for ordinary code.
-fn help_shorthand(src: &str) -> Option<String> {
+/// REPL `help` / `help topic`: the topic (`None` for the overview); `None` for ordinary code.
+fn help_shorthand(src: &str) -> Option<Option<&str>> {
     let rest = src.trim().strip_prefix("help")?;
     let topic = rest.trim_start();
     if topic.is_empty() {
-        return Some("help()".into());
+        return Some(None);
     }
     let word = topic.chars().all(|c| c.is_alphanumeric() || c == '_');
-    (rest.starts_with(char::is_whitespace) && word).then(|| format!("help({topic:?})"))
+    (rest.starts_with(char::is_whitespace) && word).then_some(Some(topic))
 }
 
 /// REPL tab completion over builtins, constants, `to` targets, units and help topics.
@@ -222,7 +222,8 @@ fn tint(v: &Value) -> &'static str {
 
 /// A REPL result, colored by type when `color_on`.
 fn show(v: &Value) -> String {
-    if !color_on() {
+    // Multi-line text, like `help(upper)`, reads better bare.
+    if !color_on() || matches!(v, Value::Str(s) if s.contains('\n')) {
         return v.to_string();
     }
     format!("{DIM}={RESET} {}{v}{RESET}", tint(v))
@@ -253,16 +254,22 @@ fn repl(interp: &mut Interp) {
         if unclosed(&buf) {
             continue;
         }
-        let mut src = std::mem::take(&mut buf);
+        let src = std::mem::take(&mut buf);
         if src.trim().is_empty() {
             continue;
         }
         if matches!(src.trim(), "exit" | "quit") {
             break;
         }
+        if src.trim() == "clear" {
+            let _ = rl.clear_screen();
+            continue;
+        }
         let _ = rl.add_history_entry(src.trim_end());
-        if let Some(call) = help_shorthand(&src) {
-            src = call;
+        // Printed directly, so it keeps its colors.
+        if let Some(topic) = help_shorthand(&src) {
+            println!("{}\n", help::help(topic, color_on()).unwrap_or_else(|e| e));
+            continue;
         }
         match run(interp, &src) {
             Ok(Value::Nil | Value::Fn(_)) => {}
@@ -272,6 +279,7 @@ fn repl(interp: &mut Interp) {
             }
             Err(e) => report("<repl>", &src, e),
         }
+        println!();
     }
     if let Some(h) = &history {
         let _ = std::fs::create_dir_all(h.parent().unwrap());

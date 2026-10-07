@@ -3,9 +3,45 @@
 use crate::interp::Interp;
 use crate::modules::{self, ALL, Doc, Module, Section, modules, units};
 use crate::{BOLD, DIM, RESET};
+use std::cell::{Cell, RefCell};
 
-/// Prints help for `topic` (an overview if `None`); false if nothing matched.
-pub fn help(topic: Option<&str>) -> bool {
+thread_local! {
+    /// What the page renderers below write to, read back by `capture`.
+    static OUT: RefCell<String> = const { RefCell::new(String::new()) };
+    static COLOR: Cell<bool> = const { Cell::new(false) };
+}
+
+/// `println!` into the help buffer.
+macro_rules! out {
+    ($($t:tt)*) => {
+        $crate::help::push(format!($($t)*))
+    };
+}
+pub(crate) use out;
+
+pub fn push(line: String) {
+    OUT.with_borrow_mut(|o| {
+        o.push_str(&line);
+        o.push('\n');
+    });
+}
+
+/// Runs a page renderer, returning its text; `Err` holds the miss note if it returned false.
+pub fn capture(color: bool, render: impl FnOnce() -> bool) -> Result<String, String> {
+    COLOR.set(color);
+    OUT.take();
+    let found = render();
+    let text = OUT.take().trim_end().to_string();
+    if found { Ok(text) } else { Err(text) }
+}
+
+/// Help for `topic` (an overview if `None`), with ANSI colors if `color`.
+pub fn help(topic: Option<&str>, color: bool) -> Result<String, String> {
+    capture(color, || render(topic))
+}
+
+/// Writes help for `topic`; false if nothing matched.
+fn render(topic: Option<&str>) -> bool {
     let Some(topic) = topic else {
         overview();
         return true;
@@ -33,7 +69,7 @@ pub fn help(topic: Option<&str>) -> bool {
     if hits.is_empty() {
         let near: Vec<_> = near(topic).iter().map(|n| paint(BOLD, n)).collect();
         let hint = if near.is_empty() { String::new() } else { format!("; did you mean {}?", near.join(", ")) };
-        println!("no help for {topic:?}{hint}  help() for an overview");
+        out!("no help for {topic:?}{hint}  help() for an overview");
         return false;
     }
     listing(hits);
@@ -51,7 +87,7 @@ pub fn type_page(ty: &str) -> bool {
     if hits.is_empty() {
         return false;
     }
-    println!("functions taking a {} first, so x.f(...) works\n", paint(BOLD, ty));
+    out!("functions taking a {} first, so x.f(...) works\n", paint(BOLD, ty));
     listing(hits);
     true
 }
@@ -116,8 +152,8 @@ const SYNTAX: &[Section] = &[
 
 /// `help()`: what zil is, its module tree, and how to dig deeper.
 fn overview() {
-    println!("{}: an expression calculator and scripting language with units, dates, exact fractions and big ints.", paint(BOLD, "zil"));
-    println!("\n{}", paint(BOLD, "modules"));
+    out!("{}: an expression calculator and scripting language with units, dates, exact fractions and big ints.", paint(BOLD, "zil"));
+    out!("\n{}", paint(BOLD, "modules"));
     let types = |m: &Module| m.guide.iter().find(|s| s.0 == "types").map(|s| s.1.iter().map(|r| r.0).collect::<Vec<_>>().join(" "));
     // Indented by depth: two spaces per dot in the path.
     let rows: Vec<_> = ALL.iter().map(|(path, m)| (format!("{}{}", "  ".repeat(path.matches('.').count()), m.name), *m)).collect();
@@ -125,9 +161,9 @@ fn overview() {
     for (name, m) in rows {
         let types = types(m).map_or(String::new(), |t| format!("  {}", paint(DIM, &format!("[{t}]"))));
         let label = if m.children.is_empty() { name.clone() } else { paint(BOLD, &name) };
-        println!("  {label}{}  {}{types}", pad(&name, w), m.about);
+        out!("  {label}{}  {}{types}", pad(&name, w), m.about);
     }
-    println!("\n{}", paint(BOLD, "more help"));
+    out!("\n{}", paint(BOLD, "more help"));
     let rows = [
         (r#"help("examples")"#, "start here: a few dozen one-liners, module by module"),
         (r#"help("syntax")"#, "the language at a glance"),
@@ -138,11 +174,12 @@ fn overview() {
         (r#"help("km")"#, r#"a unit, or a kind of unit like help("length")"#),
         (r#"help("sorting")"#, "search function names and descriptions"),
         ("help upper", "REPL shorthand for help(upper)"),
+        ("clear", "clear the screen (or Ctrl+L)"),
         ("exit", "leave the REPL (or quit, Ctrl+D)"),
     ];
     let w = rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0);
     for (ex, what) in rows {
-        println!("  {}{}  {}", code(ex), pad(ex, w), paint(DIM, what));
+        out!("  {}{}  {}", code(ex), pad(ex, w), paint(DIM, what));
     }
 }
 
@@ -152,7 +189,7 @@ fn examples() {
     for m in modules() {
         sections(m.examples);
     }
-    println!("\n{}", paint(DIM, r#"help("time") etc. for a module's full function list"#));
+    out!("\n{}", paint(DIM, r#"help("time") etc. for a module's full function list"#));
 }
 
 /// Every builtin, with its module.
@@ -163,17 +200,17 @@ fn docs() -> impl Iterator<Item = (&'static Module, &'static Doc)> {
 /// A function's page: where it lives, signature, live examples, related functions.
 fn function(m: &Module, f: &Doc) {
     let group = m.groups.iter().find(|g| g.1.contains(&f.name)).map_or(String::new(), |g| format!(" › {}", g.0));
-    println!("{}", paint(DIM, &format!("{}{group}", modules::path(m))));
-    println!("{}  {}", sig(f), f.desc);
+    out!("{}", paint(DIM, &format!("{}{group}", modules::path(m))));
+    out!("{}  {}", sig(f), f.desc);
     show(f.examples.iter().map(|e| e.to_string()).collect());
     for ex in f.shown {
-        println!("  {}", code(ex));
+        out!("  {}", code(ex));
     }
     if f.name == "help" {
-        println!("  {}  {}", code("help upper"), paint(DIM, "(REPL shorthand)"));
+        out!("  {}  {}", code("help upper"), paint(DIM, "(REPL shorthand)"));
     }
     if !f.see.is_empty() {
-        println!("{} {}", paint(DIM, "see also:"), f.see.join(", "));
+        out!("{} {}", paint(DIM, "see also:"), f.see.join(", "));
     }
 }
 
@@ -183,10 +220,10 @@ fn listing(hits: Vec<(&Module, &Doc)>) {
     let mut last = "";
     for (m, f) in hits {
         if m.name != last {
-            println!("{}", paint(BOLD, modules::path(m)));
+            out!("{}", paint(BOLD, modules::path(m)));
             last = m.name;
         }
-        println!("  {}{}  {}", sig(f), pad(f.sig, w), f.desc);
+        out!("  {}{}  {}", sig(f), pad(f.sig, w), f.desc);
     }
 }
 
@@ -213,40 +250,40 @@ fn near(topic: &str) -> Vec<&'static str> {
 
 /// A module's page: what it adds (types, operators, conversions, units...), its submodules, then its functions by group.
 fn page(m: &Module) {
-    println!("{}: {}", paint(BOLD, modules::path(m)), m.about);
+    out!("{}: {}", paint(BOLD, modules::path(m)), m.about);
     sections(m.guide);
     let kinds = units::kinds(m.units);
     if !kinds.is_empty() {
-        println!("\n{}", paint(BOLD, "units"));
+        out!("\n{}", paint(BOLD, "units"));
         let w = kinds.iter().map(|k| k.0.chars().count()).max().unwrap_or(0);
         for (kind, rows) in kinds {
             let names: Vec<_> = rows.iter().map(|r| r.0.split(' ').next().unwrap()).collect();
-            println!("  {}{}  {}", paint(DIM, kind), pad(kind, w), names.join(" "));
+            out!("  {}{}  {}", paint(DIM, kind), pad(kind, w), names.join(" "));
         }
     }
     if let Some(topic) = m.topic {
         topic(m.name);
     }
     if !m.children.is_empty() {
-        println!("\n{}", paint(BOLD, "submodules"));
+        out!("\n{}", paint(BOLD, "submodules"));
         let w = m.children.iter().map(|c| c.name.chars().count()).max().unwrap_or(0);
         for c in m.children {
-            println!("  {}{}  {}", c.name, pad(c.name, w), c.about);
+            out!("  {}{}  {}", c.name, pad(c.name, w), c.about);
         }
     }
     if m.fns.is_empty() {
         return;
     }
-    println!("\n{}", paint(BOLD, "functions"));
+    out!("\n{}", paint(BOLD, "functions"));
     let all = [("", m.fns.iter().map(|f| f.name).collect::<Vec<_>>())];
     let groups: Vec<_> = m.groups.iter().map(|g| (g.0, g.1.to_vec())).collect();
     let groups = if groups.is_empty() { &all[..] } else { &groups[..] };
     let gw = groups.iter().map(|g| g.0.chars().count()).max().unwrap_or(0);
     for (name, fns) in groups {
         let label = if name.is_empty() { String::new() } else { format!("{}{}  ", paint(DIM, name), pad(name, gw)) };
-        println!("  {label}{}", fns.join(" "));
+        out!("  {label}{}", fns.join(" "));
     }
-    println!("{}", paint(DIM, &format!("help(name) for details, e.g. help({})", m.fns[0].name)));
+    out!("{}", paint(DIM, &format!("help(name) for details, e.g. help({})", m.fns[0].name)));
 }
 
 /// Help sections as aligned `label  example  → result` rows; an empty example prints the label alone.
@@ -255,18 +292,18 @@ fn sections(guide: &[Section]) {
     let lw = rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0);
     let ew = rows.iter().map(|r| r.1.chars().count()).max().unwrap_or(0);
     for (heading, rows) in guide {
-        println!("\n{}", paint(BOLD, heading));
+        out!("\n{}", paint(BOLD, heading));
         for (label, ex) in *rows {
             if ex.is_empty() {
-                println!("  {}", paint(DIM, label));
+                out!("  {}", paint(DIM, label));
                 continue;
             }
             let (plain, colored) = result(ex);
             let label = format!("{}{}", paint(DIM, label), pad(label, lw));
             if plain == *ex {
-                println!("  {label}  {}", code(ex));
+                out!("  {label}  {}", code(ex));
             } else {
-                println!("  {label}  {}{}  {} {colored}", code(ex), pad(ex, ew), paint(DIM, "→"));
+                out!("  {label}  {}{}  {} {colored}", code(ex), pad(ex, ew), paint(DIM, "→"));
             }
         }
     }
@@ -276,7 +313,7 @@ fn sections(guide: &[Section]) {
 pub fn show(examples: Vec<String>) {
     let w = examples.iter().map(|e| e.chars().count()).max().unwrap_or(0);
     for ex in &examples {
-        println!("  {}{}  {} {}", code(ex), pad(ex, w), paint(DIM, "→"), result(ex).1);
+        out!("  {}{}  {} {}", code(ex), pad(ex, w), paint(DIM, "→"), result(ex).1);
     }
 }
 
@@ -305,12 +342,12 @@ fn sig(f: &Doc) -> String {
 }
 
 fn paint(color: &str, s: &str) -> String {
-    if color.is_empty() || !crate::color_on() { s.to_string() } else { format!("{color}{s}{RESET}") }
+    if color.is_empty() || !COLOR.get() { s.to_string() } else { format!("{color}{s}{RESET}") }
 }
 
 /// Code, syntax-highlighted when color is on.
 fn code(s: &str) -> String {
-    if crate::color_on() { crate::highlight(s) } else { s.to_string() }
+    if COLOR.get() { crate::highlight(s) } else { s.to_string() }
 }
 
 /// Spaces padding uncolored `s` to width `w`; `{:<w$}` would count escape codes.
@@ -331,17 +368,19 @@ mod tests {
         for ex in fns.iter().flat_map(|f| f.examples.iter()).chain(guide) {
             assert!(!eval(ex).starts_with("error:"), "{ex}: {}", eval(ex));
         }
+        let found = |t| help(Some(t), false).is_ok();
         for (path, m) in ALL.iter() {
-            assert!(help(Some(path)));
-            assert!(help(Some(m.name)));
+            assert!(found(path));
+            assert!(found(m.name));
         }
         for (kind, _) in DIMS {
-            assert!(help(Some(kind)));
+            assert!(found(kind));
         }
-        assert!(help(Some("km")));
-        assert!(help(Some("syntax")));
-        assert!(help(Some("quantity")));
-        assert!(!help(Some("nope")));
+        assert!(found("km"));
+        assert!(found("syntax"));
+        assert!(found("quantity"));
+        assert!(!found("nope"));
+        assert!(help(Some("upper"), false).unwrap().contains("upper(s: str)"));
     }
 
     #[test]

@@ -52,7 +52,7 @@ const FNS: &[Doc] = &[
     doc("parse", "parse(s: str)", "read a zil literal (number, string, list, map, quantity); never runs code", &[r#""[1, 2.5, 0xff]".parse"#, r#""5 km".parse to m"#], &["str", "nums"]),
     doc("read_file", "read_file(path: str)", "file contents as a string", &[], &["write_file", "lines"]).shown(&[r#"read_file("notes.txt").lines.len"#]),
     doc("write_file", "write_file(path: str, v: any)", "write v to a file as text", &[], &["read_file"]).shown(&[r#"write_file("out.txt", [1, 2, 3])"#]),
-    doc("help", "help(topic?: any)", "this help; topic is a function, module (\"trig\" or \"math.trig\"), unit, or any value to list functions for its type", &[], &[]).shown(&["help(upper)", r#"help("math.trig")"#, "help(today)"]),
+    doc("help", "help(topic?: any)", "this help, as text; topic is a function, module (\"trig\" or \"math.trig\"), unit, or any value to list functions for its type", &[], &[]).shown(&["help(upper)", r#"help("math.trig")"#, "help(today)", r#"help("text") |> grep("case")"#]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -63,25 +63,16 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             println!("{}", parts.join(" "));
             Nil
         }
-        // A miss prints its own note: not finding help isn't an error in the user's code.
-        ("help", []) => {
-            help(None);
-            Nil
-        }
-        ("help", [Str(s)]) => {
-            help(Some(s));
-            Nil
-        }
-        ("help", [Builtin(_, f)]) => {
-            help(Some(f));
-            Nil
-        }
+        // Plain text, so it can be piped to `grep` etc. A miss returns its note: not finding help isn't an error in the user's code.
+        ("help", []) => Value::str(help(None, false).unwrap_or_else(|e| e)),
+        ("help", [Str(s)]) => Value::str(help(Some(s), false).unwrap_or_else(|e| e)),
+        ("help", [Builtin(_, f)]) => Value::str(help(Some(f), false).unwrap_or_else(|e| e)),
         ("help", [Fn(_)]) => return Err(Fail::Arg(0, "no help for user-defined functions".into())),
         ("help", [v]) => {
-            if !crate::help::type_page(v.type_name()) {
-                println!("no functions take a {} first; help() for an overview", v.type_name());
-            }
-            Nil
+            let t = v.type_name();
+            Value::str(
+                crate::help::capture(false, || crate::help::type_page(t)).unwrap_or_else(|_| format!("no functions take a {t} first; help() for an overview")),
+            )
         }
         ("type", [v]) => Value::str(v.type_name()),
         ("str", [v @ (Float(_) | Frac(_, false))]) => Value::str(num(v).unwrap().to_string()),
