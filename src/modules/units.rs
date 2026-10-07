@@ -679,6 +679,7 @@ fn load_rates_once() {
     if RATES_LOADED.with(|l| l.replace(true)) {
         return;
     }
+    RATES_ERROR.with(|e| e.borrow_mut().clear());
     match load_rates() {
         Ok(rates) => REGISTRY.with(|r| {
             let mut r = r.borrow_mut();
@@ -733,6 +734,10 @@ pub fn lookup(name: &str) -> Result<Rc<UnitDef>, String> {
     if looks_like_currency && !RATES_LOADED.with(|l| *l.borrow()) {
         load_rates_once();
         return lookup(name);
+    }
+    // Rates failed to load, so a real code like VND isn't registered: say why, not just "unknown".
+    if looks_like_currency && RATES_ERROR.with(|e| !e.borrow().is_empty()) {
+        return Err(format!("unknown unit `{name}` ({})", rate_error()));
     }
     let known: Vec<String> = REGISTRY.with(|r| r.borrow().keys().cloned().collect());
     let targets = crate::modules::modules().flat_map(|m| m.targets.iter().map(|t| t.0));
