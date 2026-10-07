@@ -1,23 +1,23 @@
 //! Modules group builtins with everything else a feature owns: docs, operators, ordering,
-//! `to` conversions and magic identifiers. All are always loaded and share one flat namespace.
+//! `to` conversions and magic identifiers. All are always loaded and share one flat namespace:
+//! nesting only shapes source files, `help` and the book, never how a name resolves.
 //!
-//! Hooks return `None` for "not mine"; dispatch tries modules in `MODULES` order, so order matters:
-//! strings before units (`"a" + 5 km` concatenates), dates before units (`date + 1 d` is calendar math).
+//! Adding a module:
+//! 1. Write `src/modules/<path>.rs` with a `pub const MODULE`; children go in `src/modules/<path>/<child>.rs`.
+//! 2. List it in its parent's `children` (or in `TREE` for a root). Help and the book follow the tree.
+//! 3. If it has an `ident`, `binary`, `compare` or `convert` hook, add it to `DISPATCH` too.
+//!
+//! Hooks return `None` for "not mine"; dispatch tries modules in `DISPATCH` order, so order matters:
+//! text before units (`"a" + 5 km` concatenates), time before units (`date + 1 d` is calendar math).
+//! `DISPATCH` is separate from the tree so moving a module for docs reasons never changes behavior.
 
-pub mod binary;
-pub mod ciphers;
-pub mod color;
 pub mod core;
-pub mod dates;
-pub mod fortune;
-pub mod goofy_units;
-pub mod lists;
+pub mod data;
+pub mod dev;
+pub mod fun;
 pub mod math;
-pub mod money;
-pub mod net;
-pub mod random;
-pub mod roman;
-pub mod strings;
+pub mod text;
+pub mod time;
 pub mod units;
 
 use crate::Error;
@@ -26,6 +26,7 @@ use crate::interp::Interp;
 use crate::lexer::Span;
 use crate::value::Value;
 use std::cmp::Ordering;
+use std::sync::LazyLock;
 
 /// A builtin's help.
 pub struct Doc {
@@ -35,11 +36,19 @@ pub struct Doc {
     /// Run live by `help`.
     pub examples: &'static [&'static str],
     pub see: &'static [&'static str],
+    /// Shown but never run, for fns with side effects: `doc(...).shown(&[...])`.
+    pub shown: &'static [&'static str],
 }
 
 /// Keeps the `FNS` tables one positional row per builtin.
 pub const fn doc(name: &'static str, sig: &'static str, desc: &'static str, examples: &'static [&'static str], see: &'static [&'static str]) -> Doc {
-    Doc { name, sig, desc, examples, see }
+    Doc { name, sig, desc, examples, see, shown: &[] }
+}
+
+impl Doc {
+    pub const fn shown(self, shown: &'static [&'static str]) -> Doc {
+        Doc { shown, ..self }
+    }
 }
 
 /// A help page section: heading, then (label, example) rows; examples run live, and an empty one prints the label alone.
@@ -90,7 +99,7 @@ impl Fail {
 pub type Call = Result<Value, Fail>;
 
 pub struct Module {
-    /// Help category.
+    /// Short name, unique across the tree; the dotted path (`math.trig`) comes from where it sits.
     pub name: &'static str,
     /// One line under the module's help page title.
     pub about: &'static str,
@@ -114,6 +123,10 @@ pub struct Module {
     pub convert: Option<fn(&Value, &Target) -> Claim>,
     /// Extra help topics; prints and returns true if it knows `topic`.
     pub topic: Option<fn(&str) -> bool>,
+    /// Unit rows it adds, listed by kind on its help and book pages.
+    pub units: &'static [units::Row],
+    /// Submodules, shown under it in help and the book.
+    pub children: &'static [Module],
 }
 
 impl Module {
@@ -132,36 +145,70 @@ impl Module {
         compare: None,
         convert: None,
         topic: None,
+        units: &[],
+        children: &[],
     };
 }
 
-/// Also the `help()` overview order.
-pub const MODULES: &[Module] = &[strings::MODULE, lists::MODULE, math::MODULE, dates::MODULE, random::MODULE, units::MODULE, goofy_units::MODULE, money::MODULE, color::MODULE, net::MODULE, binary::MODULE, roman::MODULE, ciphers::MODULE, fortune::MODULE, core::MODULE];
+/// Root modules, in `help()` order.
+pub const TREE: &[Module] = &[core::MODULE, text::MODULE, data::MODULE, math::MODULE, units::MODULE, time::MODULE, dev::MODULE, fun::MODULE];
+
+/// Modules with hooks, in the order hooks are tried.
+pub const DISPATCH: &[&Module] =
+    &[&text::MODULE, &data::lists::MODULE, &math::bits::MODULE, &time::MODULE, &time::zones::MODULE, &units::MODULE, &core::MODULE];
+
+/// Every module with its dotted path, each parent before its children, in tree order.
+pub static ALL: LazyLock<Vec<(String, &'static Module)>> = LazyLock::new(|| {
+    fn walk(ms: &'static [Module], prefix: &str, out: &mut Vec<(String, &'static Module)>) {
+        for m in ms {
+            let path = if prefix.is_empty() { m.name.to_string() } else { format!("{prefix}.{}", m.name) };
+            out.push((path.clone(), m));
+            walk(m.children, &path, out);
+        }
+    }
+    let mut out = Vec::new();
+    walk(TREE, "", &mut out);
+    out
+});
+
+pub fn modules() -> impl Iterator<Item = &'static Module> {
+    ALL.iter().map(|(_, m)| *m)
+}
+
+/// A module by dotted path or short name.
+pub fn find(name: &str) -> Option<&'static Module> {
+    ALL.iter().find(|(path, m)| path == name || m.name == name).map(|(_, m)| *m)
+}
+
+/// `m`'s dotted path.
+pub fn path(m: &Module) -> &'static str {
+    &ALL.iter().find(|(_, o)| o.name == m.name).expect("module in the tree").0
+}
 
 /// A builtin by name, ignoring any variable that shadows it.
 pub fn builtin(name: &str) -> Value {
-    MODULES.iter().find_map(|m| m.fns.iter().find(|f| f.name == name).map(|f| Value::Builtin(m, f.name))).expect("known builtin")
+    modules().find_map(|m| m.fns.iter().find(|f| f.name == name).map(|f| Value::Builtin(m, f.name))).expect("known builtin")
 }
 
 /// The module and fn a `to` keyword calls.
 pub fn target(keyword: &str) -> Option<(&'static Module, &'static str)> {
-    MODULES.iter().find_map(|m| m.targets.iter().find(|t| t.0 == keyword).map(|t| (m, t.1)))
+    modules().find_map(|m| m.targets.iter().find(|t| t.0 == keyword).map(|t| (m, t.1)))
 }
 
 pub fn ident(it: &mut Interp, name: &str) -> Claim {
-    MODULES.iter().filter_map(|m| m.ident).find_map(|f| f(it, name))
+    DISPATCH.iter().filter_map(|m| m.ident).find_map(|f| f(it, name))
 }
 
 pub fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
-    MODULES.iter().filter_map(|m| m.binary).find_map(|f| f(op, a, b))
+    DISPATCH.iter().filter_map(|m| m.binary).find_map(|f| f(op, a, b))
 }
 
 pub fn compare(a: &Value, b: &Value) -> Option<Ordering> {
-    MODULES.iter().filter_map(|m| m.compare).find_map(|f| f(a, b))
+    DISPATCH.iter().filter_map(|m| m.compare).find_map(|f| f(a, b))
 }
 
 pub fn convert(v: &Value, t: &Target) -> Claim {
-    MODULES.iter().filter_map(|m| m.convert).find_map(|f| f(v, t))
+    DISPATCH.iter().filter_map(|m| m.convert).find_map(|f| f(v, t))
 }
 
 #[cfg(test)]
@@ -171,11 +218,23 @@ mod tests {
     #[test]
     fn registry() {
         let mut seen = std::collections::HashMap::new();
-        for m in MODULES {
+        let mut names = std::collections::HashSet::new();
+        let fns: Vec<_> = modules().flat_map(|m| m.fns).collect();
+        for m in modules() {
+            assert!(names.insert(m.name), "two modules named {}", m.name);
+            assert!(!m.about.is_empty(), "{}: empty about", m.name);
+            assert!(!m.guide.is_empty() || !m.examples.is_empty() || !m.children.is_empty(), "{}: needs a guide, examples or children", m.name);
+            let hooked = m.ident.is_some() || m.binary.is_some() || m.compare.is_some() || m.convert.is_some();
+            let listed = DISPATCH.iter().filter(|d| d.name == m.name).count();
+            assert_eq!(listed, usize::from(hooked), "{}: modules with hooks are in DISPATCH once, others never", m.name);
             for f in m.fns {
-                assert!(!MODULES.iter().any(|o| o.name == f.name), "fn {} collides with a module name, hiding its help page", f.name);
+                assert!(!modules().any(|o| o.name == f.name), "fn {} collides with a module name, hiding its help page", f.name);
                 if let Some(other) = seen.insert(f.name, m.name) {
                     panic!("{} exported by both {other} and {}", f.name, m.name);
+                }
+                assert!(!f.examples.is_empty() || !f.shown.is_empty(), "{}: no examples", f.name);
+                for s in f.see {
+                    assert!(fns.iter().any(|g| g.name == *s), "{}: see also {s} missing", f.name);
                 }
             }
             for (kw, f) in m.targets {
@@ -191,5 +250,7 @@ mod tests {
                 assert!(m.fns.iter().any(|f| f.name == *g), "{}: group lists unknown fn {g}", m.name);
             }
         }
+        assert_eq!(find("math.trig").map(|m| m.name), Some("trig"));
+        assert_eq!(find("trig").map(path), Some("math.trig"));
     }
 }

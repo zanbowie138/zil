@@ -90,8 +90,12 @@ struct Names(Vec<String>, interp::Env);
 
 impl Names {
     fn new(globals: interp::Env) -> Names {
-        let ms = modules::MODULES;
-        let mut v: Vec<String> = ms.iter().flat_map(|m| m.fns.iter().map(|f| f.name).chain(m.consts.iter().map(|c| c.0)).chain(m.targets.iter().map(|t| t.0)).chain([m.name])).map(String::from).collect();
+        let mut v: Vec<String> = modules::ALL.iter().map(|(path, _)| path.clone()).collect();
+        v.extend(
+            modules::modules()
+                .flat_map(|m| m.fns.iter().map(|f| f.name).chain(m.consts.iter().map(|c| c.0)).chain(m.targets.iter().map(|t| t.0)).chain([m.name]))
+                .map(String::from),
+        );
         v.extend(modules::units::TABLE.iter().flat_map(|u| u.0.split_whitespace()).map(String::from));
         v.extend(modules::units::DIMS.iter().map(|d| d.0.to_string()));
         v.extend(["syntax", "examples"].map(String::from));
@@ -185,7 +189,22 @@ fn highlight(src: &str) -> String {
         let color = match tok {
             Ok(Tok::Int(_) | Tok::Float(_) | Tok::Dec(_) | Tok::Based(_) | Tok::Currency(_)) => CYAN,
             Ok(Tok::Str(_) | Tok::Regex(_)) => GREEN,
-            Ok(Tok::Fn | Tok::If | Tok::Else | Tok::While | Tok::For | Tok::In | Tok::To | Tok::Of | Tok::Return | Tok::Break | Tok::Continue | Tok::True | Tok::False | Tok::Nil) => MAGENTA,
+            Ok(
+                Tok::Fn
+                | Tok::If
+                | Tok::Else
+                | Tok::While
+                | Tok::For
+                | Tok::In
+                | Tok::To
+                | Tok::Of
+                | Tok::Return
+                | Tok::Break
+                | Tok::Continue
+                | Tok::True
+                | Tok::False
+                | Tok::Nil,
+            ) => MAGENTA,
             _ => continue,
         };
         out.push_str(&src[last..span.start]);

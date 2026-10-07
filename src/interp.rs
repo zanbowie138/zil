@@ -1,7 +1,7 @@
 use crate::Error;
 use crate::ast::{BinOp, Expr, ExprKind, FnDef, Radix, Target, UnOp};
 use crate::lexer::Span;
-use crate::modules::{self, MODULES, units};
+use crate::modules::{self, units};
 use crate::value::{Value, compare, exact, num, ratio};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
@@ -95,7 +95,7 @@ impl Interp {
         let globals: Env = Default::default();
         {
             let mut g = globals.borrow_mut();
-            for m in MODULES {
+            for m in modules::modules() {
                 for f in m.fns {
                     g.vars.insert(f.name.to_string(), Value::Builtin(m, f.name));
                 }
@@ -199,8 +199,8 @@ impl Interp {
             ExprKind::Percent(x) => binary(BinOp::Div, &self.eval(x, env)?, &Value::int(100)).map_err(err)?,
             ExprKind::Format(x, spec) => {
                 let v = self.eval(x, env)?;
-                let spec = modules::math::Spec::parse(spec).expect("parser checks specs");
-                Value::str(modules::math::render(&v, &spec).map_err(err)?)
+                let spec = modules::math::formatting::Spec::parse(spec).expect("parser checks specs");
+                Value::str(modules::math::formatting::render(&v, &spec).map_err(err)?)
             }
             ExprKind::Unary(op, x) => match (op, self.eval(x, env)?) {
                 (UnOp::Not, v) => Value::Bool(!v.truthy()),

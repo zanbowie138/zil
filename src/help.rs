@@ -1,7 +1,7 @@
 //! `help`: rendered from each module's docs; every example shown is evaluated live in a fresh interpreter.
 
 use crate::interp::Interp;
-use crate::modules::{Doc, MODULES, Module, Section};
+use crate::modules::{self, ALL, Doc, Module, Section, modules, units};
 use crate::{BOLD, DIM, RESET};
 
 /// Prints help for `topic` (an overview if `None`); false if nothing matched.
@@ -22,11 +22,11 @@ pub fn help(topic: Option<&str>) -> bool {
         sections(SYNTAX);
         return true;
     }
-    if let Some(m) = MODULES.iter().find(|m| m.name == topic) {
+    if let Some(m) = modules::find(topic) {
         page(m);
         return true;
     }
-    if MODULES.iter().filter_map(|m| m.topic).any(|f| f(topic)) || type_page(topic) {
+    if modules().filter_map(|m| m.topic).any(|f| f(topic)) || type_page(topic) {
         return true;
     }
     let hits = search(topic);
@@ -62,14 +62,6 @@ const TAKES: &[(&str, &[&str])] = &[
     ("quantity", &["x", "qty", "duration", "sum", "loan", "balance", "cost", "rate"]),
     ("list", &["list"]),
     ("map", &["map"]),
-];
-
-/// The overview's module groups; every module on exactly one shelf.
-const SHELVES: &[(&str, &[&str])] = &[
-    ("data", &["strings", "lists", "math", "general"]),
-    ("time & measure", &["dates", "units", "money"]),
-    ("tools", &["random", "colors", "net", "binary"]),
-    ("fun", &["goofy_units", "numerals", "ciphers", "oracles"]),
 ];
 
 /// Things most languages can't do in one line: heads `help("examples")` and the mdBook index.
@@ -129,23 +121,25 @@ const SYNTAX: &[Section] = &[
     ("more", &[("full reference, with operator precedence: the Syntax page from zil --docs", "")]),
 ];
 
-/// `help()`: what zil is, its modules by shelf, and how to dig deeper.
+/// `help()`: what zil is, its module tree, and how to dig deeper.
 fn overview() {
     println!("{}: an expression calculator and scripting language with units, dates, exact fractions and big ints.", paint(BOLD, "zil"));
+    println!("\n{}", paint(BOLD, "modules"));
     let types = |m: &Module| m.guide.iter().find(|s| s.0 == "types").map(|s| s.1.iter().map(|r| r.0).collect::<Vec<_>>().join(" "));
-    let w = MODULES.iter().map(|m| m.name.chars().count()).max().unwrap_or(0);
-    for (shelf, names) in SHELVES {
-        println!("\n{}", paint(BOLD, shelf));
-        for m in names.iter().filter_map(|n| MODULES.iter().find(|m| m.name == *n)) {
-            let types = types(m).map_or(String::new(), |t| format!("  {}", paint(DIM, &format!("[{t}]"))));
-            println!("  {}{}  {}{types}", m.name, pad(m.name, w), m.about);
-        }
+    // Indented by depth: two spaces per dot in the path.
+    let rows: Vec<_> = ALL.iter().map(|(path, m)| (format!("{}{}", "  ".repeat(path.matches('.').count()), m.name), *m)).collect();
+    let w = rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0);
+    for (name, m) in rows {
+        let types = types(m).map_or(String::new(), |t| format!("  {}", paint(DIM, &format!("[{t}]"))));
+        let label = if m.children.is_empty() { name.clone() } else { paint(BOLD, &name) };
+        println!("  {label}{}  {}{types}", pad(&name, w), m.about);
     }
     println!("\n{}", paint(BOLD, "more help"));
     let rows = [
         (r#"help("examples")"#, "start here: a few dozen one-liners, module by module"),
         (r#"help("syntax")"#, "the language at a glance"),
-        (r#"help("strings")"#, "a module: its types, operators and every function"),
+        (r#"help("text")"#, "a module: its types, operators and every function"),
+        (r#"help("math.trig")"#, "a submodule, by path or just help(\"trig\")"),
         ("help(upper)", "a function: signature, live examples, related functions"),
         ("help(today)", "a value: every function that takes its type"),
         (r#"help("km")"#, r#"a unit, or a kind of unit like help("length")"#),
@@ -161,23 +155,26 @@ fn overview() {
 /// `help("examples")`: the highlights, then every module's showcase, aligned per module so one long line doesn't stretch them all.
 fn examples() {
     sections(HIGHLIGHTS);
-    for m in MODULES {
+    for m in modules() {
         sections(m.examples);
     }
-    println!("\n{}", paint(DIM, r#"help("dates") etc. for a module's full function list"#));
+    println!("\n{}", paint(DIM, r#"help("time") etc. for a module's full function list"#));
 }
 
 /// Every builtin, with its module.
 fn docs() -> impl Iterator<Item = (&'static Module, &'static Doc)> {
-    MODULES.iter().flat_map(|m| m.fns.iter().map(move |f| (m, f)))
+    modules().flat_map(|m| m.fns.iter().map(move |f| (m, f)))
 }
 
 /// A function's page: where it lives, signature, live examples, related functions.
 fn function(m: &Module, f: &Doc) {
     let group = m.groups.iter().find(|g| g.1.contains(&f.name)).map_or(String::new(), |g| format!(" › {}", g.0));
-    println!("{}", paint(DIM, &format!("{}{group}", m.name)));
+    println!("{}", paint(DIM, &format!("{}{group}", modules::path(m))));
     println!("{}  {}", sig(f), f.desc);
     show(f.examples.iter().map(|e| e.to_string()).collect());
+    for ex in f.shown {
+        println!("  {}", code(ex));
+    }
     if f.name == "help" {
         println!("  {}  {}", code("help upper"), paint(DIM, "(REPL shorthand)"));
     }
@@ -192,20 +189,23 @@ fn listing(hits: Vec<(&Module, &Doc)>) {
     let mut last = "";
     for (m, f) in hits {
         if m.name != last {
-            println!("{}", paint(BOLD, m.name));
+            println!("{}", paint(BOLD, modules::path(m)));
             last = m.name;
         }
         println!("  {}{}  {}", sig(f), pad(f.sig, w), f.desc);
     }
 }
 
-/// Builtins whose name, description or help-page group (`trig`, `encode`) mentions `topic`, or its stem.
+/// Builtins whose name, description, module (`trig`) or help-page group (`spread`) mentions `topic`, or its stem.
 // ponytail: crude suffix stemming ("sorting" → "sort"); real fuzzy matching if this misses too often.
 fn search(topic: &str) -> Vec<(&'static Module, &'static Doc)> {
     let t = topic.to_lowercase();
-    let stems: Vec<&str> = [Some(&t[..]), t.strip_suffix("ing"), t.strip_suffix("es"), t.strip_suffix('s')].into_iter().flatten().filter(|s| s.len() >= 2).collect();
+    let stems: Vec<&str> =
+        [Some(&t[..]), t.strip_suffix("ing"), t.strip_suffix("es"), t.strip_suffix('s')].into_iter().flatten().filter(|s| s.len() >= 2).collect();
     let hit = |m: &Module, f: &Doc| {
-        m.groups.iter().any(|g| stems.contains(&g.0) && g.1.contains(&f.name)) || stems.iter().any(|s| f.name.contains(s) || f.desc.to_lowercase().contains(s))
+        stems.contains(&m.name)
+            || m.groups.iter().any(|g| stems.contains(&g.0) && g.1.contains(&f.name))
+            || stems.iter().any(|s| f.name.contains(s) || f.desc.to_lowercase().contains(s))
     };
     docs().filter(|(m, f)| hit(m, f)).collect()
 }
@@ -213,7 +213,7 @@ fn search(topic: &str) -> Vec<(&'static Module, &'static Doc)> {
 /// Up to three function, module, unit or topic names a typo or two from `topic`, closest first.
 fn near(topic: &str) -> Vec<&'static str> {
     let units = crate::modules::units::TABLE.iter().flat_map(|u| u.0.split(' '));
-    let names = docs().map(|(_, f)| f.name).chain(MODULES.iter().map(|m| m.name)).chain(["examples", "syntax"]).chain(units);
+    let names = docs().map(|(_, f)| f.name).chain(ALL.iter().flat_map(|(path, m)| [path.as_str(), m.name])).chain(["examples", "syntax"]).chain(units);
     let max = (topic.chars().count() / 3).max(1);
     let mut hits: Vec<_> = names.map(|n| (edits(topic, n), n)).filter(|h| h.0 <= max).collect();
     hits.sort();
@@ -237,12 +237,28 @@ fn edits(a: &str, b: &str) -> usize {
     row[b.len()]
 }
 
-/// A module's page: what it adds (types, operators, conversions...), then its functions by group.
+/// A module's page: what it adds (types, operators, conversions, units...), its submodules, then its functions by group.
 fn page(m: &Module) {
-    println!("{}: {}", paint(BOLD, m.name), m.about);
+    println!("{}: {}", paint(BOLD, modules::path(m)), m.about);
     sections(m.guide);
+    let kinds = units::kinds(m.units);
+    if !kinds.is_empty() {
+        println!("\n{}", paint(BOLD, "units"));
+        let w = kinds.iter().map(|k| k.0.chars().count()).max().unwrap_or(0);
+        for (kind, rows) in kinds {
+            let names: Vec<_> = rows.iter().map(|r| r.0.split(' ').next().unwrap()).collect();
+            println!("  {}{}  {}", paint(DIM, kind), pad(kind, w), names.join(" "));
+        }
+    }
     if let Some(topic) = m.topic {
         topic(m.name);
+    }
+    if !m.children.is_empty() {
+        println!("\n{}", paint(BOLD, "submodules"));
+        let w = m.children.iter().map(|c| c.name.chars().count()).max().unwrap_or(0);
+        for c in m.children {
+            println!("  {}{}  {}", c.name, pad(c.name, w), c.about);
+        }
     }
     if m.fns.is_empty() {
         return;
@@ -290,11 +306,6 @@ pub fn show(examples: Vec<String>) {
     }
 }
 
-/// Bold when color is on, for help text printed by modules' `topic` hooks.
-pub fn heading(s: &str) -> String {
-    paint(BOLD, s)
-}
-
 pub fn eval(src: &str) -> String {
     result(src).0
 }
@@ -339,19 +350,15 @@ mod tests {
 
     #[test]
     fn docs_examples_run() {
-        let fns: Vec<_> = MODULES.iter().flat_map(|m| m.fns).collect();
-        let guide = MODULES.iter().flat_map(|m| m.guide.iter().chain(m.examples)).chain(HIGHLIGHTS).chain(SYNTAX).flat_map(|s| s.1).map(|r| &r.1).filter(|e| !e.is_empty());
+        let fns: Vec<_> = modules().flat_map(|m| m.fns).collect();
+        let guide =
+            modules().flat_map(|m| m.guide.iter().chain(m.examples)).chain(HIGHLIGHTS).chain(SYNTAX).flat_map(|s| s.1).map(|r| &r.1).filter(|e| !e.is_empty());
         for ex in fns.iter().flat_map(|f| f.examples.iter()).chain(guide) {
             assert!(!eval(ex).starts_with("error:"), "{ex}: {}", eval(ex));
         }
-        for f in &fns {
-            for s in f.see {
-                assert!(fns.iter().any(|g| g.name == *s), "{}: see also {s} missing", f.name);
-            }
-        }
-        for m in MODULES {
+        for (path, m) in ALL.iter() {
+            assert!(help(Some(path)));
             assert!(help(Some(m.name)));
-            assert_eq!(SHELVES.iter().filter(|s| s.1.contains(&m.name)).count(), 1, "{} on one shelf", m.name);
         }
         for (kind, _) in DIMS {
             assert!(help(Some(kind)));

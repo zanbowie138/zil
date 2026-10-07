@@ -1,8 +1,11 @@
 //! Units: quantities with dimensions, arithmetic and conversion between them, live currency rates.
 
-use super::{Claim, Module};
+pub mod goofy;
+pub mod money;
+
 use crate::ast::{BinOp, Target, UnitSpec};
 use crate::interp::mismatch;
+use crate::modules::{Claim, Module};
 use crate::value::{Value, num};
 use std::cell::{Cell, RefCell};
 use std::cmp::Ordering;
@@ -51,6 +54,8 @@ pub const MODULE: Module = Module {
     compare: Some(compare),
     convert: Some(convert),
     topic: Some(topic),
+    units: TABLE,
+    children: &[money::MODULE, goofy::MODULE],
     ..Module::EMPTY
 };
 
@@ -138,11 +143,8 @@ pub fn unit_of(spec: &UnitSpec) -> Result<Unit, String> {
 fn topic(topic: &str) -> bool {
     use crate::help::show;
     if topic == "units" {
-        println!("\n{}", crate::help::heading("units"));
-        for (kind, _) in DIMS {
-            println!("  {kind:<14} {}", units_of(kind).join(" "));
-        }
-        println!("  {:<14} 3-letter codes (USD EUR GBP ...), live rates fetched when converting", "currency");
+        let w = DIMS.iter().map(|d| d.0.len()).max().unwrap_or(0);
+        println!("  {:<w$}  3-letter codes (USD EUR GBP ...), live rates fetched when converting", "currency");
         println!("help(\"length\") or help(\"km\") for details");
     } else if topic == "currency" {
         println!("currency: 3-letter codes like USD, EUR, GBP, JPY. Rates come from frankfurter.dev,");
@@ -166,6 +168,11 @@ fn topic(topic: &str) -> bool {
         return false;
     }
     true
+}
+
+/// `rows` grouped by kind, in `DIMS` order, leaving out kinds with none.
+pub fn kinds(rows: &'static [Row]) -> Vec<(&'static str, Vec<&'static Row>)> {
+    DIMS.iter().map(|(kind, dim)| (*kind, rows.iter().filter(|r| r.3 == *dim).collect::<Vec<_>>())).filter(|k| !k.1.is_empty()).collect()
 }
 
 fn units_of(kind: &str) -> Vec<&'static str> {
@@ -221,7 +228,10 @@ pub const DIMS: &[(&str, Dim)] = &[
 /// SI bases: m, kg, s, A, K, mol, cd; extras: bit, EUR, rad. Within a dimension, the first unit with
 /// factor 1 is the one metric products are renamed to (see `named`), so J beats N*m and lm beats cd.
 #[rustfmt::skip]
-pub const TABLE: &[(&str, f64, f64, Dim)] = &[
+/// A unit row: space-separated names (primary first), scale to SI, offset, dimension.
+pub type Row = (&'static str, f64, f64, Dim);
+
+pub const TABLE: &[Row] = &[
     ("m meter meters metre metres", 1.0, 0.0, LEN),
     ("km kilometer kilometers", 1e3, 0.0, LEN),
     ("cm centimeter centimeters", 1e-2, 0.0, LEN),
@@ -235,7 +245,6 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
     ("nmi", 1852.0, 0.0, LEN),
     ("au", 1.495978707e11, 0.0, LEN),
     ("ly lightyear lightyears", 9.4607304725808e15, 0.0, LEN),
-
     ("kg kilogram kilograms", 1.0, 0.0, MASS),
     ("g gram grams", 1e-3, 0.0, MASS),
     ("mg milligram milligrams", 1e-6, 0.0, MASS),
@@ -244,7 +253,6 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
     ("lb lbs pound pounds", 0.45359237, 0.0, MASS),
     ("oz ounce ounces", 0.028349523125, 0.0, MASS),
     ("st stone", 6.35029318, 0.0, MASS),
-
     ("s sec secs second seconds", 1.0, 0.0, TIME),
     ("ms millisecond milliseconds", 1e-3, 0.0, TIME),
     ("µs us μs microsecond microseconds", 1e-6, 0.0, TIME),
@@ -260,11 +268,9 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
     ("workwk workweek workweeks", 40.0 * 3600.0, 0.0, TIME),
     ("workmo workmonth workmonths", 2080.0 / 12.0 * 3600.0, 0.0, TIME),
     ("workyr workyear workyears", 2080.0 * 3600.0, 0.0, TIME),
-
     ("K kelvin", 1.0, 0.0, TEMP),
     ("C celsius degC", 1.0, 273.15, TEMP),
     ("F fahrenheit degF", 5.0 / 9.0, 459.67, TEMP),
-
     ("L l liter liters litre litres", 1e-3, 0.0, d(3, 0, 0, 0)),
     ("mL ml milliliter milliliters", 1e-6, 0.0, d(3, 0, 0, 0)),
     ("gal gallon gallons", 3.785411784e-3, 0.0, d(3, 0, 0, 0)),
@@ -274,14 +280,11 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
     ("floz", 2.95735295625e-5, 0.0, d(3, 0, 0, 0)),
     ("tbsp", 1.478676478125e-5, 0.0, d(3, 0, 0, 0)),
     ("tsp", 4.92892159375e-6, 0.0, d(3, 0, 0, 0)),
-
     ("ha hectare hectares", 1e4, 0.0, d(2, 0, 0, 0)),
     ("acre acres", 4046.8564224, 0.0, d(2, 0, 0, 0)),
-
     ("kph kmh", 1.0 / 3.6, 0.0, d(1, 0, -1, 0)),
     ("mph", 0.44704, 0.0, d(1, 0, -1, 0)),
     ("kn knot knots", 1852.0 / 3600.0, 0.0, d(1, 0, -1, 0)),
-
     ("bit bits", 1.0, 0.0, DATA),
     ("B byte bytes", 8.0, 0.0, DATA),
     ("KB", 8e3, 0.0, DATA),
@@ -301,7 +304,6 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
     ("kbps", 1e3, 0.0, RATE),
     ("Mbps", 1e6, 0.0, RATE),
     ("Gbps", 1e9, 0.0, RATE),
-
     ("J joule joules", 1.0, 0.0, d(2, 1, -2, 0)),
     ("kJ", 1e3, 0.0, d(2, 1, -2, 0)),
     ("MJ", 1e6, 0.0, d(2, 1, -2, 0)),
@@ -311,12 +313,10 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
     ("kWh", 3.6e6, 0.0, d(2, 1, -2, 0)),
     ("eV", 1.602176634e-19, 0.0, d(2, 1, -2, 0)),
     ("BTU btu", 1055.05585262, 0.0, d(2, 1, -2, 0)),
-
     ("W watt watts", 1.0, 0.0, d(2, 1, -3, 0)),
     ("kW", 1e3, 0.0, d(2, 1, -3, 0)),
     ("MW", 1e6, 0.0, d(2, 1, -3, 0)),
     ("hp horsepower", 745.699_871_582_270_2, 0.0, d(2, 1, -3, 0)),
-
     ("Pa pascal", 1.0, 0.0, d(-1, 1, -2, 0)),
     ("kPa", 1e3, 0.0, d(-1, 1, -2, 0)),
     ("MPa", 1e6, 0.0, d(-1, 1, -2, 0)),
@@ -324,15 +324,12 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
     ("atm", 101325.0, 0.0, d(-1, 1, -2, 0)),
     ("psi", 6894.757293168, 0.0, d(-1, 1, -2, 0)),
     ("mmHg", 133.322387415, 0.0, d(-1, 1, -2, 0)),
-
     ("N newton newtons", 1.0, 0.0, d(1, 1, -2, 0)),
     ("kN", 1e3, 0.0, d(1, 1, -2, 0)),
     ("lbf", 4.4482216152605, 0.0, d(1, 1, -2, 0)),
-
     ("rad radian radians", 1.0, 0.0, ANGLE),
     ("deg degree degrees", PI / 180.0, 0.0, ANGLE),
     ("turn turns", 2.0 * PI, 0.0, ANGLE),
-
     ("A amp amps ampere amperes", 1.0, 0.0, CURRENT),
     ("mA milliamp milliamps", 1e-3, 0.0, CURRENT),
     ("µA uA μA", 1e-6, 0.0, CURRENT),
@@ -364,13 +361,11 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
     ("H henry henries", 1.0, 0.0, HENRY),
     ("mH", 1e-3, 0.0, HENRY),
     ("µH uH μH", 1e-6, 0.0, HENRY),
-
     ("Hz hertz", 1.0, 0.0, PER_TIME),
     ("kHz", 1e3, 0.0, PER_TIME),
     ("MHz", 1e6, 0.0, PER_TIME),
     ("GHz", 1e9, 0.0, PER_TIME),
     ("rpm", 1.0 / 60.0, 0.0, PER_TIME),
-
     ("mol mole moles", 1.0, 0.0, AMOUNT),
     ("mmol", 1e-3, 0.0, AMOUNT),
     ("µmol umol μmol", 1e-6, 0.0, AMOUNT),
@@ -378,7 +373,6 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
     ("M molar", 1e3, 0.0, MOLAR),
     ("mM millimolar", 1.0, 0.0, MOLAR),
     ("µM uM μM micromolar", 1e-3, 0.0, MOLAR),
-
     // Steradians are dimensionless in SI, so lumens and candelas share a dimension.
     ("lm lumen lumens", 1.0, 0.0, LIGHT),
     ("cd candela candelas", 1.0, 0.0, LIGHT),
@@ -558,8 +552,8 @@ fn load_rates_once() {
 }
 
 /// Every unit row: the real ones, then the goofy ones.
-pub fn rows() -> impl Iterator<Item = &'static (&'static str, f64, f64, Dim)> {
-    TABLE.iter().chain(super::goofy_units::TABLE)
+pub fn rows() -> impl Iterator<Item = &'static Row> {
+    TABLE.iter().chain(goofy::TABLE)
 }
 
 fn builtin_units() -> HashMap<String, Rc<UnitDef>> {
@@ -572,7 +566,7 @@ fn builtin_units() -> HashMap<String, Rc<UnitDef>> {
         }
     }
     // `banana_for_scale`.
-    for (names, ..) in super::goofy_units::TABLE {
+    for (names, ..) in goofy::TABLE {
         let primary = names.split(' ').next().unwrap();
         map.insert(format!("{primary}_for_scale"), map[primary].clone());
     }

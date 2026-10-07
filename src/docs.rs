@@ -1,8 +1,8 @@
-//! `zil --docs <dir>`: the mdBook reference, rendered from the same `MODULES` tables as `help`.
+//! `zil --docs <dir>`: the mdBook reference, rendered from the same module tree as `help`, one page per module.
 //! Example results are evaluated live; a test keeps the committed pages in sync, ignoring results.
 
 use crate::help::{HIGHLIGHTS, eval};
-use crate::modules::{Doc, MODULES, Module, Section, goofy_units, units};
+use crate::modules::{ALL, Doc, Module, Section, modules, units};
 use std::fmt::Write;
 use std::path::Path;
 
@@ -15,7 +15,9 @@ const NOTE: &str = "> Example results generated on ";
 pub fn write(dir: &Path) -> std::io::Result<()> {
     std::fs::create_dir_all(dir)?;
     for (name, page) in pages(true) {
-        std::fs::write(dir.join(name), page)?;
+        let file = dir.join(name);
+        std::fs::create_dir_all(file.parent().unwrap())?;
+        std::fs::write(file, page)?;
     }
     Ok(())
 }
@@ -29,38 +31,48 @@ fn pages(live: bool) -> Vec<(String, String)> {
     sections(&mut index, HIGHLIGHTS, live);
     index.push_str("\n## Modules\n\n| module | about |\n|---|---|\n");
     let mut out = vec![("syntax.md".into(), "{{#include ../../syntax.md}}\n".into())];
-    for m in MODULES {
-        writeln!(summary, "- [{0}]({0}.md)", m.name).unwrap();
-        writeln!(index, "| [{0}]({0}.md) | {1} |", m.name, m.about).unwrap();
-        out.push((format!("{}.md", m.name), page(m, &note, live)));
+    for (path, m) in ALL.iter() {
+        let depth = path.matches('.').count();
+        writeln!(summary, "{}- [{}]({})", "  ".repeat(depth), m.name, file(path)).unwrap();
+        writeln!(index, "| [{path}]({}) | {} |", file(path), m.about).unwrap();
+        out.push((file(path), page(path, m, &note, live)));
     }
     out.push(("SUMMARY.md".into(), summary));
     out.push(("index.md".into(), index));
     out
 }
 
-fn page(m: &Module, note: &str, live: bool) -> String {
-    let mut s = format!("# {}\n\n{}\n\n{note}", m.name, m.about);
+/// A module's page file: `math.trig` is `math/trig.md`.
+fn file(path: &str) -> String {
+    format!("{}.md", path.replace('.', "/"))
+}
+
+fn page(path: &str, m: &Module, note: &str, live: bool) -> String {
+    let mut s = format!("# {path}\n\n{}\n\n{note}", m.about);
     sections(&mut s, m.guide, live);
-    let table = match m.name {
-        "units" => units::TABLE,
-        "goofy_units" => goofy_units::TABLE,
-        _ => &[],
-    };
-    let kinds: Vec<_> = units::DIMS.iter().map(|(kind, dim)| (kind, table.iter().filter(|r| r.3 == *dim).map(|r| r.0.replace(' ', ", ")).collect::<Vec<_>>())).filter(|k| !k.1.is_empty()).collect();
+    let kinds = units::kinds(m.units);
     if !kinds.is_empty() {
         s.push_str("\n## Units\n\n| kind | names |\n|---|---|\n");
-        for (kind, names) in kinds {
+        for (kind, rows) in kinds {
+            let names: Vec<_> = rows.iter().map(|r| r.0.replace(' ', ", ")).collect();
             writeln!(s, "| {kind} | {} |", names.join("; ")).unwrap();
         }
     }
+    if !m.children.is_empty() {
+        s.push_str("\n## Submodules\n\n| module | about |\n|---|---|\n");
+        for c in m.children {
+            writeln!(s, "| [{0}]({1}/{0}.md) | {2} |", c.name, m.name, c.about).unwrap();
+        }
+    }
+    // Links from this page climb back to the book root first.
+    let root = "../".repeat(path.matches('.').count());
     if !m.fns.is_empty() {
         s.push_str("\n## Functions\n\n| function | description |\n|---|---|\n");
         for f in m.fns {
             writeln!(s, "| [`{}`](#{}) | {} |", f.sig.replace('|', "\\|"), f.name, f.desc.replace('|', "\\|")).unwrap();
         }
         for f in m.fns {
-            function(&mut s, f, live);
+            function(&mut s, f, &root, live);
         }
     }
     if !m.examples.is_empty() {
@@ -70,17 +82,21 @@ fn page(m: &Module, note: &str, live: bool) -> String {
     s
 }
 
-fn function(s: &mut String, f: &Doc, live: bool) {
+fn function(s: &mut String, f: &Doc, root: &str, live: bool) {
     writeln!(s, "\n### {}\n\n`{}`: {}", f.name, f.sig, f.desc).unwrap();
-    if !f.examples.is_empty() {
+    if !f.examples.is_empty() || !f.shown.is_empty() {
         s.push_str("\n```zil\n");
         for ex in f.examples {
             example(s, ex, live);
         }
+        for ex in f.shown {
+            writeln!(s, "{ex}").unwrap();
+        }
         s.push_str("```\n");
     }
     if !f.see.is_empty() {
-        let links: Vec<_> = f.see.iter().map(|n| format!("[{n}]({}.md#{n})", MODULES.iter().find(|m| m.fns.iter().any(|g| g.name == *n)).map_or("", |m| m.name))).collect();
+        let home = |n: &str| modules().find(|m| m.fns.iter().any(|g| g.name == n)).map_or(String::new(), |m| file(crate::modules::path(m)));
+        let links: Vec<_> = f.see.iter().map(|n| format!("[{n}]({root}{}#{n})", home(n))).collect();
         writeln!(s, "\nSee also: {}", links.join(", ")).unwrap();
     }
 }
@@ -116,8 +132,10 @@ mod tests {
         let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/book/src");
         let strip = |page: &str| -> String {
             let lines = page.lines().filter(|l| !l.starts_with(RESULT));
-            lines.map(|l| if l.starts_with(NOTE) { NOTE } else { l }).collect::<Vec<_>>().join("
-")
+            lines.map(|l| if l.starts_with(NOTE) { NOTE } else { l }).collect::<Vec<_>>().join(
+                "
+",
+            )
         };
         for (name, page) in pages(false) {
             let disk = std::fs::read_to_string(dir.join(&name)).unwrap_or_default();

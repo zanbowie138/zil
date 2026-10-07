@@ -97,7 +97,7 @@ impl Value {
             Value::Frac(r, true) => write!(f, "{r}"),
             Value::Frac(r, false) => write!(f, "{}", fmt_float(r.to_f64().unwrap_or(f64::NAN))),
             Value::Float(n) => write!(f, "{}", fmt_float(*n)),
-            Value::Qty(n, u) => match modules::money::show(*n, u) {
+            Value::Qty(n, u) => match modules::units::money::show(*n, u) {
                 Some(s) => write!(f, "{s}"),
                 None => write!(f, "{} {u}", fmt_float(*n)),
             },

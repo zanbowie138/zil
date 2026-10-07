@@ -1,75 +1,58 @@
-//! General: printing, type conversions, number bases, parsing, files, help, `input`.
+//! Core: printing, type conversions, parsing, files, help, `input`.
 
-use super::{Call, Claim, Doc, Fail, Module, doc, strings::hex};
+use super::{Call, Claim, Doc, Fail, Module, doc};
 use crate::ast::{BinOp, Expr, ExprKind, Radix, UnOp};
 use crate::help::help;
 use crate::interp::Interp;
 use crate::lexer::Span;
-use crate::value::{Value, exact, fits, num};
+use crate::value::{Value, exact, num};
 use num_bigint::BigInt;
 use num_rational::BigRational;
 
 pub const MODULE: Module = Module {
-    name: "general",
-    about: "values, printing, conversions, number bases, parsing, files",
+    name: "core",
+    about: "values, printing, type conversions, parsing, files, help",
     #[rustfmt::skip]
     examples: &[
-        ("general", &[
+        ("core", &[
             ("type of anything", "type(5 km)"),
             ("parse values from text", r#"parse("[1, 2, 5 km]")"#),
-            ("number bases", "255 to bin"),
-            ("any base back to decimal", "36#zz to dec"),
-            ("hex of a big int", "factorial(20) to hex"),
         ]),
     ],
     #[rustfmt::skip]
     guide: &[
         ("types", &[("nil", "nil"), ("bool", "true"), ("int", "0xff"), ("float", "1.5e3"), ("frac", "7/2 to frac"), ("fn", r"|x| x * 2")]),
-        ("names", &[("input  (stdin as a string)", "")]),
-        ("conversions", &[
-            ("to str int float frac bool list", r#""42" to int"#),
-            ("to hex bin oct dec", "255 to bin"),
-            ("to hex(bits), to base(b)", "-1 to hex(16)"),
-        ]),
+        ("names", &[("input  (stdin as a string): input.lines.len", "")]),
+        ("conversions", &[("to str int float frac bool list", r#""42" to int"#)]),
     ],
     fns: FNS,
     #[rustfmt::skip]
     groups: &[
-        ("values", &["type", "len", "parse"]),
+        ("values", &["type", "parse"]),
         ("convert", &["str", "int", "float", "frac", "bool", "list"]),
-        ("bases", &["hex", "bin", "oct", "dec", "base"]),
         ("io", &["print", "read_file", "write_file", "help"]),
     ],
     call,
     #[rustfmt::skip]
-    targets: &[
-        ("str", "str"), ("int", "int"), ("float", "float"), ("frac", "frac"), ("bool", "bool"), ("list", "list"),
-        ("hex", "hex"), ("bin", "bin"), ("oct", "oct"), ("dec", "dec"), ("base", "base"),
-    ],
+    targets: &[("str", "str"), ("int", "int"), ("float", "float"), ("frac", "frac"), ("bool", "bool"), ("list", "list")],
     ident: Some(ident),
     ..Module::EMPTY
 };
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("print", "print(a, b, ...)", "print values separated by spaces", &[], &["str"]),
+    doc("print", "print(a, b, ...)", "print values separated by spaces", &[], &["str"]).shown(&[r#"print("total:", 5 km)"#]),
     doc("type", "type(v)", "the type name of a value", &["type(5 km)", r#"type("hi")"#, "type([1])"], &["str", "int", "float"]),
     doc("str", "str(v)", "convert to a string (full float precision)", &["str(1/3)", "str(5 km)"], &["int", "float"]),
     doc("int", "int(v, base?)", "convert to an integer, parsing strings in an optional base", &["int(3.9)", r#""ff".int(16)"#, r#""0b101".int"#], &["float", "str"]),
     doc("float", "float(v)", "convert to a float; drops a quantity's unit", &[r#"float("2.5")"#, "float(5 km)"], &["int", "str"]),
     doc("frac", "frac(v)", "show as a fraction; floats become the simplest fraction within 1e-12", &["7/2 to frac", "1/3 + 1/6 to frac", "0.75.frac"], &["float"]),
     doc("bool", "bool(v)", "truthiness: false only for nil and false", &["bool(0)", "nil to bool"], &["str"]),
-    doc("hex", "hex(v, bits?)", "same as `v to hex` / `v to hex(bits)`; strings become hex bytes", &["hex(255)", "hex(-1, 16)", r#"hex("hi")"#], &["bin", "base", "int"]),
-    doc("bin", "bin(v, bits?)", "same as `v to bin` / `v to bin(bits)`", &["bin(10)", "bin(5, 8)"], &["hex", "oct"]),
-    doc("oct", "oct(v, bits?)", "same as `v to oct`", &["oct(8)"], &["hex", "bin"]),
-    doc("dec", "dec(v, bits?)", "same as `v to dec`; with bits, reads two's complement as unsigned", &["dec(0xff)", "dec(-1, 8)"], &["hex", "int"]),
-    doc("base", "base(v, b)", "same as `v to base(b)`, any base 2-36", &["base(35, 36)", "base(10, 3)"], &["hex", "digits"]),
     doc("list", "list(v)", "convert to a list: characters, a copy, or [key, value] pairs", &[r#"list("abc")"#, r#""abc" to list"#, "{a: 1, b: 2}.list"], &["chars", "parse"]),
     doc("parse", "parse(s)", "read a zil literal (number, string, list, map, quantity); never runs code", &[r#""[1, 2.5, 0xff]".parse"#, r#""5 km".parse to m"#], &["str", "nums"]),
-    doc("len", "len(v)", "length of a string, list or map", &[r#""héllo".len"#, "[1, 2, 3].len", "{a: 1}.len"], &[]),
-    doc("read_file", "read_file(path)", "file contents as a string", &[], &["write_file", "lines"]),
-    doc("write_file", "write_file(path, v)", "write v to a file as text", &[], &["read_file"]),
-    doc("help", "help(topic?)", "this help; topic is a function, module, unit, or any value to list functions for its type", &[], &[]),
+    doc("read_file", "read_file(path)", "file contents as a string", &[], &["write_file", "lines"]).shown(&[r#"read_file("notes.txt").lines.len"#]),
+    doc("write_file", "write_file(path, v)", "write v to a file as text", &[], &["read_file"]).shown(&[r#"write_file("out.txt", [1, 2, 3])"#]),
+    doc("help", "help(topic?)", "this help; topic is a function, module (\"trig\" or \"math.trig\"), unit, or any value to list functions for its type", &[], &[]).shown(&["help(upper)", r#"help("math.trig")"#, "help(today)"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -116,31 +99,10 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("frac", [Frac(r, _)]) => Frac(r.clone(), true),
         ("frac", [Float(x)]) => exact(simplest(*x).ok_or("not a finite number")?, Radix::DEC, true),
         ("bool", [v]) => Bool(v.truthy()),
-        ("hex" | "bin" | "oct" | "dec" | "base", [v, rest @ ..]) if rest.len() <= 1 => {
-            let base = match name {
-                "hex" => 16,
-                "bin" => 2,
-                "oct" => 8,
-                "dec" => 10,
-                _ => match rest {
-                    [Int(b, _)] if (2..=36).contains(b) => *b as u32,
-                    _ => return Err("expected base(v, 2-36)".into()),
-                },
-            };
-            let width = match (name, rest) {
-                ("base", _) | (_, []) => 0,
-                (_, [Int(w, _)]) if (1..=64).contains(w) => *w as u32,
-                _ => return Err("width must be 1-64 bits".into()),
-            };
-            to_radix(v, Radix { base, width })?
-        }
         ("list", [Str(s)]) => Value::list(s.chars().map(|c| Value::str(c.to_string())).collect()),
         ("list", [List(l)]) => Value::list(l.borrow().clone()),
         ("list", [Map(m)]) => Value::list(m.borrow().iter().map(|(k, v)| Value::list(vec![Value::str(k.as_str()), v.clone()])).collect()),
         ("parse", [Str(s)]) => parse_literal(s)?,
-        ("len", [Str(s)]) => Value::int(s.chars().count() as i64),
-        ("len", [List(l)]) => Value::int(l.borrow().len() as i64),
-        ("len", [Map(m)]) => Value::int(m.borrow().len() as i64),
         ("read_file", [Str(path)]) => Value::str(std::fs::read_to_string(&**path).map_err(|e| e.to_string())?),
         ("write_file", [Str(path), v]) => {
             std::fs::write(&**path, v.to_string()).map_err(|e| e.to_string())?;
@@ -163,19 +125,6 @@ fn ident(it: &mut Interp, name: &str) -> Claim {
         it.input = Some(s.into());
     }
     Some(Ok(Value::Str(it.input.clone().unwrap())))
-}
-
-/// An integer displayed in another base or bit width; strings to hex become their bytes.
-fn to_radix(v: &Value, r: Radix) -> Result<Value, String> {
-    Ok(match v {
-        Value::Int(n, _) if r.width == 0 || fits(*n, r.width) => Value::Int(*n, r),
-        Value::Int(n, _) => return Err(format!("{n} does not fit in {} bits", r.width)),
-        Value::Big(n, _) if r.width == 0 => Value::Big(n.clone(), r),
-        Value::Big(n, _) => return Err(format!("{n} does not fit in {} bits", r.width)),
-        Value::Float(x) if x.fract() == 0.0 && x.abs() < 9.2e18 => to_radix(&Value::int(*x as i64), r)?,
-        Value::Str(s) if r == (Radix { base: 16, width: 0 }) => Value::str(hex(s.as_bytes())),
-        v => return Err(format!("cannot convert {} like that", v.type_name())),
-    })
 }
 
 /// Accepts `0x`/`0b`/`0o`/`36#` prefixes and `_` separators when no base is given.
@@ -230,7 +179,14 @@ fn simplest(x: f64) -> Option<BigRational> {
 fn parse_literal(s: &str) -> Result<Value, String> {
     fn literal(e: &Expr) -> bool {
         match &e.kind {
-            ExprKind::Nil | ExprKind::Bool(_) | ExprKind::Int(..) | ExprKind::Big(..) | ExprKind::Float(_) | ExprKind::Dec(_) | ExprKind::Str(_) | ExprKind::Regex(_) => true,
+            ExprKind::Nil
+            | ExprKind::Bool(_)
+            | ExprKind::Int(..)
+            | ExprKind::Big(..)
+            | ExprKind::Float(_)
+            | ExprKind::Dec(_)
+            | ExprKind::Str(_)
+            | ExprKind::Regex(_) => true,
             ExprKind::List(items) => items.iter().all(literal),
             ExprKind::Map(entries) => entries.iter().all(|(_, v)| literal(v)),
             ExprKind::Qty(n, _) | ExprKind::Unary(UnOp::Neg, n) => literal(n),
@@ -287,58 +243,5 @@ str(x).parse == x"#
         assert!(try_eval("5 to list").is_err());
         assert_eq!(show(r#""hi there" to base64"#), "aGkgdGhlcmU=");
         assert_eq!(show(r#"base64("hi there")"#), "aGkgdGhlcmU=");
-        assert_eq!(show("hex(255)"), "0xff");
-        assert_eq!(show("255.bin"), "0b11111111");
-        assert_eq!(show("bin(5, 8)"), "0b00000101");
-        assert_eq!(show("oct(8)"), "0o10");
-        assert_eq!(show("dec(0xff)"), "255");
-        assert_eq!(show("base(35, 36)"), "36#z");
-        assert_eq!(show(r#"hex("hi")"#), "6869");
-        assert_eq!(
-            show(
-                "hex = 3
-hex + 1"
-            ),
-            "4"
-        );
-        assert!(try_eval("hex(256, 8)").is_err());
-        assert!(try_eval("base(1, 99)").is_err());
-    }
-
-    #[test]
-    fn bases() {
-        assert_eq!(show("255 to hex"), "0xff");
-        assert_eq!(show("x = 255 to hex\nx + 1"), "0x100");
-        assert_eq!(show("0xff to dec"), "255");
-        assert_eq!(show("0b1010 + 1"), "0b1011");
-        assert_eq!(show("10 to bin"), "0b1010");
-        assert_eq!(show("35 to base(36)"), "36#z");
-        assert_eq!(
-            show(
-                "x = 36#z
-x + 1"
-            ),
-            "36#10"
-        );
-        assert_eq!(
-            show(
-                "x = 0b1010
-x + 1"
-            ),
-            "0b1011"
-        );
-        assert_eq!(show("2#1010"), "0b1010");
-        assert_eq!(show("-3#12 to dec"), "-5");
-        assert!(try_eval("37#1").is_err());
-        assert!(try_eval("2#12").is_err());
-        assert_eq!(show("-1 to hex(32)"), "0xffffffff");
-        assert_eq!(show("5 to bin(8)"), "0b00000101");
-        assert_eq!(show("-1 to dec(8)"), "255");
-        assert_eq!(show("~0x0f to hex(8)"), "0xf0");
-        assert_eq!(show("-5 to hex"), "-0x5");
-        assert!(try_eval("256 to hex(8)").is_err());
-        assert!(try_eval("5 to base(99)").is_err());
-        assert!(try_eval("5 to hex(65)").is_err());
-        assert_eq!(show(r#""hi" to hex"#), "6869");
     }
 }

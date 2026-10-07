@@ -79,6 +79,13 @@ numbers with units, combined and converted; currencies use live rates
 | light | lm, lumen, lumens; cd, candela, candelas |
 | illuminance | lx, lux; fc, footcandle, footcandles |
 
+## Submodules
+
+| module | about |
+|---|---|
+| [money](units/money.md) | currencies shown as money, pay, interest, loans, splitting bills |
+| [goofy](units/goofy.md) | bananas for scale, smoots, fortnights; every item also works as item_for_scale |
+
 ## More examples
 
 ### units

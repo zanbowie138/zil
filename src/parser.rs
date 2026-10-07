@@ -516,7 +516,7 @@ impl Parser {
                         None => (end, None),
                     };
                     if let Some(spec) = spec {
-                        crate::modules::math::Spec::parse(spec).map_err(|m| Error::new(m, start + i..start + end + 1))?;
+                        crate::modules::math::formatting::Spec::parse(spec).map_err(|m| Error::new(m, start + i..start + end + 1))?;
                     }
                     let inner_toks = lex_at(&raw[i + 1..src_end], start + i + 1)?;
                     let mut p = Parser { toks: inner_toks, pos: 0, prev_end: 0, holes: 0 };
