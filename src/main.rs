@@ -218,6 +218,15 @@ fn color_on() -> bool {
     std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none()
 }
 
+/// Help shaped for stdout, `(color, width)`, if `src` is help printed straight to it: `help upper`,
+/// or a line that is just `help(...)`. Help inside a bigger expression stays plain text for piping.
+fn help_term(src: &str) -> Option<(bool, usize)> {
+    use ast::ExprKind::{Call, Ident};
+    let call = matches!(parser::parse(src).as_deref(), Ok([e]) if matches!(&e.kind, Call(f, _) if matches!(&f.kind, Ident(n) if n == "help")));
+    let (terminal_size::Width(w), _) = terminal_size::terminal_size_of(std::io::stdout())?;
+    (call || help_shorthand(src).is_some()).then_some((color_on(), w as usize))
+}
+
 /// A value's color by type, as REPL results and help show it.
 fn tint(v: &Value) -> &'static str {
     match v {
@@ -280,10 +289,10 @@ fn repl(interp: &mut Interp) {
         let _ = rl.add_history_entry(src.trim_end());
         // Printed directly, so it keeps its colors.
         if let Some(topic) = help_shorthand(&src) {
-            println!("{}\n", help::help(topic, color_on()).unwrap_or_else(|e| e));
+            println!("{}\n", help::live(help_term(&src), || help::help(topic, color_on())).unwrap_or_else(|e| e));
             continue;
         }
-        match run(interp, &src) {
+        match help::live(help_term(&src), || run(interp, &src)) {
             Ok(Value::Nil | Value::Fn(_)) => {}
             // Multi-line text, like `help(upper)`, reads better bare and unnumbered.
             Ok(v) if matches!(&v, Value::Str(s) if s.contains('\n')) => {
@@ -329,7 +338,7 @@ fn real_main() {
         [] => repl(&mut interp),
         [flag, code, rest @ ..] if flag == "-e" => {
             interp.args = rest.to_vec();
-            match run_or_exit(&mut interp, "<-e>", code) {
+            match help::live(help_term(code), || run_or_exit(&mut interp, "<-e>", code)) {
                 Value::Nil => {}
                 Value::Table(t) => println!("{}", modules::data::tables::grid(&t, color_on())),
                 v => println!("{v}"),

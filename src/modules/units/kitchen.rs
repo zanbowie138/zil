@@ -34,7 +34,7 @@ const FNS: &[Doc] = &[
 ];
 
 /// CSS reference pixel: 1/96 inch.
-pub const TABLE: &[Row] = &[("px pixel pixels", 0.0254 / 96.0, 0.0, LEN)];
+pub const TABLE: &[Row] = &[("px pixel pixels", 0.0254 / 96.0, 0.0, LEN, "pixel: the CSS reference pixel, 1/96 inch")];
 
 // ponytail: one typical density per ingredient; brands and packing vary by ±10%.
 #[rustfmt::skip]

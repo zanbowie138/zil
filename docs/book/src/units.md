@@ -74,7 +74,7 @@ pretty(12345678 m, "short")
 | mass | kg, kilogram, kilograms; g, gram, grams; mg, milligram, milligrams; µg, ug, μg, microgram, micrograms; t, tonne, tonnes; lb, lbs, pound, pounds; oz, ounce, ounces; st, stone |
 | time | s, sec, secs, second, seconds; ms, millisecond, milliseconds; µs, us, μs, microsecond, microseconds; ns, nanosecond, nanoseconds; min, mins, minute, minutes; h, hr, hrs, hour, hours; d, day, days; wk, week, weeks; mo, month, months; yr, year, years; workday, workdays; workwk, workweek, workweeks; workmo, workmonth, workmonths; workyr, workyear, workyears |
 | temperature | K, kelvin; C, celsius, degC; F, fahrenheit, degF |
-| volume | L, l, liter, liters, litre, litres; mL, ml, milliliter, milliliters; gal, gallon, gallons; qt, quart, quarts; pt, pint, pints; cup, cups; floz; tbsp; tsp |
+| volume | L, l, liter, liters, litre, litres; mL, ml, milliliter, milliliters; gal, gallon, gallons; qt, quart, quarts; pt, pint, pints; cup, cups; floz; tbsp, tablespoon, tablespoons; tsp, teaspoon, teaspoons |
 | area | ha, hectare, hectares; acre, acres |
 | speed | kph, kmh; mph; kn, knot, knots |
 | data | bit, bits; B, byte, bytes; KB; MB; GB; TB; PB; KiB; MiB; GiB; TiB; PiB; kbit, Kb; Mbit, Mb; Gbit, Gb |
@@ -98,6 +98,7 @@ pretty(12345678 m, "short")
 | concentration | M, molar; mM, millimolar; µM, uM, μM, micromolar |
 | light | lm, lumen, lumens; cd, candela, candelas |
 | illuminance | lx, lux; fc, footcandle, footcandles |
+| dose | Sv, sievert, sieverts; mSv, millisievert, millisieverts; µSv, uSv, μSv, microsievert, microsieverts |
 
 ## Submodules
 
@@ -113,6 +114,7 @@ pretty(12345678 m, "short")
 | function | description |
 |---|---|
 | [`simplify(q: quantity)`](#simplify) | the quantity in the prefixed unit of the same family that reads best, like `1.2 m` or `3.6 kW`; also `to best` |
+| [`all_units()`](#all_units) | every unit as a table: {name, full, desc, aliases, kind, si, source}; source is units, goofy, kitchen, currency or user |
 
 ### simplify
 
@@ -128,6 +130,21 @@ pretty(12345678 m, "short")
 1.5e9 B.simplify
 # → 1.5 GB
 ```
+
+### all_units
+
+`all_units()`: every unit as a table: {name, full, desc, aliases, kind, si, source}; source is units, goofy, kitchen, currency or user
+
+```zil
+all_units().len
+# → 266
+all_units().filter(|u| u.kind == "length").map(|u| u.name).take(5)
+# → ["m", "km", "cm", "mm", "µm"]
+all_units().filter(|u| u.source == "goofy")[0]
+# → {name: "banana", full: "banana", desc: "a typical banana, 17.8 cm; the internet's favorite scale", aliases: ["bananas"], kind: "length", si: 0.178 m, source: "goofy"}
+```
+
+See also: [simplify](units.md#simplify)
 
 ## More examples
 

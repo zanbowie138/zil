@@ -9,15 +9,17 @@ bananas for scale, smoots, fortnights; every item also works as item_for_scale
 
 | kind | names |
 |---|---|
-| length | banana, bananas; credit_card, credit_cards; attoparsec, attoparsecs; beard_second, beard_seconds; smoot, smoots; altuve, altuves; cubit, cubits; hand, hands; giraffe, giraffes; school_bus, school_buses; blue_whale, blue_whales; football_field, football_fields; statue_of_liberty; furlong, furlongs; eiffel_tower, eiffel_towers; sheppey, sheppeys; league, leagues; everest, everests; marathon, marathons |
-| mass | paperclip, paperclips; bowling_ball, bowling_balls; corgi, corgis; slug, slugs; firkin, firkins; grand_piano, grand_pianos; honda_civic, honda_civics; elephant, elephants |
-| time | shake, shakes; jiffy, jiffies; nanocentury, nanocenturies; moment, moments; microcentury, microcenturies; scaramucci, scaramuccis; fortnight, fortnights; dog_year, dog_years; friedman, friedmans |
-| volume | barrel, barrels, bbl; hogshead, hogsheads; bathtub, bathtubs; olympic_pool, olympic_pools |
+| length | banana, bananas; credit_card, credit_cards; attoparsec, attoparsecs; beard_second, beard_seconds; human_hair, human_hairs; sheet_of_paper, sheets_of_paper; light_nanosecond, light_nanoseconds; smoot, smoots; altuve, altuves; cubit, cubits; hand, hands; step, steps; giraffe, giraffes; school_bus, school_buses; blue_whale, blue_whales; football_field, football_fields; city_block, city_blocks; statue_of_liberty; furlong, furlongs; eiffel_tower, eiffel_towers; sheppey, sheppeys; league, leagues; everest, everests; marathon, marathons |
+| mass | grain_of_rice, grains_of_rice; paperclip, paperclips; us_penny, us_pennies; bowling_ball, bowling_balls; corgi, corgis; slug, slugs; firkin, firkins; grand_piano, grand_pianos; honda_civic, honda_civics; elephant, elephants; boeing_747, boeing_747s, jumbo_jet |
+| time | planck_time, planck_times; shake, shakes; jiffy, jiffies; blink, blinks; nanocentury, nanocenturies; moment, moments; sol, sols; microcentury, microcenturies; scaramucci, scaramuccis; fortnight, fortnights; dog_year, dog_years; friedman, friedmans |
+| volume | shot, shots; can, cans; wine_bottle, wine_bottles; barrel, barrels, bbl; hogshead, hogsheads; bathtub, bathtubs; olympic_pool, olympic_pools |
 | area | barn, barns; parking_space, parking_spaces; tennis_court, tennis_courts; rhode_island; wales |
-| speed | snail, snails; mach |
-| data | nibble, nibbles; floppy, floppies; cdrom, cdroms; dvd, dvds; library_of_congress |
-| energy | big_mac, big_macs; tnt, ton_tnt; hiroshima, hiroshimas |
-| power | donkeypower; toaster, toasters |
+| speed | snail, snails; walking_pace; bike_pace; mach; lightspeed |
+| data | nibble, nibbles; tweet, tweets; paragraph, paragraphs; novel, novels; floppy, floppies; photo, photos; cdrom, cdroms; human_genome, human_genomes; dvd, dvds; hour_of_hd_video, hours_of_hd_video; library_of_congress |
+| energy | aa_battery, aa_batteries; banana_cal; big_mac, big_macs; gallon_gas, gallons_gas; tnt, ton_tnt; hiroshima, hiroshimas |
+| power | human_resting; donkeypower; toaster, toasters |
+| frequency | heartbeat, heartbeats; hummingbird_wingbeat, hummingbird_wingbeats |
+| dose | bed, banana_dose |
 
 ## Functions
 

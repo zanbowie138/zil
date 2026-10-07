@@ -10,7 +10,8 @@ use crate::interp::Interp;
 use crate::interp::mismatch;
 use crate::lexer::Span;
 use crate::modules::{Call, Claim, Doc, Fail, Module, doc};
-use crate::value::{Value, num};
+use crate::value::{Table, Value, num};
+use indexmap::IndexMap;
 use std::cell::{Cell, RefCell};
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -81,11 +82,14 @@ pub const MODULE: Module = Module {
 const FNS: &[Doc] = &[
     doc("simplify", "simplify(q: quantity)", "the quantity in the prefixed unit of the same family that reads best, like `1.2 m` or `3.6 kW`; also `to best`",
         &["0.0012 km to best", "3600 J/s to best", "1 kg*m^2/s^2 to best", "1.5e9 B.simplify"], &[]),
+    doc("all_units", "all_units()", "every unit as a table: {name, full, desc, aliases, kind, si, source}; source is units, goofy, kitchen, currency or user",
+        &["all_units().len", r#"all_units().filter(|u| u.kind == "length").map(|u| u.name).take(5)"#, r#"all_units().filter(|u| u.source == "goofy")[0]"#], &["simplify"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     match (name, args) {
         ("simplify", [Value::Qty(x, u)]) => Ok(simplify(*x, u)),
+        ("all_units", []) => Ok(all_units()),
         _ => Err(Fail::BadArgs),
     }
 }
@@ -236,33 +240,56 @@ pub fn unit_of(spec: &UnitSpec) -> Result<Unit, String> {
 
 /// `help("units")`, `help("length")`, `help("km")`, `help("currency")`.
 fn topic(topic: &str) -> bool {
-    use crate::help::{out, show};
+    use crate::DIM;
+    use crate::help::{HEADING, NAME, code, eval, names, out, pad, paint, show};
     if topic == "units" {
         let w = DIMS.iter().map(|d| d.0.len()).max().unwrap_or(0);
-        out!("  {:<w$}  3-letter codes (USD EUR GBP ...), live rates fetched when converting", "currency");
-        out!("help(\"length\") or help(\"km\") for details");
+        out!("  {}{}  3-letter codes (USD EUR GBP ...), live rates fetched when converting", paint(DIM, "currency"), pad("currency", w));
+        out!("{}", paint(DIM, r#"help("length") or help("km") for details"#));
     } else if topic == "currency" {
-        out!("currency: 3-letter codes like USD, EUR, GBP, JPY. Rates by Exchange Rate API (exchangerate-api.com),");
+        out!("{}: 3-letter codes like USD, EUR, GBP, JPY. Rates by Exchange Rate API (exchangerate-api.com),", paint(NAME, "currency"));
         out!("are fetched only when two currencies meet, after allow_network_access(), and cached for a day.");
-        out!("  100 USD to EUR");
+        out!("  {}", code("100 USD to EUR"));
     } else if let Some(kind) = DIMS.iter().map(|d| d.0).find(|k| *k == topic) {
         let units = units_of(kind);
-        out!("{kind} units: {}", units.join(" "));
+        out!("{}: {}", paint(HEADING, &format!("{kind} units")), names(&units, " "));
         show(vec![format!("1 {} to {}", units[1], units[0]), format!("1 {} to {}", units[0], units[units.len() - 1])]);
-    } else if let Some((names, _, _, dim)) = rows().find(|row| row.0.split(' ').any(|n| n == topic)) {
+        out!("{}", paint(DIM, r#"help("km") etc. for one unit"#));
+    } else if let Some((names, scale, offset, dim, about)) = rows().find(|row| row.0.split(' ').any(|n| n == topic)) {
         let mut names = names.split(' ');
         let name = names.next().unwrap();
-        let kind = DIMS.iter().find(|d| d.1 == *dim).unwrap().0;
+        let (full, desc) = about.split_once(": ").expect("unit description is \"full name: description\"");
+        let kind = DIMS.iter().find(|d| d.1 == *dim).map(|d| d.0);
+        out!("{}{}", paint(NAME, name), if full == name { String::new() } else { format!(": {full}") });
+        out!("  {desc}");
+        let row = |label: &str, text: String| out!("  {}  {text}", paint(DIM, &format!("{label:<6}")));
+        // A goofy-only kind (gee) has no name and no real units to compare with.
+        let Some(kind) = kind else {
+            row("equals", code(&format!("1 {name} = {}", eval(&format!("1 {name} to {}", base_name(dim))))));
+            return true;
+        };
+        row("kind", kind.to_string());
         let aliases: Vec<_> = names.collect();
-        let aka = if aliases.is_empty() { String::new() } else { format!("  (also {})", aliases.join(", ")) };
-        out!("{name}: {kind}{aka}");
-        let other = units_of(kind).into_iter().find(|u| *u != name).unwrap();
+        if !aliases.is_empty() {
+            row("also", aliases.join(", "));
+        }
+        // The SI or named base unit of the kind; temperatures show their zero, since 1 C is not 1 K apart from 0 C.
+        let base = base_name(dim);
+        if base != name {
+            let x = if *offset != 0.0 { 0 } else { 1 };
+            row("equals", code(&format!("{x} {name} = {}", eval(&format!("{x} {name} to {base}")))));
+        }
+        // Examples convert to the closest-sized everyday unit, not the base unit `equals` already shows.
+        let closeness = |r: &&(&str, f64)| (r.1 / scale).log10().abs();
+        let others: Vec<_> = TABLE.iter().filter(|r| r.3 == *dim).map(|r| (r.0.split(' ').next().unwrap(), r.1)).filter(|r| r.0 != name).collect();
+        let other = others.iter().filter(|r| r.0 != base).min_by(|a, b| closeness(a).total_cmp(&closeness(b))).or(others.first()).unwrap().0;
+        out!("");
         show(vec![format!("1 {name} to {other}"), format!("1 {other} to {name}")]);
-        out!("all {kind} units: help(\"{kind}\")");
+        out!("{}", paint(DIM, &format!("all {kind} units: help(\"{kind}\")")));
     } else if let Some((_, desc)) = USER.with(|u| u.borrow().iter().find(|(n, _)| n == topic).cloned()) {
         match desc.as_str() {
-            "" => out!("{topic}: a base unit you defined with `unit {topic}`"),
-            _ => out!("{topic}: a unit you defined, 1 {topic} = {desc}"),
+            "" => out!("{}: a base unit you defined with `unit {topic}`", paint(NAME, topic)),
+            _ => out!("{}: a unit you defined, 1 {topic} = {desc}", paint(NAME, topic)),
         }
     } else {
         return false;
@@ -275,16 +302,82 @@ pub fn kinds(rows: &'static [Row]) -> Vec<(&'static str, Vec<&'static Row>)> {
     DIMS.iter().map(|(kind, dim)| (*kind, rows.iter().filter(|r| r.3 == *dim).collect::<Vec<_>>())).filter(|k| !k.1.is_empty()).collect()
 }
 
+/// `all_units()`: every unit as a table of {name, full, desc, aliases, kind, si, source}. Never fetches rates, so
+/// a currency's `si` is nil until they're loaded.
+fn all_units() -> Value {
+    let entry = |name: &str, full: &str, desc: &str, aliases: Vec<&str>, scale: f64, dim: &Dim, source: &str| {
+        let kind = match DIMS.iter().find(|d| d.1 == *dim) {
+            Some(d) => d.0.to_string(),
+            None if *dim == MONEY => "money".into(),
+            None if *dim == NONE => "number".into(),
+            None => base_name(dim),
+        };
+        let si = if scale.is_nan() {
+            Value::Nil
+        } else {
+            let base = base_terms(dim).iter().fold(Unit::default(), |u, (n, p)| u.mul(&unit(n).expect("base unit").pow(*p), 1));
+            Value::qty(scale, base)
+        };
+        Value::map(IndexMap::from([
+            ("name".into(), Value::str(name)),
+            ("full".into(), Value::str(full)),
+            ("desc".into(), Value::str(desc)),
+            ("aliases".into(), Value::list(aliases.into_iter().map(Value::str).collect())),
+            ("kind".into(), Value::str(kind)),
+            ("si".into(), si),
+            ("source".into(), Value::str(source)),
+        ]))
+    };
+    let mut maps = Vec::new();
+    for (source, table) in [("units", TABLE), ("goofy", goofy::TABLE), ("kitchen", kitchen::TABLE)] {
+        for (names, scale, _, dim, about) in table {
+            let mut names = names.split(' ');
+            let name = names.next().unwrap();
+            let (full, desc) = about.split_once(": ").expect("unit description is \"full name: description\"");
+            maps.push(entry(name, full, desc, names.collect(), *scale, dim, source));
+        }
+    }
+    let user = USER.with(|u| u.borrow().clone());
+    // A currency is registered under its code and its lowercase alias; user units can be money too.
+    let mut codes: Vec<_> = REGISTRY
+        .with(|r| r.borrow().iter().filter(|(k, u)| u.dim == MONEY && **k == u.name && !user.iter().any(|(n, _)| n == *k)).map(|(_, u)| u.clone()).collect());
+    codes.sort_by(|a, b| a.name.cmp(&b.name));
+    for def in codes {
+        maps.push(entry(&def.name, &def.name, "currency", vec![&def.name.to_lowercase()], def.scale.get(), &def.dim, "currency"));
+    }
+    for (name, desc) in &user {
+        let def = lookup(name).expect("user unit is registered");
+        maps.push(entry(name, name, desc, vec![], def.scale.get(), &def.dim, "user"));
+    }
+    Value::table(Table::from_maps(&maps).expect("all maps"))
+}
+
+/// The unit a kind is defined in, as (name, power) terms: its named SI unit (`J`, `lx`), else SI and user bases.
+fn base_terms(dim: &Dim) -> Vec<(String, i8)> {
+    if let Some(row) = TABLE.iter().find(|r| r.1 == 1.0 && r.2 == 0.0 && r.3 == *dim) {
+        return vec![(row.0.split(' ').next().unwrap().to_string(), 1)];
+    }
+    const BASES: [&str; 11] = ["m", "kg", "s", "A", "K", "mol", "cd", "bit", "EUR", "rad", "Sv"];
+    // User bases take slots in the order they were made.
+    let user = USER.with(|u| u.borrow().iter().filter(|(_, d)| d.is_empty()).map(|(n, _)| n.clone()).collect::<Vec<_>>());
+    BASES.iter().map(|n| n.to_string()).chain(user).zip(dim).filter(|(_, p)| **p != 0).map(|(n, p)| (n, *p)).collect()
+}
+
+/// The unit a kind is defined in, written out: `J`, `m/s`, `bit/s`, `pizza`.
+fn base_name(dim: &Dim) -> String {
+    product(base_terms(dim).iter().map(|(n, p)| (n.as_str(), *p)))
+}
+
 fn units_of(kind: &str) -> Vec<&'static str> {
     let dim = DIMS.iter().find(|d| d.0 == kind).unwrap().1;
     TABLE.iter().filter(|row| row.3 == dim).map(|row| row.0.split(' ').next().unwrap()).collect()
 }
 
-/// Exponents of the 7 SI bases (m kg s A K mol cd), the non-SI extras data, money, angle,
+/// Exponents of the 7 SI bases (m kg s A K mol cd), the non-SI extras data, money, angle, dose,
 /// then slots for user base units (`unit pizza`).
 pub type Dim = [i8; 16];
 pub const NONE: Dim = [0; 16];
-const FIRST_USER_BASE: usize = 10;
+const FIRST_USER_BASE: usize = 11;
 
 /// Length, mass, time, current.
 pub const fn d(l: i8, m: i8, t: i8, i: i8) -> Dim {
@@ -313,6 +406,8 @@ pub const DATA: Dim = base(7, 1, NONE);
 const RATE: Dim = base(7, 1, PER_TIME);
 pub const MONEY: Dim = base(8, 1, NONE);
 const ANGLE: Dim = base(9, 1, NONE);
+// Its own base, not J/kg, so specific energies don't print as sieverts.
+pub const DOSE: Dim = base(10, 1, NONE);
 const VOLT: Dim = d(2, 1, -3, -1);
 const OHM: Dim = d(2, 1, -3, -2);
 const COULOMB: Dim = d(0, 0, 1, 1);
@@ -332,163 +427,166 @@ pub const DIMS: &[(&str, Dim)] = &[
     ("current", CURRENT), ("voltage", VOLT), ("resistance", OHM), ("charge", COULOMB),
     ("capacitance", FARAD), ("conductance", SIEMENS), ("magnetic_flux", WEBER), ("magnetic_field", TESLA),
     ("inductance", HENRY), ("frequency", PER_TIME), ("amount", AMOUNT), ("concentration", MOLAR),
-    ("light", LIGHT), ("illuminance", LUX),
+    ("light", LIGHT), ("illuminance", LUX), ("dose", DOSE),
 ];
 
 /// Space-separated names (first is the display name), factor to SI, offset (temperatures only), dimension.
 /// SI bases: m, kg, s, A, K, mol, cd; extras: bit, EUR, rad. Within a dimension, the first unit with
 /// factor 1 is the one metric products are renamed to (see `named`), so J beats N*m and lm beats cd.
 #[rustfmt::skip]
-/// A unit row: space-separated names (primary first), scale to SI, offset, dimension.
-pub type Row = (&'static str, f64, f64, Dim);
+/// A unit row: space-separated names (primary first), scale to SI, offset, dimension, "full name: description" for help.
+pub type Row = (&'static str, f64, f64, Dim, &'static str);
 
 pub const TABLE: &[Row] = &[
-    ("m meter meters metre metres", 1.0, 0.0, LEN),
-    ("km kilometer kilometers", 1e3, 0.0, LEN),
-    ("cm centimeter centimeters", 1e-2, 0.0, LEN),
-    ("mm millimeter millimeters", 1e-3, 0.0, LEN),
-    ("µm um μm micrometer micrometers micron", 1e-6, 0.0, LEN),
-    ("nm nanometer nanometers", 1e-9, 0.0, LEN),
-    ("mi mile miles", 1609.344, 0.0, LEN),
-    ("yd yard yards", 0.9144, 0.0, LEN),
-    ("ft foot feet", 0.3048, 0.0, LEN),
-    ("in inch inches", 0.0254, 0.0, LEN),
-    ("nmi", 1852.0, 0.0, LEN),
-    ("au", 1.495978707e11, 0.0, LEN),
-    ("ly lightyear lightyears", 9.4607304725808e15, 0.0, LEN),
-    ("kg kilogram kilograms", 1.0, 0.0, MASS),
-    ("g gram grams", 1e-3, 0.0, MASS),
-    ("mg milligram milligrams", 1e-6, 0.0, MASS),
-    ("µg ug μg microgram micrograms", 1e-9, 0.0, MASS),
-    ("t tonne tonnes", 1e3, 0.0, MASS),
-    ("lb lbs pound pounds", 0.45359237, 0.0, MASS),
-    ("oz ounce ounces", 0.028349523125, 0.0, MASS),
-    ("st stone", 6.35029318, 0.0, MASS),
-    ("s sec secs second seconds", 1.0, 0.0, TIME),
-    ("ms millisecond milliseconds", 1e-3, 0.0, TIME),
-    ("µs us μs microsecond microseconds", 1e-6, 0.0, TIME),
-    ("ns nanosecond nanoseconds", 1e-9, 0.0, TIME),
-    ("min mins minute minutes", 60.0, 0.0, TIME),
-    ("h hr hrs hour hours", 3600.0, 0.0, TIME),
-    ("d day days", 86400.0, 0.0, TIME),
-    ("wk week weeks", 604800.0, 0.0, TIME),
-    ("mo month months", 2629746.0, 0.0, TIME),
-    ("yr year years", 31556952.0, 0.0, TIME),
+    ("m meter meters metre metres", 1.0, 0.0, LEN, "meter: SI base unit of length, the distance light travels in 1/299792458 s"),
+    ("km kilometer kilometers", 1e3, 0.0, LEN, "kilometer: 1000 meters"),
+    ("cm centimeter centimeters", 1e-2, 0.0, LEN, "centimeter: a hundredth of a meter"),
+    ("mm millimeter millimeters", 1e-3, 0.0, LEN, "millimeter: a thousandth of a meter"),
+    ("µm um μm micrometer micrometers micron", 1e-6, 0.0, LEN, "micrometer: a millionth of a meter, also called a micron; about the size of a bacterium"),
+    ("nm nanometer nanometers", 1e-9, 0.0, LEN, "nanometer: a billionth of a meter; visible light is 380 to 750 nm"),
+    ("mi mile miles", 1609.344, 0.0, LEN, "mile: the international mile, 5280 feet"),
+    ("yd yard yards", 0.9144, 0.0, LEN, "yard: 3 feet, exactly 0.9144 m"),
+    ("ft foot feet", 0.3048, 0.0, LEN, "foot: 12 inches, exactly 0.3048 m"),
+    ("in inch inches", 0.0254, 0.0, LEN, "inch: exactly 2.54 cm"),
+    ("nmi", 1852.0, 0.0, LEN, "nautical mile: exactly 1852 m, about one minute of latitude"),
+    ("au", 1.495978707e11, 0.0, LEN, "astronomical unit: about the mean distance from Earth to the Sun"),
+    ("ly lightyear lightyears", 9.4607304725808e15, 0.0, LEN, "light-year: how far light travels in a Julian year"),
+    ("kg kilogram kilograms", 1.0, 0.0, MASS, "kilogram: SI base unit of mass"),
+    ("g gram grams", 1e-3, 0.0, MASS, "gram: a thousandth of a kilogram"),
+    ("mg milligram milligrams", 1e-6, 0.0, MASS, "milligram: a thousandth of a gram"),
+    ("µg ug μg microgram micrograms", 1e-9, 0.0, MASS, "microgram: a millionth of a gram"),
+    ("t tonne tonnes", 1e3, 0.0, MASS, "tonne: the metric ton, 1000 kg"),
+    ("lb lbs pound pounds", 0.45359237, 0.0, MASS, "pound: the avoirdupois pound, exactly 0.45359237 kg"),
+    ("oz ounce ounces", 0.028349523125, 0.0, MASS, "ounce: the avoirdupois ounce, 1/16 pound; floz is the fluid ounce"),
+    ("st stone", 6.35029318, 0.0, MASS, "stone: 14 pounds, used for body weight in the UK"),
+    ("s sec secs second seconds", 1.0, 0.0, TIME, "second: SI base unit of time"),
+    ("ms millisecond milliseconds", 1e-3, 0.0, TIME, "millisecond: a thousandth of a second"),
+    ("µs us μs microsecond microseconds", 1e-6, 0.0, TIME, "microsecond: a millionth of a second"),
+    ("ns nanosecond nanoseconds", 1e-9, 0.0, TIME, "nanosecond: a billionth of a second"),
+    ("min mins minute minutes", 60.0, 0.0, TIME, "minute: 60 seconds"),
+    ("h hr hrs hour hours", 3600.0, 0.0, TIME, "hour: 60 minutes"),
+    ("d day days", 86400.0, 0.0, TIME, "day: 24 hours"),
+    ("wk week weeks", 604800.0, 0.0, TIME, "week: 7 days"),
+    ("mo month months", 2629746.0, 0.0, TIME, "month: the average Gregorian month, 1/12 of a year or about 30.44 days"),
+    ("yr year years", 31556952.0, 0.0, TIME, "year: the average Gregorian year, 365.2425 days"),
     // Paid time: 8 h days, 40 h weeks, 52 weeks a year. `25 USD/h to USD/workyr` is a salary; `USD/yr` is calendar time.
-    ("workday workdays", 8.0 * 3600.0, 0.0, TIME),
-    ("workwk workweek workweeks", 40.0 * 3600.0, 0.0, TIME),
-    ("workmo workmonth workmonths", 2080.0 / 12.0 * 3600.0, 0.0, TIME),
-    ("workyr workyear workyears", 2080.0 * 3600.0, 0.0, TIME),
-    ("K kelvin", 1.0, 0.0, TEMP),
-    ("C celsius degC", 1.0, 273.15, TEMP),
-    ("F fahrenheit degF", 5.0 / 9.0, 459.67, TEMP),
-    ("L l liter liters litre litres", 1e-3, 0.0, d(3, 0, 0, 0)),
-    ("mL ml milliliter milliliters", 1e-6, 0.0, d(3, 0, 0, 0)),
-    ("gal gallon gallons", 3.785411784e-3, 0.0, d(3, 0, 0, 0)),
-    ("qt quart quarts", 9.46352946e-4, 0.0, d(3, 0, 0, 0)),
-    ("pt pint pints", 4.73176473e-4, 0.0, d(3, 0, 0, 0)),
-    ("cup cups", 2.365882365e-4, 0.0, d(3, 0, 0, 0)),
-    ("floz", 2.95735295625e-5, 0.0, d(3, 0, 0, 0)),
-    ("tbsp", 1.478676478125e-5, 0.0, d(3, 0, 0, 0)),
-    ("tsp", 4.92892159375e-6, 0.0, d(3, 0, 0, 0)),
-    ("ha hectare hectares", 1e4, 0.0, d(2, 0, 0, 0)),
-    ("acre acres", 4046.8564224, 0.0, d(2, 0, 0, 0)),
-    ("kph kmh", 1.0 / 3.6, 0.0, d(1, 0, -1, 0)),
-    ("mph", 0.44704, 0.0, d(1, 0, -1, 0)),
-    ("kn knot knots", 1852.0 / 3600.0, 0.0, d(1, 0, -1, 0)),
-    ("bit bits", 1.0, 0.0, DATA),
-    ("B byte bytes", 8.0, 0.0, DATA),
-    ("KB", 8e3, 0.0, DATA),
-    ("MB", 8e6, 0.0, DATA),
-    ("GB", 8e9, 0.0, DATA),
-    ("TB", 8e12, 0.0, DATA),
-    ("PB", 8e15, 0.0, DATA),
-    ("KiB", 8.0 * 1024.0, 0.0, DATA),
-    ("MiB", 8.0 * 1048576.0, 0.0, DATA),
-    ("GiB", 8.0 * 1073741824.0, 0.0, DATA),
-    ("TiB", 8.0 * 1099511627776.0, 0.0, DATA),
-    ("PiB", 8.0 * 1125899906842624.0, 0.0, DATA),
-    ("kbit Kb", 1e3, 0.0, DATA),
-    ("Mbit Mb", 1e6, 0.0, DATA),
-    ("Gbit Gb", 1e9, 0.0, DATA),
-    ("bps", 1.0, 0.0, RATE),
-    ("kbps", 1e3, 0.0, RATE),
-    ("Mbps", 1e6, 0.0, RATE),
-    ("Gbps", 1e9, 0.0, RATE),
-    ("J joule joules", 1.0, 0.0, d(2, 1, -2, 0)),
-    ("kJ", 1e3, 0.0, d(2, 1, -2, 0)),
-    ("MJ", 1e6, 0.0, d(2, 1, -2, 0)),
-    ("cal calorie calories", 4.184, 0.0, d(2, 1, -2, 0)),
-    ("kcal Cal", 4184.0, 0.0, d(2, 1, -2, 0)),
-    ("Wh", 3600.0, 0.0, d(2, 1, -2, 0)),
-    ("kWh", 3.6e6, 0.0, d(2, 1, -2, 0)),
-    ("eV", 1.602176634e-19, 0.0, d(2, 1, -2, 0)),
-    ("BTU btu", 1055.05585262, 0.0, d(2, 1, -2, 0)),
-    ("W watt watts", 1.0, 0.0, d(2, 1, -3, 0)),
-    ("kW", 1e3, 0.0, d(2, 1, -3, 0)),
-    ("MW", 1e6, 0.0, d(2, 1, -3, 0)),
-    ("hp horsepower", 745.699_871_582_270_2, 0.0, d(2, 1, -3, 0)),
-    ("Pa pascal", 1.0, 0.0, d(-1, 1, -2, 0)),
-    ("kPa", 1e3, 0.0, d(-1, 1, -2, 0)),
-    ("MPa", 1e6, 0.0, d(-1, 1, -2, 0)),
-    ("bar", 1e5, 0.0, d(-1, 1, -2, 0)),
-    ("atm", 101325.0, 0.0, d(-1, 1, -2, 0)),
-    ("psi", 6894.757293168, 0.0, d(-1, 1, -2, 0)),
-    ("mmHg", 133.322387415, 0.0, d(-1, 1, -2, 0)),
-    ("N newton newtons", 1.0, 0.0, d(1, 1, -2, 0)),
-    ("kN", 1e3, 0.0, d(1, 1, -2, 0)),
-    ("lbf", 4.4482216152605, 0.0, d(1, 1, -2, 0)),
-    ("rad radian radians", 1.0, 0.0, ANGLE),
-    ("deg degree degrees", PI / 180.0, 0.0, ANGLE),
-    ("turn turns", 2.0 * PI, 0.0, ANGLE),
-    ("A amp amps ampere amperes", 1.0, 0.0, CURRENT),
-    ("mA milliamp milliamps", 1e-3, 0.0, CURRENT),
-    ("µA uA μA", 1e-6, 0.0, CURRENT),
-    ("kA", 1e3, 0.0, CURRENT),
-    ("V volt volts", 1.0, 0.0, VOLT),
-    ("mV", 1e-3, 0.0, VOLT),
-    ("µV uV μV", 1e-6, 0.0, VOLT),
-    ("kV", 1e3, 0.0, VOLT),
-    ("Ω ohm ohms", 1.0, 0.0, OHM),
-    ("mΩ mohm", 1e-3, 0.0, OHM),
-    ("kΩ kohm", 1e3, 0.0, OHM),
-    ("MΩ Mohm", 1e6, 0.0, OHM),
+    ("workday workdays", 8.0 * 3600.0, 0.0, TIME, "work day: 8 hours of paid time"),
+    ("workwk workweek workweeks", 40.0 * 3600.0, 0.0, TIME, "work week: 40 hours of paid time"),
+    ("workmo workmonth workmonths", 2080.0 / 12.0 * 3600.0, 0.0, TIME, "work month: 1/12 of a work year, about 173 hours"),
+    ("workyr workyear workyears", 2080.0 * 3600.0, 0.0, TIME, "work year: 2080 hours, 52 weeks of 40; USD/h to USD/workyr gives a salary"),
+    ("K kelvin", 1.0, 0.0, TEMP, "kelvin: SI base unit of temperature, counted from absolute zero"),
+    ("C celsius degC", 1.0, 273.15, TEMP, "degree Celsius: kelvin minus 273.15; water freezes at 0 and boils at 100"),
+    ("F fahrenheit degF", 5.0 / 9.0, 459.67, TEMP, "degree Fahrenheit: water freezes at 32 and boils at 212; a degree is 5/9 of a kelvin"),
+    ("L l liter liters litre litres", 1e-3, 0.0, d(3, 0, 0, 0), "liter: a cubic decimeter, 1000 cm^3"),
+    ("mL ml milliliter milliliters", 1e-6, 0.0, d(3, 0, 0, 0), "milliliter: a thousandth of a liter, 1 cm^3"),
+    ("gal gallon gallons", 3.785411784e-3, 0.0, d(3, 0, 0, 0), "gallon: the US liquid gallon, 231 cubic inches"),
+    ("qt quart quarts", 9.46352946e-4, 0.0, d(3, 0, 0, 0), "quart: the US liquid quart, a quarter gallon"),
+    ("pt pint pints", 4.73176473e-4, 0.0, d(3, 0, 0, 0), "pint: the US liquid pint, half a quart"),
+    ("cup cups", 2.365882365e-4, 0.0, d(3, 0, 0, 0), "cup: the US customary cup, half a pint"),
+    ("floz", 2.95735295625e-5, 0.0, d(3, 0, 0, 0), "fluid ounce: the US fluid ounce, 1/8 cup"),
+    ("tbsp tablespoon tablespoons", 1.478676478125e-5, 0.0, d(3, 0, 0, 0), "tablespoon: the US tablespoon, half a fluid ounce"),
+    ("tsp teaspoon teaspoons", 4.92892159375e-6, 0.0, d(3, 0, 0, 0), "teaspoon: the US teaspoon, a third of a tablespoon"),
+    ("ha hectare hectares", 1e4, 0.0, d(2, 0, 0, 0), "hectare: 10000 m^2, a square 100 m on a side"),
+    ("acre acres", 4046.8564224, 0.0, d(2, 0, 0, 0), "acre: the international acre, 43560 square feet"),
+    ("kph kmh", 1.0 / 3.6, 0.0, d(1, 0, -1, 0), "kilometer per hour: road speeds in most of the world"),
+    ("mph", 0.44704, 0.0, d(1, 0, -1, 0), "mile per hour: road speeds in the US and UK"),
+    ("kn knot knots", 1852.0 / 3600.0, 0.0, d(1, 0, -1, 0), "knot: one nautical mile per hour, used at sea and in the air"),
+    ("bit bits", 1.0, 0.0, DATA, "bit: one binary digit, 0 or 1"),
+    ("B byte bytes", 8.0, 0.0, DATA, "byte: 8 bits"),
+    ("KB", 8e3, 0.0, DATA, "kilobyte: 1000 bytes; KiB is 1024"),
+    ("MB", 8e6, 0.0, DATA, "megabyte: 10^6 bytes; MiB is 1024^2"),
+    ("GB", 8e9, 0.0, DATA, "gigabyte: 10^9 bytes, as drive makers count; GiB is 1024^3"),
+    ("TB", 8e12, 0.0, DATA, "terabyte: 10^12 bytes; TiB is 1024^4"),
+    ("PB", 8e15, 0.0, DATA, "petabyte: 10^15 bytes"),
+    ("KiB", 8.0 * 1024.0, 0.0, DATA, "kibibyte: 1024 bytes"),
+    ("MiB", 8.0 * 1048576.0, 0.0, DATA, "mebibyte: 1024 KiB, 1048576 bytes"),
+    ("GiB", 8.0 * 1073741824.0, 0.0, DATA, "gibibyte: 1024 MiB; what many operating systems call a GB"),
+    ("TiB", 8.0 * 1099511627776.0, 0.0, DATA, "tebibyte: 1024 GiB"),
+    ("PiB", 8.0 * 1125899906842624.0, 0.0, DATA, "pebibyte: 1024 TiB"),
+    ("kbit Kb", 1e3, 0.0, DATA, "kilobit: 1000 bits"),
+    ("Mbit Mb", 1e6, 0.0, DATA, "megabit: 10^6 bits; Mb is bits, MB is bytes"),
+    ("Gbit Gb", 1e9, 0.0, DATA, "gigabit: 10^9 bits"),
+    ("bps", 1.0, 0.0, RATE, "bit per second: the base unit of data rate"),
+    ("kbps", 1e3, 0.0, RATE, "kilobit per second: 1000 bits each second"),
+    ("Mbps", 1e6, 0.0, RATE, "megabit per second: how internet speeds are quoted; divide by 8 for MB/s"),
+    ("Gbps", 1e9, 0.0, RATE, "gigabit per second: 1000 Mbps"),
+    ("J joule joules", 1.0, 0.0, d(2, 1, -2, 0), "joule: SI unit of energy, a newton of force over a meter"),
+    ("kJ", 1e3, 0.0, d(2, 1, -2, 0), "kilojoule: 1000 joules; food energy on labels outside the US"),
+    ("MJ", 1e6, 0.0, d(2, 1, -2, 0), "megajoule: 10^6 joules"),
+    ("cal calorie calories", 4.184, 0.0, d(2, 1, -2, 0), "calorie: the small calorie, warms 1 g of water by 1 °C"),
+    ("kcal Cal", 4184.0, 0.0, d(2, 1, -2, 0), "kilocalorie: 1000 calories, the Calorie on food labels"),
+    ("Wh", 3600.0, 0.0, d(2, 1, -2, 0), "watt-hour: one watt for an hour, 3600 J"),
+    ("kWh", 3.6e6, 0.0, d(2, 1, -2, 0), "kilowatt-hour: 1000 Wh, how electricity is billed"),
+    ("eV", 1.602176634e-19, 0.0, d(2, 1, -2, 0), "electronvolt: the energy an electron gains across 1 volt"),
+    ("BTU btu", 1055.05585262, 0.0, d(2, 1, -2, 0), "British thermal unit: warms a pound of water by 1 °F; heating and air conditioning"),
+    ("W watt watts", 1.0, 0.0, d(2, 1, -3, 0), "watt: SI unit of power, a joule per second"),
+    ("kW", 1e3, 0.0, d(2, 1, -3, 0), "kilowatt: 1000 watts"),
+    ("MW", 1e6, 0.0, d(2, 1, -3, 0), "megawatt: 10^6 watts"),
+    ("hp horsepower", 745.699_871_582_270_2, 0.0, d(2, 1, -3, 0), "horsepower: mechanical horsepower, 550 foot-pounds per second"),
+    ("Pa pascal", 1.0, 0.0, d(-1, 1, -2, 0), "pascal: SI unit of pressure, a newton per square meter"),
+    ("kPa", 1e3, 0.0, d(-1, 1, -2, 0), "kilopascal: 1000 pascals"),
+    ("MPa", 1e6, 0.0, d(-1, 1, -2, 0), "megapascal: 10^6 pascals, about 145 psi"),
+    ("bar", 1e5, 0.0, d(-1, 1, -2, 0), "bar: 100 kPa, about the air pressure at sea level"),
+    ("atm", 101325.0, 0.0, d(-1, 1, -2, 0), "standard atmosphere: 101325 Pa, the average air pressure at sea level"),
+    ("psi", 6894.757293168, 0.0, d(-1, 1, -2, 0), "pound per square inch: pound-force per square inch; tire pressure in the US"),
+    ("mmHg", 133.322387415, 0.0, d(-1, 1, -2, 0), "millimeter of mercury: used for blood pressure; 760 mmHg is 1 atm"),
+    ("N newton newtons", 1.0, 0.0, d(1, 1, -2, 0), "newton: SI unit of force, accelerates 1 kg by 1 m/s^2"),
+    ("kN", 1e3, 0.0, d(1, 1, -2, 0), "kilonewton: 1000 newtons"),
+    ("lbf", 4.4482216152605, 0.0, d(1, 1, -2, 0), "pound-force: the weight of one pound under standard gravity"),
+    ("rad radian radians", 1.0, 0.0, ANGLE, "radian: the angle whose arc equals the radius; a full turn is 2π"),
+    ("deg degree degrees", PI / 180.0, 0.0, ANGLE, "degree: 1/360 of a turn"),
+    ("turn turns", 2.0 * PI, 0.0, ANGLE, "turn: one full revolution, 360 degrees"),
+    ("A amp amps ampere amperes", 1.0, 0.0, CURRENT, "ampere: SI base unit of electric current"),
+    ("mA milliamp milliamps", 1e-3, 0.0, CURRENT, "milliampere: a thousandth of an ampere"),
+    ("µA uA μA", 1e-6, 0.0, CURRENT, "microampere: a millionth of an ampere"),
+    ("kA", 1e3, 0.0, CURRENT, "kiloampere: 1000 amperes"),
+    ("V volt volts", 1.0, 0.0, VOLT, "volt: SI unit of voltage, a watt per ampere"),
+    ("mV", 1e-3, 0.0, VOLT, "millivolt: a thousandth of a volt"),
+    ("µV uV μV", 1e-6, 0.0, VOLT, "microvolt: a millionth of a volt"),
+    ("kV", 1e3, 0.0, VOLT, "kilovolt: 1000 volts"),
+    ("Ω ohm ohms", 1.0, 0.0, OHM, "ohm: SI unit of resistance, a volt per ampere"),
+    ("mΩ mohm", 1e-3, 0.0, OHM, "milliohm: a thousandth of an ohm"),
+    ("kΩ kohm", 1e3, 0.0, OHM, "kiloohm: 1000 ohms"),
+    ("MΩ Mohm", 1e6, 0.0, OHM, "megaohm: 10^6 ohms"),
     // C and F stay Celsius and Fahrenheit.
-    ("coulomb coulombs", 1.0, 0.0, COULOMB),
-    ("mAh", 3.6, 0.0, COULOMB),
-    ("Ah", 3600.0, 0.0, COULOMB),
-    ("farad farads", 1.0, 0.0, FARAD),
-    ("mF", 1e-3, 0.0, FARAD),
-    ("µF uF μF", 1e-6, 0.0, FARAD),
-    ("nF", 1e-9, 0.0, FARAD),
-    ("pF", 1e-12, 0.0, FARAD),
-    ("S siemens", 1.0, 0.0, SIEMENS),
-    ("mS", 1e-3, 0.0, SIEMENS),
-    ("Wb weber webers", 1.0, 0.0, WEBER),
-    ("mWb", 1e-3, 0.0, WEBER),
-    ("T tesla teslas", 1.0, 0.0, TESLA),
-    ("mT", 1e-3, 0.0, TESLA),
-    ("µT uT μT", 1e-6, 0.0, TESLA),
-    ("H henry henries", 1.0, 0.0, HENRY),
-    ("mH", 1e-3, 0.0, HENRY),
-    ("µH uH μH", 1e-6, 0.0, HENRY),
-    ("Hz hertz", 1.0, 0.0, PER_TIME),
-    ("kHz", 1e3, 0.0, PER_TIME),
-    ("MHz", 1e6, 0.0, PER_TIME),
-    ("GHz", 1e9, 0.0, PER_TIME),
-    ("rpm", 1.0 / 60.0, 0.0, PER_TIME),
-    ("mol mole moles", 1.0, 0.0, AMOUNT),
-    ("mmol", 1e-3, 0.0, AMOUNT),
-    ("µmol umol μmol", 1e-6, 0.0, AMOUNT),
-    ("kmol", 1e3, 0.0, AMOUNT),
-    ("M molar", 1e3, 0.0, MOLAR),
-    ("mM millimolar", 1.0, 0.0, MOLAR),
-    ("µM uM μM micromolar", 1e-3, 0.0, MOLAR),
+    ("coulomb coulombs", 1.0, 0.0, COULOMB, "coulomb: SI unit of charge, an ampere for a second; C here is Celsius"),
+    ("mAh", 3.6, 0.0, COULOMB, "milliampere-hour: battery capacity, 3.6 coulombs"),
+    ("Ah", 3600.0, 0.0, COULOMB, "ampere-hour: battery capacity, 3600 coulombs"),
+    ("farad farads", 1.0, 0.0, FARAD, "farad: SI unit of capacitance, a coulomb per volt; F here is Fahrenheit"),
+    ("mF", 1e-3, 0.0, FARAD, "millifarad: a thousandth of a farad"),
+    ("µF uF μF", 1e-6, 0.0, FARAD, "microfarad: a millionth of a farad"),
+    ("nF", 1e-9, 0.0, FARAD, "nanofarad: a billionth of a farad"),
+    ("pF", 1e-12, 0.0, FARAD, "picofarad: a trillionth of a farad"),
+    ("S siemens", 1.0, 0.0, SIEMENS, "siemens: SI unit of conductance, the inverse of an ohm"),
+    ("mS", 1e-3, 0.0, SIEMENS, "millisiemens: a thousandth of a siemens"),
+    ("Wb weber webers", 1.0, 0.0, WEBER, "weber: SI unit of magnetic flux, a volt-second"),
+    ("mWb", 1e-3, 0.0, WEBER, "milliweber: a thousandth of a weber"),
+    ("T tesla teslas", 1.0, 0.0, TESLA, "tesla: SI unit of magnetic field, a weber per square meter; t is the tonne"),
+    ("mT", 1e-3, 0.0, TESLA, "millitesla: a thousandth of a tesla; a fridge magnet is about 5 mT"),
+    ("µT uT μT", 1e-6, 0.0, TESLA, "microtesla: a millionth of a tesla; Earth's field is 25 to 65 µT"),
+    ("H henry henries", 1.0, 0.0, HENRY, "henry: SI unit of inductance, a weber per ampere"),
+    ("mH", 1e-3, 0.0, HENRY, "millihenry: a thousandth of a henry"),
+    ("µH uH μH", 1e-6, 0.0, HENRY, "microhenry: a millionth of a henry"),
+    ("Hz hertz", 1.0, 0.0, PER_TIME, "hertz: one cycle per second"),
+    ("kHz", 1e3, 0.0, PER_TIME, "kilohertz: 1000 hertz"),
+    ("MHz", 1e6, 0.0, PER_TIME, "megahertz: 10^6 hertz"),
+    ("GHz", 1e9, 0.0, PER_TIME, "gigahertz: 10^9 hertz; CPU clocks and Wi-Fi"),
+    ("rpm", 1.0 / 60.0, 0.0, PER_TIME, "revolution per minute: rotational speed, 1/60 Hz"),
+    ("mol mole moles", 1.0, 0.0, AMOUNT, "mole: SI base unit of amount, 6.02214076e23 particles"),
+    ("mmol", 1e-3, 0.0, AMOUNT, "millimole: a thousandth of a mole"),
+    ("µmol umol μmol", 1e-6, 0.0, AMOUNT, "micromole: a millionth of a mole"),
+    ("kmol", 1e3, 0.0, AMOUNT, "kilomole: 1000 moles"),
+    ("M molar", 1e3, 0.0, MOLAR, "molar: a mole per liter"),
+    ("mM millimolar", 1.0, 0.0, MOLAR, "millimolar: a thousandth of a mole per liter"),
+    ("µM uM μM micromolar", 1e-3, 0.0, MOLAR, "micromolar: a millionth of a mole per liter"),
+    ("Sv sievert sieverts", 1.0, 0.0, DOSE, "sievert: SI unit of radiation dose to the body; a CT scan is about 10 mSv"),
+    ("mSv millisievert millisieverts", 1e-3, 0.0, DOSE, "millisievert: a thousandth of a sievert; natural background is about 3 mSv a year"),
+    ("µSv uSv μSv microsievert microsieverts", 1e-6, 0.0, DOSE, "microsievert: a millionth of a sievert; a dental X-ray is about 5 µSv"),
     // Steradians are dimensionless in SI, so lumens and candelas share a dimension.
-    ("lm lumen lumens", 1.0, 0.0, LIGHT),
-    ("cd candela candelas", 1.0, 0.0, LIGHT),
-    ("lx lux", 1.0, 0.0, LUX),
-    ("fc footcandle footcandles", 10.763910416709722, 0.0, LUX),
+    ("lm lumen lumens", 1.0, 0.0, LIGHT, "lumen: the total visible light a source gives off"),
+    ("cd candela candelas", 1.0, 0.0, LIGHT, "candela: SI base unit of luminous intensity, the light sent in one direction"),
+    ("lx lux", 1.0, 0.0, LUX, "lux: illuminance, a lumen per square meter"),
+    ("fc footcandle footcandles", 10.763910416709722, 0.0, LUX, "foot-candle: a lumen per square foot, about 10.76 lux"),
 ];
 
 #[derive(Debug)]
@@ -705,7 +803,7 @@ pub fn rows() -> impl Iterator<Item = &'static Row> {
 
 fn builtin_units() -> HashMap<String, Rc<UnitDef>> {
     let mut map = HashMap::new();
-    for (names, scale, offset, dim) in rows() {
+    for (names, scale, offset, dim, _) in rows() {
         let primary = names.split(' ').next().unwrap();
         let def = Rc::new(UnitDef { name: primary.into(), scale: Cell::new(*scale), offset: *offset, dim: *dim });
         for n in names.split(' ') {
@@ -831,6 +929,17 @@ mod tests {
 
     fn close(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-9 * b.abs().max(1.0)
+    }
+
+    #[test]
+    fn units_lists_every_source() {
+        try_eval("unit widget").unwrap();
+        for source in ["units", "goofy", "kitchen", "currency", "user"] {
+            assert_eq!(show(&format!(r#"all_units().filter(|u| u.source == "{source}").len > 0"#)), "true", "{source}");
+        }
+        assert_eq!(show(r#"all_units().filter(|u| u.name == "mi")[0].si"#), "1609.34 m");
+        assert_eq!(show(r#"all_units().filter(|u| u.name == "USD")[0].kind"#), "money");
+        assert_eq!(show(r#"all_units().filter(|u| u.name == "widget")[0].kind"#), "widget");
     }
 
     #[test]

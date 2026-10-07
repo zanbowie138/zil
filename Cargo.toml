@@ -26,6 +26,7 @@ rustyline = "18.0.1"
 serde_json = { version = "1.0.151", features = ["preserve_order"] }
 sha1 = "0.11"
 sha2 = "0.11.0"
+terminal_size = "0.4.4"
 ureq = "3.4.2"
 
 [lints.clippy]
