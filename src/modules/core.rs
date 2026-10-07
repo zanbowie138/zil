@@ -1,7 +1,7 @@
 //! General: printing, type conversions, number bases, parsing, files, help, `input`.
 
 use super::{Call, Claim, Doc, Fail, Module, doc, strings::hex};
-use crate::ast::{Expr, ExprKind, Radix, UnOp};
+use crate::ast::{BinOp, Expr, ExprKind, Radix, UnOp};
 use crate::help::help;
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -12,7 +12,16 @@ use num_rational::BigRational;
 pub const MODULE: Module = Module {
     name: "general",
     about: "values, printing, conversions, number bases, parsing, files",
-    example: "type(5 km)",
+    #[rustfmt::skip]
+    examples: &[
+        ("general", &[
+            ("type of anything", "type(5 km)"),
+            ("parse values from text", r#"parse("[1, 2, 5 km]")"#),
+            ("number bases", "255 to bin"),
+            ("any base back to decimal", "36#zz to dec"),
+            ("hex of a big int", "factorial(20) to hex"),
+        ]),
+    ],
     #[rustfmt::skip]
     guide: &[
         ("types", &[("nil", "nil"), ("bool", "true"), ("int", "0xff"), ("float", "1.5e3"), ("frac", "7/2 to frac"), ("fn", r"\x -> x * 2")]),
@@ -72,9 +81,18 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             Nil
         }
         // A miss prints its own note: not finding help isn't an error in the user's code.
-        ("help", []) => help(None).map(|_| Nil)?,
-        ("help", [Str(s)]) => help(Some(s)).map(|_| Nil)?,
-        ("help", [Builtin(_, f)]) => help(Some(f)).map(|_| Nil)?,
+        ("help", []) => {
+            help(None);
+            Nil
+        }
+        ("help", [Str(s)]) => {
+            help(Some(s));
+            Nil
+        }
+        ("help", [Builtin(_, f)]) => {
+            help(Some(f));
+            Nil
+        }
         ("help", [Fn(_)]) => return Err("user-defined function; no help available".into()),
         ("type", [v]) => Value::str(v.type_name()),
         ("str", [v @ (Float(_) | Frac(_, false))]) => Value::str(num(v).unwrap().to_string()),
@@ -206,10 +224,12 @@ fn simplest(x: f64) -> Option<BigRational> {
 fn parse_literal(s: &str) -> Result<Value, String> {
     fn literal(e: &Expr) -> bool {
         match &e.kind {
-            ExprKind::Nil | ExprKind::Bool(_) | ExprKind::Int(..) | ExprKind::Big(..) | ExprKind::Float(_) | ExprKind::Str(_) | ExprKind::Regex(_) => true,
+            ExprKind::Nil | ExprKind::Bool(_) | ExprKind::Int(..) | ExprKind::Big(..) | ExprKind::Float(_) | ExprKind::Dec(_) | ExprKind::Str(_) | ExprKind::Regex(_) => true,
             ExprKind::List(items) => items.iter().all(literal),
             ExprKind::Map(entries) => entries.iter().all(|(_, v)| literal(v)),
             ExprKind::Qty(n, _) | ExprKind::Unary(UnOp::Neg, n) => literal(n),
+            // `5 ft 11 in`, as `to ft in` prints it.
+            ExprKind::Binary(BinOp::Add, a, b) => matches!(a.kind, ExprKind::Qty(..)) && literal(a) && literal(b),
             _ => false,
         }
     }

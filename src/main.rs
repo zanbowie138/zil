@@ -81,8 +81,46 @@ fn help_shorthand(src: &str) -> Option<String> {
     (rest.starts_with(char::is_whitespace) && word).then(|| format!("help({topic:?})"))
 }
 
+/// REPL tab completion over builtins, constants, `to` targets, units and help topics.
+// ponytail: names fixed at startup, so user variables don't complete; pass the interp's globals in if wanted.
+struct Names(Vec<String>);
+
+impl Names {
+    fn new() -> Names {
+        let ms = modules::MODULES;
+        let mut v: Vec<String> = ms.iter().flat_map(|m| m.fns.iter().map(|f| f.name).chain(m.consts.iter().map(|c| c.0)).chain(m.targets.iter().map(|t| t.0)).chain([m.name])).map(String::from).collect();
+        v.extend(modules::units::TABLE.iter().flat_map(|u| u.0.split_whitespace()).map(String::from));
+        v.extend(modules::units::DIMS.iter().map(|d| d.0.to_string()));
+        v.sort();
+        v.dedup();
+        Names(v)
+    }
+}
+
+impl rustyline::completion::Completer for Names {
+    type Candidate = String;
+    fn complete(&self, line: &str, pos: usize, _: &rustyline::Context<'_>) -> rustyline::Result<(usize, Vec<String>)> {
+        let start = pos - line[..pos].chars().rev().take_while(|c| c.is_alphanumeric() || *c == '_').map(char::len_utf8).sum::<usize>();
+        let word = &line[start..pos];
+        let hits = match word.is_empty() {
+            true => vec![],
+            false => self.0.iter().filter(|n| n.starts_with(word)).cloned().collect(),
+        };
+        Ok((start, hits))
+    }
+}
+
+impl rustyline::hint::Hinter for Names {
+    type Hint = String;
+}
+impl rustyline::highlight::Highlighter for Names {}
+impl rustyline::validate::Validator for Names {}
+impl rustyline::Helper for Names {}
+
 fn repl(interp: &mut Interp) {
-    let mut rl = rustyline::DefaultEditor::new().expect("terminal");
+    let config = rustyline::Config::builder().completion_type(rustyline::CompletionType::List).build();
+    let mut rl = rustyline::Editor::with_config(config).expect("terminal");
+    rl.set_helper(Some(Names::new()));
     let history = cache_dir().map(|d| d.join("history.txt"));
     if let Some(h) = &history {
         let _ = rl.load_history(h);
@@ -150,5 +188,21 @@ fn main() {
             eprintln!("{USAGE}");
             exit(2)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rustyline::completion::Completer;
+
+    #[test]
+    fn completes_names_at_cursor() {
+        let history = rustyline::history::DefaultHistory::new();
+        let ctx = rustyline::Context::new(&history);
+        let names = Names::new();
+        assert_eq!(names.complete("x.upp", 5, &ctx).unwrap(), (2, vec!["upper".to_string()]));
+        assert!(names.complete("5 kilo", 6, &ctx).unwrap().1.contains(&"kilometers".to_string()));
+        assert!(names.complete("x ", 2, &ctx).unwrap().1.is_empty());
     }
 }

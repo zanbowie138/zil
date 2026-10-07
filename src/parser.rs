@@ -234,12 +234,15 @@ impl Parser {
             Tok::Nil => ExprKind::Nil,
             Tok::True => ExprKind::Bool(true),
             Tok::False => ExprKind::Bool(false),
-            t @ (Tok::Int(_) | Tok::Based(_) | Tok::Big(_) | Tok::Float(_)) => {
+            t @ (Tok::Int(_) | Tok::Based(_) | Tok::Big(_) | Tok::Float(_) | Tok::Dec(_)) => {
                 let kind = match t {
                     Tok::Int(n) => ExprKind::Int(n, 10),
                     Tok::Based((n, b)) => ExprKind::Int(n, b),
                     Tok::Big((n, b)) => ExprKind::Big(Rc::new(n), b),
                     Tok::Float(n) => ExprKind::Float(n),
+                    // `2.0` asks for a float; `2.5` is exact.
+                    Tok::Dec(r) if r.is_integer() => ExprKind::Float(r.to_integer().to_string().parse().unwrap_or(f64::NAN)),
+                    Tok::Dec(r) => ExprKind::Dec(Rc::new(r)),
                     _ => unreachable!(),
                 };
                 // `20%` unless an operand follows: `20 % 3` and `7%3` stay remainders.
@@ -248,7 +251,14 @@ impl Parser {
                     ExprKind::Percent(Box::new(self.mk(kind, start)))
                 } else if self.unit_next() {
                     let num = self.mk(kind, start);
-                    ExprKind::Qty(Box::new(num), self.unit_spec(true)?)
+                    let qty = ExprKind::Qty(Box::new(num), self.unit_spec(true)?);
+                    // `5 ft 11 in`, `1 h 30 min`: adjacent quantities add, as one literal.
+                    if matches!(self.peek(), Tok::Int(_) | Tok::Float(_) | Tok::Dec(_)) && matches!(self.peek_at(1), Tok::Ident(_) | Tok::In) {
+                        let lhs = self.mk(qty, start);
+                        ExprKind::Binary(BinOp::Add, Box::new(lhs), Box::new(self.prefix()?))
+                    } else {
+                        qty
+                    }
                 } else {
                     kind
                 }
@@ -337,6 +347,7 @@ impl Parser {
                     | Tok::Based(_)
                     | Tok::Big(_)
                     | Tok::Float(_)
+                    | Tok::Dec(_)
                     | Tok::Str(_)
                     | Tok::Regex(_)
                     | Tok::LParen
@@ -601,6 +612,7 @@ fn starts_operand(t: &Tok) -> bool {
             | Based(_)
             | Big(_)
             | Float(_)
+            | Dec(_)
             | Str(_)
             | Regex(_)
             | LParen

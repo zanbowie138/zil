@@ -12,7 +12,25 @@ use jiff::{SignedDuration, Span, Timestamp, Zoned, tz::TimeZone};
 pub const MODULE: Module = Module {
     name: "dates",
     about: "parsing, calendar math, relative text, month grids; weeks start Monday",
-    example: r#"date("2026-12-25").weekday"#,
+    #[rustfmt::skip]
+    examples: &[
+        ("dates", &[
+            ("day of the week", r#"date("2026-12-25").weekday"#),
+            ("month math clamps to the end", r#"date("2026-01-31") + 1 mo"#),
+            ("Thanksgiving: 4th Thursday", r#"date(2026, 11, 1).nth_weekday(4, "thu")"#),
+            ("Memorial Day: last Monday", r#"date(2026, 5, 1).nth_weekday(-1, "mon")"#),
+            ("3 business days later", r#"date("2026-12-24").add_workdays(3)"#),
+            ("workdays in December", r#"workdays(date("2026-12-01"), date("2026-12-31"))"#),
+            ("plain-English dates", r#"date("next friday")"#),
+            ("time zones", r#"date("2026-12-25 18:30") to "Asia/Tokyo""#),
+            ("countdown", r#"(date("2027-01-01") - now).parts"#),
+            ("relative time", "(now - 3 h).relative"),
+            ("first of next month", "(today + 1 mo).with({day: 1})"),
+            ("months with a Friday the 13th", r#"(1..=12).filter(\m -> date(2026, m, 13).weekday == "Friday")"#),
+            ("from a Unix timestamp", "date(1798178400)"),
+            ("ISO week number", "today.iso_week"),
+        ]),
+    ],
     #[rustfmt::skip]
     guide: &[
         ("types", &[("date", r#"date("2026-12-25 18:30")"#)]),
@@ -195,7 +213,18 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
     Some(match (op, a, b) {
         (BinOp::Add, Date(z), Qty(v, u)) | (BinOp::Add, Qty(v, u), Date(z)) => add(z, *v, u).map(Value::date),
         (BinOp::Sub, Date(z), Qty(v, u)) => add(z, -v, u).map(Value::date),
-        (BinOp::Sub, Date(x), Date(y)) => units::unit("d").map(|d| Qty(x.duration_since(y).as_secs_f64() / 86400.0, d)),
+        // Elapsed time, except same-clock-time dates are whole calendar days even across a DST change.
+        (BinOp::Sub, Date(x), Date(y)) => {
+            // Same zone first: jiff counts days in one calendar (and panics on mixed zones, and on
+            // `total` of an empty span, as of 0.2.38).
+            let x = x.with_time_zone(y.time_zone().clone());
+            let cal = x.since(&**y).and_then(|s| if s.is_zero() { Ok(0.0) } else { s.total((jiff::Unit::Day, &**y)) });
+            let days = match cal {
+                Ok(n) if n.fract() == 0.0 => n,
+                _ => x.duration_since(y).as_secs_f64() / 86400.0,
+            };
+            units::unit("d").map(|d| Qty(days, d))
+        }
         _ => return None,
     })
 }
@@ -226,16 +255,24 @@ fn e(x: impl ToString) -> String {
 
 pub const PERIODS: &str = "second, minute, hour, day, week, month, quarter, year";
 
-/// `z + v u`; whole months/years follow the calendar (Jan 31 + 1 mo = Feb 28), not a fixed length.
+/// `z + v u`; whole days, weeks, months and years follow the calendar (Jan 31 + 1 mo = Feb 28, and a
+/// day keeps the clock time across a DST change), not a fixed length.
 pub fn add(z: &Zoned, v: f64, u: &Unit) -> R<Zoned> {
     if u.dim() != units::unit("s")?.dim() {
         return Err(format!("cannot add {u} to a date"));
     }
-    let r = if (u.is("mo") || u.is("yr")) && v.fract() == 0.0 {
-        let span = if u.is("mo") { Span::new().try_months(v as i64) } else { Span::new().try_years(v as i64) };
-        z.checked_add(span.map_err(e)?)
-    } else {
-        z.checked_add(SignedDuration::try_from_secs_f64(u.to_si(v)).map_err(e)?)
+    let n = v as i64;
+    let span = match () {
+        _ if v.fract() != 0.0 => None,
+        _ if u.is("d") => Some(Span::new().try_days(n)),
+        _ if u.is("wk") => Some(Span::new().try_weeks(n)),
+        _ if u.is("mo") => Some(Span::new().try_months(n)),
+        _ if u.is("yr") => Some(Span::new().try_years(n)),
+        _ => None,
+    };
+    let r = match span {
+        Some(span) => z.checked_add(span.map_err(e)?),
+        None => z.checked_add(SignedDuration::try_from_secs_f64(u.to_si(v)).map_err(e)?),
     };
     r.map_err(e)
 }
@@ -657,6 +694,12 @@ mod tests {
         assert_eq!(show("-90 s to min s"), "-1 min 30 s");
         assert_eq!(show("5000 s.parts"), "1 h 23 min 20 s");
         assert_eq!(show("0.5 d.parts"), "12 h");
+        // Chicago's DST ends 2026-11-01: days keep the clock time, whole-day gaps stay whole.
+        let midnight = r#"(date("2026-11-01T05:00Z") to "America/Chicago")"#;
+        assert_eq!(show(&format!("{midnight} + 1 d")), "2026-11-02");
+        assert_eq!(show(&format!("({midnight} + 1 d) - {midnight}")), "1 d");
+        assert_eq!(show(&format!("{midnight} + 24 h"))[..16], *"2026-11-01 23:00");
+        assert_eq!(show(r#"date("2026-12-25") - (date("2026-12-25") to "Asia/Tokyo")"#), "0 d");
         assert!(try_eval("5 km to h min").is_err());
         assert!(try_eval(r#"now.start_of("fortnight")"#).is_err());
     }

@@ -140,6 +140,7 @@ impl Interp {
             ExprKind::Int(n, b) => Value::Int(*n, Radix { base: *b, width: 0 }),
             ExprKind::Big(n, b) => Value::Big(n.clone(), Radix { base: *b, width: 0 }),
             ExprKind::Float(n) => Value::Float(*n),
+            ExprKind::Dec(r) => Value::Frac(r.clone(), false),
             ExprKind::Str(s) => Value::Str(s.clone()),
             ExprKind::Regex(r) => Value::Regex(r.clone()),
             ExprKind::Ident(name) => match lookup(env, name) {
@@ -717,6 +718,8 @@ fib(10)";
 
     #[test]
     fn fractions() {
+        assert_eq!(show("[0.1 + 0.2 == 0.3, 0.1 + 0.2 - 0.3, type(0.1), type(1.0), type(1.5e3)]"), r#"[true, 0, "frac", "float", "float"]"#);
+        assert_eq!(show("round(2.675, 2)"), "2.68");
         assert_eq!(show("7 / 2"), "3.5");
         assert_eq!(show("1 / 3 * 3"), "1");
         assert_eq!(show("type(1 / 3)"), "frac");

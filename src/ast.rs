@@ -17,6 +17,8 @@ pub enum ExprKind {
     Int(i64, u32),
     Big(Rc<BigInt>, u32),
     Float(f64),
+    /// Exact decimal literal: `0.1`.
+    Dec(Rc<num_rational::BigRational>),
     Str(Rc<str>),
     Regex(Rc<Regex>),
     Ident(String),

@@ -1,11 +1,23 @@
 //! Randomness: numbers, picks, shuffles, UUIDs.
 
-use super::{Call, Doc, Fail, Module, doc, strings::hex};
+use super::{Call, Doc, Fail, Module, Section, doc, strings::hex};
 use crate::interp::Interp;
 use crate::lexer::Span;
 use crate::value::{Value, num};
 
-pub const MODULE: Module = Module { name: "random", about: "numbers, picks, shuffles, UUIDs", example: "rand(1, 6)", fns: FNS, call, ..Module::EMPTY };
+pub const MODULE: Module = Module { name: "random", about: "numbers, picks, shuffles, UUIDs", examples: EXAMPLES, fns: FNS, call, ..Module::EMPTY };
+
+#[rustfmt::skip]
+const EXAMPLES: &[Section] = &[
+    ("random", &[
+        ("roll a die", "rand(1, 6)"),
+        ("roll three", r#"(1..=3).map(\_ -> rand(1, 6))"#),
+        ("float in a range", "rand(1.0, 2.0)"),
+        ("pick one", r#"["rock", "paper", "scissors"].choice"#),
+        ("shuffle", "(1..=5).shuffle"),
+        ("UUID", "uuid()"),
+    ]),
+];
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[

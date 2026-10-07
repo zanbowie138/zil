@@ -2,6 +2,7 @@ use crate::Error;
 use crate::ast::BinOp;
 use logos::Logos;
 use num_bigint::BigInt;
+use num_rational::BigRational;
 
 #[derive(Logos, Debug, Clone, PartialEq)]
 #[logos(skip r"[ \t\r]+")]
@@ -37,9 +38,13 @@ pub enum Tok {
     #[token("nil")]
     Nil,
 
-    #[regex(r"[0-9][0-9_]*\.[0-9][0-9_]*([eE][+-]?[0-9]+)?", |l| l.slice().replace('_', "").parse().ok())]
-    #[regex(r"[0-9][0-9_]*[eE][+-]?[0-9]+", |l| l.slice().replace('_', "").parse().ok())]
+    /// Scientific notation stays a float: `6.022e23`, `1e-9`.
+    #[regex(r"[0-9][0-9_]*(\.[0-9][0-9_]*)?[eE][+-]?[0-9]+", |l| l.slice().replace('_', "").parse().ok())]
     Float(f64),
+    /// A plain decimal, kept exact so `0.1 + 0.2 == 0.3`.
+    // ponytail: repeated decimal multiplies in a loop grow the denominator; fall back to f64 past a size cap if that gets slow.
+    #[regex(r"[0-9][0-9_]*\.[0-9][0-9_]*", |l| decimal(l.slice()))]
+    Dec(BigRational),
     #[regex(r"[0-9][0-9_]*", |l| l.slice().replace('_', "").parse().ok())]
     Int(i64),
     /// Integer literal that keeps its base: `0xff`, `0b101`, `0o17`, `36#z`.
@@ -194,6 +199,14 @@ fn op_assign(s: &str) -> BinOp {
         "<<" => BinOp::Shl,
         _ => BinOp::Shr,
     }
+}
+
+/// `12.50` as exactly 1250/100.
+fn decimal(s: &str) -> Option<BigRational> {
+    let s = s.replace('_', "");
+    let (int, frac) = s.split_once('.')?;
+    let n = format!("{int}{frac}").parse::<BigInt>().ok()?;
+    Some(BigRational::new(n, BigInt::from(10).pow(frac.len() as u32)))
 }
 
 /// An integer literal that overflowed i64: `99999999999999999999`, `0xffffffffffffffffff`, `36#zzzzzzzzzzzzzz`.

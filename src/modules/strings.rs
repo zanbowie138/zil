@@ -11,7 +11,22 @@ use sha2::Digest;
 pub const MODULE: Module = Module {
     name: "strings",
     about: "case, splitting, search and regex, encodings, hashes",
-    example: r#""a b".split.join("-")"#,
+    #[rustfmt::skip]
+    examples: &[
+        ("strings", &[
+            ("numbers out of text", r#""a1b22c333".nums.sum"#),
+            ("regex captures", r#""2026-10-06".match(r"(\d+)-(\d+)-(\d+)")"#),
+            ("regex replace with $1", r#""CamelCaseName".replace(r"(\B[A-Z])", " $1")"#),
+            ("grep lines", r#""ok\nERROR disk full\nok".grep(r"ERROR")"#),
+            ("initials", r#""Ada Lovelace".split.map(\w -> w[0]).join"#),
+            ("hashes", r#""hello".md5"#),
+            ("base64", r#""hi" to base64"#),
+            ("URL encoding", r#""a b&c".encode("url")"#),
+            ("UTF-8 bytes", r#""héllo".bytes"#),
+            ("code point to char", "chr(9731)"),
+            ("printf", r#"format("%-6s|%5.2f", "pi", pi)"#),
+        ]),
+    ],
     #[rustfmt::skip]
     guide: &[
         ("types", &[("str", r#""héllo\tworld""#), ("regex", r#"r"\d+""#)]),
@@ -57,8 +72,8 @@ const FNS: &[Doc] = &[
     doc("base64", "base64(s)", "base64-encode a string; same as `s to base64`", &[r#"base64("hi there")"#, r#""hi" to base64"#], &["encode", "decode"]),
     doc("encode", "encode(s, fmt)", "encode as \"base64\", \"url\" or \"hex\"", &[r#""hi there".encode("base64")"#, r#""a b&c".encode("url")"#], &["decode"]),
     doc("decode", "decode(s, fmt)", "decode \"base64\", \"url\" or \"hex\"", &[r#""aGk=".decode("base64")"#, r#""6869".decode("hex")"#], &["encode"]),
-    doc("sha256", "sha256(s)", "hex SHA-256 digest", &[r#""hello".sha256[..16]"#], &["md5"]),
-    doc("md5", "md5(s)", "hex MD5 digest", &[r#""hello".md5"#], &["sha256"]),
+    doc("sha256", "sha256(s)", "hex SHA-256 hash", &[r#""hello".sha256[..16]"#], &["md5"]),
+    doc("md5", "md5(s)", "hex MD5 hash", &[r#""hello".md5"#], &["sha256"]),
     doc("ord", "ord(c)", "Unicode code point of a single character", &[r#""A".ord"#, r#""A".ord to hex"#], &["chr", "bytes"]),
     doc("chr", "chr(n)", "character for a Unicode code point", &["97.chr", "(65..70).map(chr).join"], &["ord"]),
     doc("nums", "nums(s)", "every number in a string", &[r#""x=3, y=-2.5; 1e3".nums"#], &["find_all", "parse"]),

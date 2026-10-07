@@ -12,7 +12,21 @@ use std::collections::HashMap;
 pub const MODULE: Module = Module {
     name: "lists",
     about: "ranges, higher-order fns, aggregates, sorting",
-    example: r"[3, 1, 2].sort.map(\x -> x * 2)",
+    #[rustfmt::skip]
+    examples: &[
+        ("lists", &[
+            ("stepped range", "(1..=10).step(3)"),
+            ("primes under 100", "(1..100).filter(is_prime).len"),
+            ("pipe into a function", r#"(1..=10).map(\x -> x ** 2) |> sum"#),
+            ("fold", r#"[1, 2, 3].reduce(10, \acc, x -> acc + x)"#),
+            ("standard deviation", "[2, 4, 4, 4, 5, 5, 7, 9].stdev"),
+            ("percentile", "(1..=100).percentile(90)"),
+            ("unique, order kept", "[3, 1, 3, 2, 1].unique"),
+            ("sort quantities", "[1 km, 900 m, 1 mi].sort"),
+            ("sort dates", r#"[date("2026-12-25"), date("2026-01-01")].sort"#),
+            ("sum a map", "{a: 1, b: 2}.values.sum"),
+        ]),
+    ],
     #[rustfmt::skip]
     guide: &[
         ("types", &[("list", "[1, 2, 3]"), ("map", "{a: 1, b: 2}")]),

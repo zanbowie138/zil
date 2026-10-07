@@ -14,7 +14,23 @@ use std::rc::Rc;
 pub const MODULE: Module = Module {
     name: "units",
     about: "numbers with units, combined and converted; currencies use live rates",
-    example: "5 km to mi",
+    #[rustfmt::skip]
+    examples: &[
+        ("units", &[
+            ("speed from distance and time", "100 km / 2 h to mph"),
+            ("feet and inches", "1.8 m to ft in"),
+            ("mixed units add", "5 ft 11 in to cm"),
+            ("drive time", "300 mi / 65 mph to h min"),
+            ("download time", "4 GB / 100 Mbps to min"),
+            ("why a 1 TB disk shows less", "1 TB to GiB"),
+            ("area", "3 m * 4 m to ft^2"),
+            ("running pace", "1 h / 10 km to min/mi"),
+            ("force", "9.81 m/s^2 * 70 kg to N"),
+            ("a month of a 60 W bulb", "60 W * 8 h * 30 to kWh"),
+            ("temperature", "101 F to C"),
+            ("20 USD to EUR   (currencies use live rates)", ""),
+        ]),
+    ],
     #[rustfmt::skip]
     guide: &[
         ("types", &[("quantity", "5 km")]),
@@ -491,6 +507,10 @@ mod tests {
 
     #[test]
     fn end_to_end() {
+        assert_eq!(show("5 ft 11 in to cm"), "180.34 cm");
+        assert_eq!(show("1 h 30 min 15 s to s"), "5415 s");
+        assert_eq!(show("2 * 1 h 30 min"), "3 h");
+        assert_eq!(show(r#"parse(1.8 m to ft in) to m"#), "1.8 m");
         assert_eq!(show("5 km to mi"), "3.10686 mi");
         assert_eq!(show("72 F to C"), "22.2222 C");
         assert_eq!(show("-40 C to F"), "-40 F");

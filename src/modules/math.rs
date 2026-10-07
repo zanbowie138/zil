@@ -14,7 +14,39 @@ use std::rc::Rc;
 pub const MODULE: Module = Module {
     name: "math",
     about: "digits, rounding, logs, trigonometry (angles as units), formatting, number theory, bits",
-    example: "round(sqrt(2), 3)",
+    #[rustfmt::skip]
+    examples: &[
+        ("numbers", &[
+            ("exact fractions", r#"(1..=6).map(\x -> 1/x).sum to frac"#),
+            ("decimals are exact", "0.1 + 0.2 == 0.3"),
+            ("1/3 * 3 is exactly 1", "1/3 * 3 == 1"),
+            ("decimal to fraction", "0.75 to frac"),
+            ("big ints never overflow", "2 ** 100"),
+            ("prime factors", "factors(2 ** 32 + 1)"),
+            ("is a Mersenne number prime", "is_prime(2 ** 61 - 1)"),
+            ("poker hands", "choose(52, 5)"),
+            ("modular power", "mod_pow(3, 1000, 7)"),
+            ("add a percent", "80 + 15%"),
+            ("percent of", "15% of 64.50"),
+            ("trig takes angle units", "sin(30 deg)"),
+            ("radians back to degrees", "atan2(1, 1) to deg"),
+            ("digit sum", "(2 ** 100).digits.sum"),
+            ("format specs", r#""{1234567.891:,.2f}""#),
+        ]),
+        ("bits", &[
+            ("see the bits", "0xf0 to bits"),
+            ("results keep their base", "0xff + 1"),
+            ("two's complement", "-1 to hex(16)"),
+            ("xor", "0b1010 ^ 0b0110"),
+            ("count set bits", "popcount(0xff)"),
+            ("rotate within 8 bits", "rotr(1, 1, 8)"),
+            ("swap byte order", "byteswap(0x1234, 16)"),
+            ("clear a bit", "clear_bit(0xff, 0)"),
+            ("hex with a prefix", r#""{255:#06x}""#),
+            ("32-bit binary", r#""{0xdeadbeef:032b}""#),
+            ("base 36", "255 to base(36)"),
+        ]),
+    ],
     #[rustfmt::skip]
     guide: &[
         ("constants", &[("pi e tau phi inf nan", "")]),
@@ -23,6 +55,7 @@ pub const MODULE: Module = Module {
             (r#""{x:.2f}"  fixed decimals"#, r#""{pi:.2f}""#),
             (r#""{x:>8}"  width, align < > ^"#, r#""[{42:>8}]""#),
             (r#""{n:08x}"  zero pad; x X b o d"#, r#""{255:08x}""#),
+            (r#""{n:#06x}"  # adds 0x 0b 0o"#, r#""{255:#06x}""#),
             (r#""{x:,}"  commas; also + e %"#, r#""{1234567:,}""#),
             (r#"format("%5.2f", x)  printf"#, r#"format("%5.2f|%-4d|", pi, 7)"#),
         ]),
@@ -246,9 +279,15 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             big(b.modpow(&e, &m))
         }
         ("popcount", [Int(n, _)]) => Value::int(n.count_ones() as i64),
-        ("bit", [Int(n, _), Int(i, _)]) if (0..64).contains(i) => Value::int(n >> i & 1),
-        ("set_bit", [Int(n, r), Int(i, _)]) if (0..64).contains(i) => Int(n | 1 << i, *r),
-        ("clear_bit", [Int(n, r), Int(i, _)]) if (0..64).contains(i) => Int(n & !(1 << i), *r),
+        ("popcount", [Big(n, _)]) if !n.is_negative() => Value::int(n.magnitude().count_ones() as i64),
+        ("popcount", [Big(..)]) => return Err("negative big ints have infinitely many 1 bits".into()),
+        // Through BigInt so bits past 63 work; two's complement, like the i64 ops.
+        ("bit", [n @ (Int(..) | Big(..)), Int(i, _)]) if *i >= 0 => Value::int(int(n)?.bit(*i as u64) as i64),
+        ("set_bit" | "clear_bit", [n @ (Int(_, r) | Big(_, r)), Int(i, _)]) if *i >= 0 => {
+            let mut b = int(n)?;
+            b.set_bit(*i as u64, name == "set_bit");
+            exact(BigRational::from_integer(b), *r, false)
+        }
         ("rotl" | "rotr", [Int(n, r), Int(k, _), Int(w, _)]) => {
             let (m, w) = low_bits(*n, *w)?;
             let k = k.rem_euclid(w as i64) as u32;
@@ -321,6 +360,8 @@ pub struct Spec {
     fill: char,
     align: Option<char>,
     plus: bool,
+    /// `#`: 0x / 0b / 0o prefix on x X b o.
+    alt: bool,
     zero: bool,
     width: usize,
     commas: bool,
@@ -329,7 +370,7 @@ pub struct Spec {
 }
 
 impl Spec {
-    const PLAIN: Spec = Spec { fill: ' ', align: None, plus: false, zero: false, width: 0, commas: false, prec: None, kind: None };
+    const PLAIN: Spec = Spec { fill: ' ', align: None, plus: false, alt: false, zero: false, width: 0, commas: false, prec: None, kind: None };
 
     pub fn parse(s: &str) -> Result<Spec, String> {
         let c: Vec<char> = s.chars().collect();
@@ -353,6 +394,7 @@ impl Spec {
             c[start..*i].iter().collect::<String>().parse::<usize>().ok().filter(|n| *n <= 1000)
         };
         sp.plus = flag('+', &mut i);
+        sp.alt = flag('#', &mut i);
         sp.zero = flag('0', &mut i);
         sp.width = number(&mut i).unwrap_or(0);
         sp.commas = flag(',', &mut i);
@@ -397,7 +439,15 @@ pub fn render(v: &Value, sp: &Spec) -> Result<String, String> {
             };
             let d = i.abs().to_str_radix(base);
             let d = if k == 'X' { d.to_uppercase() } else { d };
-            if i.is_negative() { format!("-{d}") } else { d }
+            let prefix = match k {
+                _ if !sp.alt => "",
+                'x' => "0x",
+                'X' => "0X",
+                'b' => "0b",
+                'o' => "0o",
+                _ => "",
+            };
+            format!("{}{prefix}{d}", if i.is_negative() { "-" } else { "" })
         }
         _ if numeric && sp.prec.is_some() => format!("{:.*}", sp.prec.unwrap(), x()?),
         _ => {
@@ -419,7 +469,9 @@ pub fn render(v: &Value, sp: &Spec) -> Result<String, String> {
     }
     let pad = sp.width.saturating_sub(s.chars().count());
     if sp.zero && sp.align.is_none() && numeric {
-        s.insert_str(s.starts_with(['-', '+']) as usize, &"0".repeat(pad));
+        // Zeros go after the sign and any `#` prefix: `{255:#06x}` is `0x00ff`.
+        let prefix = 2 * (sp.alt && matches!(sp.kind, Some('x' | 'X' | 'b' | 'o'))) as usize;
+        s.insert_str(s.starts_with(['-', '+']) as usize + prefix, &"0".repeat(pad));
         return Ok(s);
     }
     let fill = |k: usize| sp.fill.to_string().repeat(k);
@@ -445,7 +497,7 @@ fn commas(s: &str) -> String {
     format!("{}{out}{}", &s[..start], &s[end..])
 }
 
-/// `format("%5.2f and %d", x, n)`: printf-style, translated to a `Spec`. Flags `- + 0 ,`; `%%` is a literal `%`.
+/// `format("%5.2f and %d", x, n)`: printf-style, translated to a `Spec`. Flags `- + # 0 ,`; `%%` is a literal `%`.
 pub fn printf(f: &str, args: &[Value]) -> Result<String, String> {
     let (mut out, mut args, mut chars) = (String::new(), args.iter(), f.chars());
     while let Some(c) = chars.next() {
@@ -470,13 +522,14 @@ pub fn printf(f: &str, args: &[Value]) -> Result<String, String> {
             'i' | 'u' => 'd',
             k => k,
         };
-        let flags: String = body.chars().take_while(|c| "-+0,".contains(*c)).collect();
+        let flags: String = body.chars().take_while(|c| "-+#0,".contains(*c)).collect();
         let rest = &body[flags.len()..];
         let (width, prec) = rest.split_once('.').map_or((rest, None), |(w, p)| (w, Some(p)));
         let spec = format!(
-            "{}{}{}{width}{}{}{kind}",
+            "{}{}{}{}{width}{}{}{kind}",
             if flags.contains('-') { "<" } else { "" },
             if flags.contains('+') { "+" } else { "" },
+            if flags.contains('#') { "#" } else { "" },
             if flags.contains('0') { "0" } else { "" },
             if flags.contains(',') { "," } else { "" },
             prec.map(|p| format!(".{p}")).unwrap_or_default(),
@@ -644,6 +697,7 @@ mod tests {
 
     #[test]
     fn formatting() {
+        assert_eq!(show(r#"["{255:#x}", "{255:#06x}", "{255:#X}", "{5:#b}", format("%#o", 8)]"#), r#"["0xff", "0x00ff", "0XFF", "0b101", "0o10"]"#);
         assert_eq!(show("[pi.fixed(2), (5 km to mi).fixed(1), 2.fixed(0)]"), r#"["3.14", "3.1 mi", "2"]"#);
         assert_eq!(show("[123456.sci, 123456.sci(2), 0.256.percent, (1/3).percent(1)]"), r#"["1.23456e5", "1.23e5", "25.6%", "33.3%"]"#);
         assert_eq!(
@@ -704,6 +758,9 @@ n = 255
     fn bits() {
         assert_eq!(show("[popcount(0b1011), popcount(-1), bit(0b100, 2), bit(0b100, 1)]"), "[3, 64, 1, 0]");
         assert_eq!(show("[set_bit(0b1, 4), clear_bit(0xff, 0)]"), "[0b10001, 0xfe]");
+        assert_eq!(show("[popcount(2 ** 64 - 1), bit(2 ** 70, 70), bit(-1, 100)]"), "[64, 1, 1]");
+        assert_eq!(show("[set_bit(0x0, 64), clear_bit(2 ** 70 + 1, 70)]"), "[0x10000000000000000, 1]");
+        assert!(try_eval("popcount(-(2 ** 70))").is_err());
         assert_eq!(
             show("[rotl(0x81, 1, 8), rotr(0x81, 1, 8), rotl(0x81, 9, 8), rotl(-1, 4, 8), rotr(1, 1, 64)]"),
             "[0x3, 0xc0, 0x3, 255, 9223372036854775808]"
