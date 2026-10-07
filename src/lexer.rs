@@ -62,8 +62,12 @@ pub enum Tok {
     Regex(String),
     #[regex(r"[A-Za-z_][A-Za-z0-9_]*", |l| l.slice().to_string())]
     Ident(String),
+    /// `$25` is `25 USD`: the currency code for `$`, `€` or `£`.
+    #[regex("[$€£]", |l| match l.slice() { "$" => "USD", "€" => "EUR", _ => "GBP" }.to_string())]
+    Currency(String),
 
     #[token("\n")]
+    #[token(";")]
     Newline,
     #[token("(")]
     LParen,

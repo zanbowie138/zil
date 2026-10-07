@@ -10,6 +10,7 @@ use ariadne::{Label, Report, ReportKind, Source};
 use interp::Interp;
 use lexer::{Span, Tok};
 use rustyline::error::ReadlineError;
+use std::borrow::Cow;
 use std::path::PathBuf;
 use std::process::exit;
 use value::Value;
@@ -82,18 +83,43 @@ fn help_shorthand(src: &str) -> Option<String> {
 }
 
 /// REPL tab completion over builtins, constants, `to` targets, units and help topics.
-// ponytail: names fixed at startup, so user variables don't complete; pass the interp's globals in if wanted.
-struct Names(Vec<String>);
+/// After `to`, offers every unit the left side converts to.
+// ponytail: names fixed at startup, so user variables don't complete.
+struct Names(Vec<String>, interp::Env);
 
 impl Names {
-    fn new() -> Names {
+    fn new(globals: interp::Env) -> Names {
         let ms = modules::MODULES;
         let mut v: Vec<String> = ms.iter().flat_map(|m| m.fns.iter().map(|f| f.name).chain(m.consts.iter().map(|c| c.0)).chain(m.targets.iter().map(|t| t.0)).chain([m.name])).map(String::from).collect();
         v.extend(modules::units::TABLE.iter().flat_map(|u| u.0.split_whitespace()).map(String::from));
         v.extend(modules::units::DIMS.iter().map(|d| d.0.to_string()));
         v.sort();
         v.dedup();
-        Names(v)
+        Names(v, globals)
+    }
+
+    /// Units convertible from the expression before a trailing `to`, read from literals and
+    /// existing variables only: nothing is evaluated, so Tab has no side effects.
+    fn conversions(&self, before: &str) -> Option<Vec<String>> {
+        let toks = lexer::lex(before).ok()?;
+        let [.., (Tok::To, to), (Tok::Eof, _)] = toks.as_slice() else {
+            return None;
+        };
+        // Longest parseable tail, so `print(5 km to` looks at `5 km`.
+        let ast = toks.iter().find_map(|(_, s)| parser::parse(lexer::lex(&before[s.start..to.start]).ok()?).ok())?;
+        let mut e = ast.last()?;
+        while let ast::ExprKind::Assign(_, rhs) = &e.kind {
+            e = rhs;
+        }
+        let dim = match &e.kind {
+            ast::ExprKind::Qty(_, spec) => modules::units::known_dim(spec)?,
+            ast::ExprKind::Ident(name) => match interp::lookup(&self.1, name) {
+                Some(Value::Qty(_, u)) => u.dim(),
+                _ => modules::units::known_dim(&vec![(name.clone(), 1)])?,
+            },
+            _ => return None,
+        };
+        Some(modules::units::names_with_dim(dim))
     }
 }
 
@@ -102,25 +128,89 @@ impl rustyline::completion::Completer for Names {
     fn complete(&self, line: &str, pos: usize, _: &rustyline::Context<'_>) -> rustyline::Result<(usize, Vec<String>)> {
         let start = pos - line[..pos].chars().rev().take_while(|c| c.is_alphanumeric() || *c == '_').map(char::len_utf8).sum::<usize>();
         let word = &line[start..pos];
-        let hits = match word.is_empty() {
-            true => vec![],
-            false => self.0.iter().filter(|n| n.starts_with(word)).cloned().collect(),
+        let hits = match (self.conversions(&line[..start]), word.is_empty()) {
+            (Some(units), _) => units.into_iter().filter(|n| n.starts_with(word)).collect(),
+            (None, true) => vec![],
+            (None, false) => self.0.iter().filter(|n| n.starts_with(word)).cloned().collect(),
         };
         Ok((start, hits))
     }
 }
 
+/// Fish-style ghost text: the rest of the word when exactly one completion fits.
 impl rustyline::hint::Hinter for Names {
     type Hint = String;
+    fn hint(&self, line: &str, pos: usize, ctx: &rustyline::Context<'_>) -> Option<String> {
+        use rustyline::completion::Completer;
+        if pos < line.len() {
+            return None;
+        }
+        let (start, hits) = self.complete(line, pos, ctx).ok()?;
+        let [hit] = hits.as_slice() else { return None };
+        Some(hit[pos - start..].to_string()).filter(|h| !h.is_empty())
+    }
 }
-impl rustyline::highlight::Highlighter for Names {}
+
+const DIM: &str = "[2m";
+const CYAN: &str = "[36m";
+const GREEN: &str = "[32m";
+const MAGENTA: &str = "[35m";
+const RESET: &str = "[0m";
+
+/// Syntax colors for the line being typed; unlexable bits stay plain.
+impl rustyline::highlight::Highlighter for Names {
+    fn highlight<'l>(&self, line: &'l str, _: usize) -> Cow<'l, str> {
+        use logos::Logos;
+        let mut out = String::with_capacity(line.len() * 2);
+        let mut last = 0;
+        for (tok, span) in Tok::lexer(line).spanned() {
+            let color = match tok {
+                Ok(Tok::Int(_) | Tok::Float(_) | Tok::Dec(_) | Tok::Based(_) | Tok::Currency(_)) => CYAN,
+                Ok(Tok::Str(_) | Tok::Regex(_)) => GREEN,
+                Ok(Tok::Fn | Tok::If | Tok::Else | Tok::While | Tok::For | Tok::In | Tok::To | Tok::Of | Tok::Return | Tok::Break | Tok::Continue | Tok::True | Tok::False | Tok::Nil) => MAGENTA,
+                _ => continue,
+            };
+            out.push_str(&line[last..span.start]);
+            out.push_str(color);
+            out.push_str(&line[span.clone()]);
+            out.push_str(RESET);
+            last = span.end;
+        }
+        out.push_str(&line[last..]);
+        Cow::Owned(out)
+    }
+    fn highlight_prompt<'b, 's: 'b, 'p: 'b>(&'s self, prompt: &'p str, _: bool) -> Cow<'b, str> {
+        Cow::Owned(format!("{DIM}{prompt}{RESET}"))
+    }
+    fn highlight_hint<'h>(&self, hint: &'h str) -> Cow<'h, str> {
+        Cow::Owned(format!("{DIM}{hint}{RESET}"))
+    }
+    fn highlight_char(&self, _: &str, _: usize, _: rustyline::highlight::CmdKind) -> bool {
+        true
+    }
+}
+
+/// A REPL result, colored by type when stdout is a terminal and `NO_COLOR` is unset.
+fn show(v: &Value) -> String {
+    use std::io::IsTerminal;
+    if !std::io::stdout().is_terminal() || std::env::var_os("NO_COLOR").is_some() {
+        return v.to_string();
+    }
+    let color = match v {
+        Value::Int(..) | Value::Big(..) | Value::Frac(..) | Value::Float(_) | Value::Qty(..) => CYAN,
+        Value::Str(_) | Value::Regex(_) => GREEN,
+        Value::Bool(_) | Value::Nil => MAGENTA,
+        _ => "",
+    };
+    format!("{DIM}={RESET} {color}{v}{RESET}")
+}
 impl rustyline::validate::Validator for Names {}
 impl rustyline::Helper for Names {}
 
 fn repl(interp: &mut Interp) {
     let config = rustyline::Config::builder().completion_type(rustyline::CompletionType::List).build();
     let mut rl = rustyline::Editor::with_config(config).expect("terminal");
-    rl.set_helper(Some(Names::new()));
+    rl.set_helper(Some(Names::new(interp.globals())));
     let history = cache_dir().map(|d| d.join("history.txt"));
     if let Some(h) = &history {
         let _ = rl.load_history(h);
@@ -151,7 +241,7 @@ fn repl(interp: &mut Interp) {
         match run(interp, &src) {
             Ok(Value::Nil | Value::Fn(_)) => {}
             Ok(v) => {
-                println!("{v}");
+                println!("{}", show(&v));
                 interp.set_global("_", v);
             }
             Err(e) => report("<repl>", &src, e),
@@ -200,9 +290,33 @@ mod tests {
     fn completes_names_at_cursor() {
         let history = rustyline::history::DefaultHistory::new();
         let ctx = rustyline::Context::new(&history);
-        let names = Names::new();
+        let mut interp = Interp::new();
+        let names = Names::new(interp.globals());
         assert_eq!(names.complete("x.upp", 5, &ctx).unwrap(), (2, vec!["upper".to_string()]));
         assert!(names.complete("5 kilo", 6, &ctx).unwrap().1.contains(&"kilometers".to_string()));
         assert!(names.complete("x ", 2, &ctx).unwrap().1.is_empty());
+
+        let to = |line: &str| names.complete(line, line.len(), &ctx).unwrap().1;
+        let length = to("5 km to ");
+        assert!(length.contains(&"mi".into()) && length.contains(&"ly".into()));
+        assert!(!length.contains(&"kg".into()) && !length.contains(&"kilometers".into()));
+        assert_eq!(to("print(5 km to m"), ["m", "mi", "mm"]);
+        assert!(to("y = 60 km/h to ").contains(&"mph".into()));
+        run(&mut interp, "x = 3 kg").unwrap();
+        assert!(to("x to ").contains(&"g".into()));
+        assert!(to("z to ").is_empty());
+    }
+
+    #[test]
+    fn hints_and_highlights() {
+        use rustyline::highlight::Highlighter;
+        use rustyline::hint::Hinter;
+        let history = rustyline::history::DefaultHistory::new();
+        let ctx = rustyline::Context::new(&history);
+        let names = Names::new(Interp::new().globals());
+        assert_eq!(names.hint("x.upp", 5, &ctx).as_deref(), Some("er"));
+        assert_eq!(names.hint("x.upp", 3, &ctx), None);
+        let line = names.highlight("if x 5 \"s\"", 0);
+        assert_eq!(line, format!("{MAGENTA}if{RESET} x {CYAN}5{RESET} {GREEN}\"s\"{RESET}"));
     }
 }

@@ -8,6 +8,7 @@ pub mod core;
 pub mod dates;
 pub mod lists;
 pub mod math;
+pub mod money;
 pub mod random;
 pub mod strings;
 pub mod units;
@@ -128,7 +129,7 @@ impl Module {
 }
 
 /// Also the `help()` overview order.
-pub const MODULES: &[Module] = &[strings::MODULE, lists::MODULE, math::MODULE, dates::MODULE, random::MODULE, units::MODULE, core::MODULE];
+pub const MODULES: &[Module] = &[strings::MODULE, lists::MODULE, math::MODULE, dates::MODULE, random::MODULE, units::MODULE, money::MODULE, core::MODULE];
 
 /// A builtin by name, ignoring any variable that shadows it.
 pub fn builtin(name: &str) -> Value {

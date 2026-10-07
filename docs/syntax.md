@@ -121,7 +121,7 @@ A unit written right after a number literal attaches to it. `to` converts.
 |-------------|----------------------------------------------------------------|
 | Length      | `m km cm mm um nm mi yd ft in nmi au ly`                       |
 | Mass        | `kg g mg ug t lb oz st`                                        |
-| Time        | `s ms us ns min h d wk mo yr`                                  |
+| Time        | `s ms us ns min h d wk mo yr`, paid time `workday workwk workmo workyr` |
 | Temperature | `K C F`                                                        |
 | Volume      | `L mL gal qt pt cup floz tbsp tsp` (and `m^3`, `cm^3`, ...)    |
 | Area        | `ha acre` (and `m^2`, `ft^2`, ...)                             |
@@ -136,8 +136,40 @@ A unit written right after a number literal attaches to it. `to` converts.
 | Currency    | 3-letter codes: `USD EUR GBP JPY CAD ...`                      |
 
 Long names work too: `meters`, `miles`, `hours`, `celsius`, `bytes`, ...
-Currency rates come from frankfurter.dev (ECB data), are fetched on first use,
-and are cached for a day. If you're offline, the last cached rates are used.
+Currency rates come from frankfurter.dev (ECB data), are fetched only when two
+currencies meet (`$25/h * 40 h` never goes online), and are cached for a day.
+If you're offline, the last cached rates are used.
+
+## Money
+
+Currency amounts show as money: `1234.5 USD` is `$1,234.50`. `$`, `€` and `£`
+written before a number mean USD, EUR and GBP: `$25/h`, `-€5`.
+
+```zil
+$25/h to USD/workyr            # $52,000.00/workyr  (workyr = 2080 h; yr is calendar time)
+85000 USD/workyr to USD/h      # $40.87/h
+$1200 / ($40/h) to workday     # 3.75 workday
+salary($25/h)                  # {hour: $25.00, day: $200.00, week: ..., month: ..., year: $52,000.00}
+salary(85000 USD/yr, {hours: 37.5, weeks: 48})
+```
+
+Finance functions tell their arguments apart by unit: `$1000` is a sum,
+`$500/mo` a payment, `7%/yr` a rate (a `1%/mo` rate compounds monthly),
+`30 yr` a time, and a string like `"monthly"` or `"continuous"` sets how
+often interest compounds.
+
+```zil
+grow($10000, 7%/yr, 30 yr)                  # $76,122.55
+grow($0, 7%/yr, 30 yr, $500/mo)             # $609,985.50
+payment($400000, 6.5%/yr, 30 yr)            # $2,528.27/mo
+payment($400000, 6.5%/yr, 30 yr) * 30 yr    # total paid
+today + payoff($5000, 22%/yr, $200/mo)      # the debt-free date
+amortize($400000, 6.5%/yr, 30 yr, {extra: $300/mo})   # [{n, payment, interest, principal, balance}, ...]
+cagr($1000, $2500, 8 yr)    doubling(7%/yr)    apy(5%/yr, "daily")    real_rate(7%/yr, 3%/yr)
+share($100, 3)                              # [$33.34, $33.33, $33.33]  always adds up
+settle({ana: $120, ben: $0, cy: $30})       # ["ben pays ana $50.00", "cy pays ana $20.00"]
+change($80, $100)    margin($60, $100)    markup($60, $100)
+```
 
 ## Strings
 

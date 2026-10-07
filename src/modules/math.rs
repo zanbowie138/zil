@@ -483,7 +483,7 @@ pub fn render(v: &Value, sp: &Spec) -> Result<String, String> {
 }
 
 /// Thousands separators in the first run of digits: `-1234.5` -> `-1,234.5`.
-fn commas(s: &str) -> String {
+pub fn commas(s: &str) -> String {
     let start = s.find(|c: char| c.is_ascii_digit()).unwrap_or(s.len());
     let end = s[start..].find(|c: char| !c.is_ascii_digit()).map_or(s.len(), |e| start + e);
     let d = &s[start..end];

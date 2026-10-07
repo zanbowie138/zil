@@ -274,6 +274,16 @@ impl Parser {
                 ExprKind::Qty(Box::new(var), self.unit_spec(true)?)
             }
             Tok::Ident(s) => ExprKind::Ident(s),
+            // `$25`, `$25/h`: a number in that currency, optionally per some unit.
+            Tok::Currency(code) => {
+                let n = self.prefix()?;
+                if !matches!(n.kind, ExprKind::Int(..) | ExprKind::Big(..) | ExprKind::Float(_) | ExprKind::Dec(_)) {
+                    return Err(Error::new(format!("expected a plain number after the currency symbol for {code}"), n.span));
+                }
+                let mut spec = vec![(code.to_string(), 1)];
+                self.unit_rest(&mut spec, true)?;
+                ExprKind::Qty(Box::new(n), spec)
+            }
             Tok::LParen => {
                 self.skip_nl();
                 let e = self.expr(0)?;
@@ -397,6 +407,12 @@ impl Parser {
     /// so `60 km/h` is a unit but `60 km / h` divides) or after `to` (spaces allowed).
     fn unit_spec(&mut self, touching: bool) -> PResult<UnitSpec> {
         let mut spec = vec![self.unit_term(touching, 1)?];
+        self.unit_rest(&mut spec, touching)?;
+        Ok(spec)
+    }
+
+    /// More `*unit` or `/unit` terms after the first.
+    fn unit_rest(&mut self, spec: &mut UnitSpec, touching: bool) -> PResult<()> {
         loop {
             let sign = match self.peek() {
                 Tok::Star => 1,
@@ -410,7 +426,7 @@ impl Parser {
             self.bump();
             spec.push(self.unit_term(touching, sign)?);
         }
-        Ok(spec)
+        Ok(())
     }
 
     fn unit_term(&mut self, touching: bool, sign: i8) -> PResult<(String, i8)> {
@@ -616,6 +632,7 @@ fn starts_operand(t: &Tok) -> bool {
             | Big(_)
             | Float(_)
             | Dec(_)
+            | Currency(_)
             | Str(_)
             | Regex(_)
             | LParen

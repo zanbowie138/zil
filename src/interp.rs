@@ -30,7 +30,7 @@ fn child(parent: &Env) -> Env {
     Rc::new(RefCell::new(Scope { vars: HashMap::new(), parent: Some(parent.clone()) }))
 }
 
-fn lookup(env: &Env, name: &str) -> Option<Value> {
+pub fn lookup(env: &Env, name: &str) -> Option<Value> {
     let s = env.borrow();
     match s.vars.get(name) {
         Some(v) => Some(v.clone()),
@@ -100,6 +100,11 @@ impl Interp {
             }
         }
         Interp { globals, input: None }
+    }
+
+    /// Shared handle to the global scope, so the REPL completer can peek at variables.
+    pub fn globals(&self) -> Env {
+        self.globals.clone()
     }
 
     pub fn set_global(&mut self, name: &str, v: Value) {
@@ -658,6 +663,12 @@ fib = fn(n) {
 }
 fib(10)";
         assert_eq!(show(src), "55");
+    }
+
+    #[test]
+    fn semicolons() {
+        assert_eq!(show("x = 1; y = 2; x + y;"), "3");
+        assert_eq!(show("f = fn(n) { a = n; a * 2 }; f(4)"), "8");
     }
 
     #[test]

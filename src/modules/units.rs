@@ -4,7 +4,7 @@ use super::{Claim, Module};
 use crate::ast::{BinOp, Target, UnitSpec};
 use crate::interp::mismatch;
 use crate::value::{Value, num};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::f64::consts::PI;
@@ -61,7 +61,10 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
             if u.dim() != w.dim() {
                 return Some(Err(format!("cannot add {u} and {w}")));
             }
-            let y = u.value_from_si(w.to_si(*y));
+            let y = match convert_value(*y, w, u) {
+                Ok(y) => y,
+                Err(e) => return Some(Err(e)),
+            };
             Value::qty(if op == BinOp::Add { x + y } else { x - y }, u.clone())
         }
         (BinOp::Mul | BinOp::Div, Qty(..), _) | (BinOp::Mul | BinOp::Div, _, Qty(..)) => {
@@ -72,7 +75,12 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
             let (Some((x, u)), Some((y, w))) = (split(a), split(b)) else {
                 return Some(Err(mismatch(a, b)));
             };
-            if op == BinOp::Mul { Value::qty(x * y, u.mul(&w, 1)) } else { Value::qty(x / y, u.mul(&w, -1)) }
+            let u = u.mul(&w, if op == BinOp::Mul { 1 } else { -1 });
+            // USD/EUR is a plain number, but only at today's rate.
+            if !u.0.is_empty() && u.dim() == [0; 7] && u.scale().is_nan() {
+                return Some(Err(rate_error()));
+            }
+            Value::qty(if op == BinOp::Mul { x * y } else { x / y }, u)
         }
         (BinOp::Pow, Qty(x, u), Int(n, _)) if (-9..=9).contains(n) => Value::qty(x.powi(*n as i32), u.pow(*n as i8)),
         _ => return None,
@@ -81,7 +89,7 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
 
 fn compare(a: &Value, b: &Value) -> Option<Ordering> {
     match (a, b) {
-        (Value::Qty(x, u), Value::Qty(y, w)) if u.dim() == w.dim() => u.to_si(*x).partial_cmp(&w.to_si(*y)),
+        (Value::Qty(x, u), Value::Qty(y, w)) if u.dim() == w.dim() => x.partial_cmp(&convert_value(*y, w, u).ok()?),
         _ => None,
     }
 }
@@ -99,7 +107,7 @@ fn convert(v: &Value, t: &Target) -> Claim {
             if u.dim() != t.dim() {
                 return Err(format!("cannot convert {u} to {t}"));
             }
-            Ok(Value::Qty(t.value_from_si(u.to_si(*x)), t))
+            Ok(Value::Qty(convert_value(*x, u, &t)?, t))
         }),
         (v, Target::Unit(_) | Target::Units(_)) if num(v).is_some() => Err(format!("{v} has no unit; attach one like `{v} km`")),
         _ => return None,
@@ -123,11 +131,11 @@ fn topic(topic: &str) -> bool {
         for (kind, _) in DIMS {
             println!("  {kind:<12} {}", units_of(kind).join(" "));
         }
-        println!("  {:<12} 3-letter codes (USD EUR GBP ...), live rates fetched on first use", "currency");
+        println!("  {:<12} 3-letter codes (USD EUR GBP ...), live rates fetched when converting", "currency");
         println!("help(\"length\") or help(\"km\") for details");
-    } else if matches!(topic, "currency" | "money") {
+    } else if topic == "currency" {
         println!("currency: 3-letter codes like USD, EUR, GBP, JPY. Rates come from frankfurter.dev,");
-        println!("are fetched on first use (with a prompt) and cached for a day.");
+        println!("are fetched (with a prompt) only when two currencies meet, and cached for a day.");
         println!("  100 USD to EUR");
     } else if let Some(kind) = DIMS.iter().map(|d| d.0).find(|k| *k == topic) {
         let units = units_of(kind);
@@ -162,11 +170,11 @@ const fn d(l: i8, m: i8, t: i8) -> Dim {
 }
 const LEN: Dim = d(1, 0, 0);
 const MASS: Dim = d(0, 1, 0);
-const TIME: Dim = d(0, 0, 1);
+pub const TIME: Dim = d(0, 0, 1);
 const TEMP: Dim = [0, 0, 0, 1, 0, 0, 0];
 const DATA: Dim = [0, 0, 0, 0, 1, 0, 0];
 const RATE: Dim = [0, 0, -1, 0, 1, 0, 0];
-const MONEY: Dim = [0, 0, 0, 0, 0, 1, 0];
+pub const MONEY: Dim = [0, 0, 0, 0, 0, 1, 0];
 const ANGLE: Dim = [0, 0, 0, 0, 0, 0, 1];
 
 /// Names of the kinds of unit in TABLE, for `help`.
@@ -215,6 +223,11 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
     ("wk week weeks", 604800.0, 0.0, TIME),
     ("mo month months", 2629746.0, 0.0, TIME),
     ("yr year years", 31556952.0, 0.0, TIME),
+    // Paid time: 8 h days, 40 h weeks, 52 weeks a year. `25 USD/h to USD/workyr` is a salary; `USD/yr` is calendar time.
+    ("workday workdays", 8.0 * 3600.0, 0.0, TIME),
+    ("workwk workweek workweeks", 40.0 * 3600.0, 0.0, TIME),
+    ("workmo workmonth workmonths", 2080.0 / 12.0 * 3600.0, 0.0, TIME),
+    ("workyr workyear workyears", 2080.0 * 3600.0, 0.0, TIME),
 
     ("K kelvin", 1.0, 0.0, TEMP),
     ("C celsius degC", 1.0, 273.15, TEMP),
@@ -292,7 +305,8 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
 #[derive(Debug)]
 pub struct UnitDef {
     pub name: String,
-    pub scale: f64,
+    /// NaN for a currency whose rate isn't loaded yet; read it through `scale()`.
+    scale: Cell<f64>,
     pub offset: f64,
     pub dim: Dim,
 }
@@ -300,6 +314,16 @@ pub struct UnitDef {
 /// A product of units with integer powers, e.g. km/h = [(km, 1), (h, -1)].
 #[derive(Debug, Clone, Default)]
 pub struct Unit(pub Vec<(Rc<UnitDef>, i8)>);
+
+impl UnitDef {
+    /// Factor to SI; the first currency rate asked for loads them all.
+    pub fn scale(&self) -> f64 {
+        if self.scale.get().is_nan() {
+            load_rates_once();
+        }
+        self.scale.get()
+    }
+}
 
 impl Unit {
     pub fn dim(&self) -> Dim {
@@ -313,11 +337,11 @@ impl Unit {
     }
 
     pub fn scale(&self) -> f64 {
-        self.0.iter().map(|(u, p)| u.scale.powi(*p as i32)).product()
+        self.0.iter().map(|(u, p)| u.scale().powi(*p as i32)).product()
     }
 
     /// Offsets only apply to a lone unit like `C`, not inside `C/s`.
-    fn offset(&self) -> f64 {
+    pub fn offset(&self) -> f64 {
         match self.0.as_slice() {
             [(u, 1)] => u.offset,
             _ => 0.0,
@@ -353,6 +377,16 @@ impl Unit {
     pub fn is(&self, name: &str) -> bool {
         matches!(self.0.as_slice(), [(u, 1)] if u.name == name)
     }
+}
+
+/// `x` in `from` as a value in `to` (same dimension). Through `from / to`, so currencies that cancel
+/// (`USD/h` to `USD/workyr`) need no exchange rate.
+pub fn convert_value(x: f64, from: &Unit, to: &Unit) -> Result<f64, String> {
+    if from.offset() != 0.0 || to.offset() != 0.0 {
+        return Ok(to.value_from_si(from.to_si(x)));
+    }
+    let f = from.mul(to, -1).scale();
+    if f.is_nan() { Err(rate_error()) } else { Ok(x * f) }
 }
 
 /// `si` as whole amounts of each unit but the last, which gets the remainder: "5 ft 6 in", "79 d 9 h 36 min".
@@ -394,16 +428,56 @@ impl fmt::Display for Unit {
 thread_local! {
     static REGISTRY: RefCell<HashMap<String, Rc<UnitDef>>> = RefCell::new(builtin_units());
     static RATES_LOADED: RefCell<bool> = const { RefCell::new(false) };
+    static RATES_ERROR: RefCell<String> = const { RefCell::new(String::new()) };
+}
+
+/// ECB currencies frankfurter.dev has; known without fetching, so `25 USD/h * 40 h` stays offline.
+const CURRENCIES: &str = "AUD BGN BRL CAD CHF CNY CZK DKK EUR GBP HKD HUF IDR ILS INR ISK JPY KRW MXN MYR NOK NZD PHP PLN RON SEK SGD THB TRY USD ZAR";
+
+fn currency(code: &str, scale: f64) -> Rc<UnitDef> {
+    Rc::new(UnitDef { name: code.into(), scale: Cell::new(scale), offset: 0.0, dim: MONEY })
+}
+
+fn rate_error() -> String {
+    RATES_ERROR.with(|e| format!("cannot load currency rates: {}", e.borrow()))
+}
+
+/// Fills in every currency's rate, once; on failure their scales stay NaN and `rate_error` says why.
+fn load_rates_once() {
+    if RATES_LOADED.with(|l| l.replace(true)) {
+        return;
+    }
+    match load_rates() {
+        Ok(rates) => REGISTRY.with(|r| {
+            let mut r = r.borrow_mut();
+            for (code, per_eur) in rates {
+                match r.get(&code) {
+                    Some(def) => def.scale.set(1.0 / per_eur),
+                    None => {
+                        let def = currency(&code, 1.0 / per_eur);
+                        r.entry(code.to_lowercase()).or_insert(def.clone());
+                        r.insert(code, def);
+                    }
+                }
+            }
+        }),
+        Err(e) => RATES_ERROR.with(|x| *x.borrow_mut() = e),
+    }
 }
 
 fn builtin_units() -> HashMap<String, Rc<UnitDef>> {
     let mut map = HashMap::new();
     for (names, scale, offset, dim) in TABLE {
         let primary = names.split(' ').next().unwrap();
-        let def = Rc::new(UnitDef { name: primary.into(), scale: *scale, offset: *offset, dim: *dim });
+        let def = Rc::new(UnitDef { name: primary.into(), scale: Cell::new(*scale), offset: *offset, dim: *dim });
         for n in names.split(' ') {
             map.insert(n.to_string(), def.clone());
         }
+    }
+    for code in CURRENCIES.split(' ') {
+        let def = currency(code, if code == "EUR" { 1.0 } else { f64::NAN });
+        map.insert(code.to_lowercase(), def.clone());
+        map.insert(code.into(), def);
     }
     map
 }
@@ -412,20 +486,35 @@ pub fn lookup(name: &str) -> Result<Rc<UnitDef>, String> {
     if let Some(u) = REGISTRY.with(|r| r.borrow().get(name).cloned()) {
         return Ok(u);
     }
-    let looks_like_currency = name.len() == 3 && name.bytes().all(|b| b.is_ascii_alphabetic());
-    if looks_like_currency && !RATES_LOADED.with(|l| l.replace(true)) {
-        let rates = load_rates().map_err(|e| format!("cannot load currency rates: {e}"))?;
-        REGISTRY.with(|r| {
-            let mut r = r.borrow_mut();
-            for (code, per_eur) in rates {
-                let def = Rc::new(UnitDef { name: code.clone(), scale: 1.0 / per_eur, offset: 0.0, dim: MONEY });
-                r.entry(code.to_lowercase()).or_insert(def.clone());
-                r.insert(code, def);
-            }
-        });
+    // A currency the ECB added after CURRENCIES was written.
+    let looks_like_currency = name.len() == 3 && name.bytes().all(|b| b.is_ascii_uppercase());
+    if looks_like_currency && !RATES_LOADED.with(|l| *l.borrow()) {
+        load_rates_once();
         return lookup(name);
     }
     Err(format!("unknown unit `{name}`"))
+}
+
+/// Dimension of `spec` from already-loaded units only, so REPL completion never fetches rates.
+pub fn known_dim(spec: &UnitSpec) -> Option<Dim> {
+    REGISTRY.with(|r| {
+        let r = r.borrow();
+        let mut dim = [0; 7];
+        for (name, p) in spec {
+            for (acc, x) in dim.iter_mut().zip(r.get(name)?.dim) {
+                *acc += x * p;
+            }
+        }
+        Some(dim)
+    })
+}
+
+/// Display names of every loaded unit of dimension `dim`, sorted.
+pub fn names_with_dim(dim: Dim) -> Vec<String> {
+    let mut v: Vec<String> = REGISTRY.with(|r| r.borrow().values().filter(|u| u.dim == dim).map(|u| u.name.clone()).collect());
+    v.sort();
+    v.dedup();
+    v
 }
 
 pub fn unit(name: &str) -> Result<Unit, String> {
