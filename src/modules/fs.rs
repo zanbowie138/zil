@@ -29,7 +29,7 @@ pub const MODULE: Module = Module {
         ("read and write", &["read_file", "write_file", "append_file"]),
         ("look", &["exists", "is_dir", "ls", "glob", "file_size", "mtime"]),
         ("change", &["rm", "mv", "cp", "mkdir"]),
-        ("paths", &["path_join", "basename", "dirname", "ext", "stem", "abspath", "cwd"]),
+        ("paths", &["path_join", "basename", "dirname", "ext", "stem", "abspath", "cwd", "cd"]),
         ("data", &["from_json", "to_json", "from_csv", "to_csv"]),
     ],
     call,
@@ -57,7 +57,8 @@ const FNS: &[Doc] = &[
     doc("ext", "ext(path: str)", "the extension without its dot, or nil", &[r#""a/b.tar.gz".ext"#, r#""README".ext"#], &["stem"]),
     doc("stem", "stem(path: str)", "the last piece without its extension, or nil", &[r#""a/b.tar.gz".stem"#], &["ext", "basename"]),
     doc("abspath", "abspath(path: str)", "path made absolute from the current directory; need not exist", &[], &["cwd"]).shown(&[r#"abspath("src")"#]),
-    doc("cwd", "cwd()", "the current directory", &[], &["abspath"]).shown(&["cwd()"]),
+    doc("cwd", "cwd()", "the current directory", &[], &["abspath", "cd"]).shown(&["cwd()"]),
+    doc("cd", "cd(dir?: str)", "change the current directory, home by default; returns the new one", &[], &["cwd"]).shown(&[r#"cd("src")"#, r#"cd("..")"#, "cd()"]),
     doc("from_json", "from_json(s: str)", "parse JSON: objects become maps, arrays lists", &[r#""\{\"a\": [1, 2.5, null]}".from_json"#], &["to_json", "parse"]),
     doc("to_json", "to_json(v: any)", "v as JSON; values JSON lacks (quantities, fractions, dates) become strings", &[r#"{a: [1, nil], b: 5 km}.to_json"#], &["from_json"]),
     doc("from_csv", "from_csv(s: str, header?: bool)", "parse CSV; with a header row (the default) a table, else a list of rows. Numbers become numbers, empty cells nil", &["\"name,n\\nx,1\".from_csv", "\"1,2\\n3,4\".from_csv(false)"], &["to_csv", "table"]),
@@ -137,6 +138,14 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         }
         ("abspath", [Str(p)]) => Value::str(std::path::absolute(&**p).map_err(io("resolve", p))?.to_string_lossy()),
         ("cwd", []) => Value::str(std::env::current_dir().map_err(|e| io_reason(&e))?.to_string_lossy()),
+        ("cd", [] | [Str(_)]) => {
+            let dir = match args {
+                [Str(p)] => p.to_string(),
+                _ => std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")).map_err(|_| Fail::Msg("no home directory set".into()))?,
+            };
+            std::env::set_current_dir(&dir).map_err(io("enter", &dir))?;
+            Value::str(std::env::current_dir().map_err(|e| io_reason(&e))?.to_string_lossy())
+        }
         ("from_json", [Str(s)]) => from_json(serde_json::from_str(s).map_err(|e| Fail::Arg(0, format!("invalid JSON: {e}")))?),
         ("to_json", [v]) => Value::str(to_json(v).to_string()),
         ("from_csv", [Str(s)]) => from_csv(s, true)?,
@@ -363,6 +372,7 @@ mod tests {
         assert_eq!(show(&format!("{csv}.from_csv.n")), "[1, nil]");
         assert_eq!(show(r#""a,1.5\nnan,inf".from_csv(false)"#), r#"[["a", 1.5], ["nan", "inf"]]"#);
         assert!(try_eval(r#""\"a".from_csv"#).is_err());
+        assert!(try_eval(r#"cd("no/such/dir")"#).is_err());
         assert_eq!(show(r#"["a/b.tar.gz".stem, "a/b.tar.gz".ext, "a/b".dirname, "x".ext, "/".basename]"#), r#"["b.tar", "gz", "a", nil, nil]"#);
     }
 

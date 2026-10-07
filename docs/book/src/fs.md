@@ -36,6 +36,7 @@ files and directories, path pieces, JSON and CSV; relative paths start at the cu
 | [`stem(path: str)`](#stem) | the last piece without its extension, or nil |
 | [`abspath(path: str)`](#abspath) | path made absolute from the current directory; need not exist |
 | [`cwd()`](#cwd) | the current directory |
+| [`cd(dir?: str)`](#cd) | change the current directory, home by default; returns the new one |
 | [`from_json(s: str)`](#from_json) | parse JSON: objects become maps, arrays lists |
 | [`to_json(v: any)`](#to_json) | v as JSON; values JSON lacks (quantities, fractions, dates) become strings |
 | [`from_csv(s: str, header?: bool)`](#from_csv) | parse CSV; with a header row (the default) a table, else a list of rows. Numbers become numbers, empty cells nil |
@@ -250,7 +251,19 @@ See also: [cwd](fs.md#cwd)
 cwd()
 ```
 
-See also: [abspath](fs.md#abspath)
+See also: [abspath](fs.md#abspath), [cd](fs.md#cd)
+
+### cd
+
+`cd(dir?: str)`: change the current directory, home by default; returns the new one
+
+```zil
+cd("src")
+cd("..")
+cd()
+```
+
+See also: [cwd](fs.md#cwd)
 
 ### from_json
 

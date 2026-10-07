@@ -461,7 +461,17 @@ impl Interp {
                 Value::Bool(true)
             }
             ExprKind::Binary(op, a, b) => {
-                let (av, bv) = (self.eval(a, env)?, self.eval(b, env)?);
+                let (mut av, mut bv) = (self.eval(a, env)?, self.eval(b, env)?);
+                // A builtin can't be multiplied or divided, so a name that is also a unit means the unit: `km / day`, `cd * 3`.
+                if matches!(op, BinOp::Mul | BinOp::Div) {
+                    for (e, v) in [(a, &mut av), (b, &mut bv)] {
+                        if let (ExprKind::Ident(n), Value::Builtin(..)) = (&e.kind, &*v)
+                            && let Ok(u) = crate::modules::units::unit(n)
+                        {
+                            *v = Value::Qty(1.0, u);
+                        }
+                    }
+                }
                 binary(*op, &av, &bv).map_err(|m| operands(m, *op, (a, &av), (b, &bv)))?
             }
             ExprKind::Assign(target, v) => {

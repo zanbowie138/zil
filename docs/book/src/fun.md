@@ -38,7 +38,7 @@ fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; placeholde
 
 ```zil
 fortune()
-# → "You will find what you lost in the last place you look. Try git reflog."
+# → "It was DNS."
 ```
 
 See also: [eight_ball](fun.md#eight_ball)
@@ -60,9 +60,9 @@ See also: [yes_or_no](fun.md#yes_or_no), [fortune](fun.md#fortune)
 
 ```zil
 coin()
-# → "heads"
+# → "tails"
 coin(3)
-# → ["heads", "heads", "tails"]
+# → ["heads", "tails", "tails"]
 ```
 
 See also: [rand](math/random.md#rand)
@@ -84,7 +84,7 @@ See also: [eight_ball](fun.md#eight_ball)
 
 ```zil
 excuse()
-# → "That's a known issue upstream."
+# → "It works on my machine."
 ```
 
 See also: [fortune](fun.md#fortune)
@@ -110,13 +110,13 @@ eight_ball("will it compile?")
 # → "Yes."
 # best of five
 coin(5)
-# → ["heads", "tails", "heads", "tails", "tails"]
+# → ["tails", "heads", "heads", "tails", "tails"]
 # standup
 excuse()
-# → "The intern had root access."
+# → "It was DNS."
 # should I ship it?
 yes_or_no()
-# → "yes"
+# → "no"
 ```
 
 ### roman

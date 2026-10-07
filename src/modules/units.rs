@@ -932,6 +932,12 @@ mod tests {
     }
 
     #[test]
+    fn unit_names_beat_builtins_in_arithmetic() {
+        assert_eq!(show(r#"[100 km / day, 60 s / min, cd * 3, min(3, 4)]"#), "[100 km/d, 1, 3 cd, 3]");
+        assert_eq!(show("day = 2; 6 / day"), "3");
+    }
+
+    #[test]
     fn units_lists_every_source() {
         try_eval("unit widget").unwrap();
         for source in ["units", "goofy", "kitchen", "currency", "user"] {

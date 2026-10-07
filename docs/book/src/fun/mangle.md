@@ -69,9 +69,9 @@ See also: [nato](../fun/mangle.md#nato)
 
 ```zil
 "he comes".zalgo
-# → "h\u{35f}\u{323}\u{30d}e\u{32e}\u{339}\u{32d} c\u{34b}\u{35d}\u{369}o\u{303}\u{324}\u{36e}m\u{31e}\u{355}\u{358}e\u{30d}\u{362}\u{36f}s\u{36c}\u{31e}\u{336}"
+# → "h\u{35a}\u{320}\u{369}e\u{331}\u{34f}\u{36e} c\u{31e}\u{319}\u{320}o\u{33d}\u{321}\u{35a}m\u{33b}\u{35a}\u{32b}e\u{337}\u{332}\u{314}s\u{33f}\u{36a}\u{357}"
 "ok".zalgo(1)
-# → "o\u{306}k\u{334}"
+# → "o\u{326}k\u{335}"
 ```
 
 See also: [flip](../fun/mangle.md#flip)
