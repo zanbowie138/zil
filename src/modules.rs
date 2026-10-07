@@ -130,6 +130,11 @@ impl Module {
 /// Also the `help()` overview order.
 pub const MODULES: &[Module] = &[strings::MODULE, lists::MODULE, math::MODULE, dates::MODULE, random::MODULE, units::MODULE, core::MODULE];
 
+/// A builtin by name, ignoring any variable that shadows it.
+pub fn builtin(name: &str) -> Value {
+    MODULES.iter().find_map(|m| m.fns.iter().find(|f| f.name == name).map(|f| Value::Builtin(m, f.name))).expect("known builtin")
+}
+
 /// The module and fn a `to` keyword calls.
 pub fn target(keyword: &str) -> Option<(&'static Module, &'static str)> {
     MODULES.iter().find_map(|m| m.targets.iter().find(|t| t.0 == keyword).map(|t| (m, t.1)))

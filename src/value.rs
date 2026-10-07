@@ -5,6 +5,9 @@ use crate::interp::Closure;
 use crate::modules::{self, Module, units::Unit};
 use indexmap::IndexMap;
 use jiff::{Zoned, tz::TimeZone};
+use num_bigint::BigInt;
+use num_rational::BigRational;
+use num_traits::{Signed, ToPrimitive};
 use regex::Regex;
 use std::cell::RefCell;
 use std::cmp::Ordering;
@@ -17,6 +20,10 @@ pub enum Value {
     Bool(bool),
     /// Integer and how it displays (`255 to hex` remembers base 16).
     Int(i64, Radix),
+    /// An integer too big for i64; arithmetic overflows into it and shrinks back out.
+    Big(Rc<BigInt>, Radix),
+    /// Exact non-integer from int division (`7 / 2`); `true` displays `7/2` instead of `3.5`.
+    Frac(Rc<BigRational>, bool),
     Float(f64),
     Qty(f64, Unit),
     Str(Rc<str>),
@@ -68,7 +75,8 @@ impl Value {
         match self {
             Value::Nil => "nil",
             Value::Bool(_) => "bool",
-            Value::Int(..) => "int",
+            Value::Int(..) | Value::Big(..) => "int",
+            Value::Frac(..) => "frac",
             Value::Float(_) => "float",
             Value::Qty(..) => "quantity",
             Value::Str(_) => "str",
@@ -85,6 +93,9 @@ impl Value {
             Value::Nil => write!(f, "nil"),
             Value::Bool(b) => write!(f, "{b}"),
             Value::Int(n, base) => write!(f, "{}", fmt_int(*n, *base)),
+            Value::Big(n, base) => write!(f, "{}", fmt_big(n, base.base)),
+            Value::Frac(r, true) => write!(f, "{r}"),
+            Value::Frac(r, false) => write!(f, "{}", fmt_float(r.to_f64().unwrap_or(f64::NAN))),
             Value::Float(n) => write!(f, "{}", fmt_float(*n)),
             Value::Qty(n, u) => write!(f, "{} {u}", fmt_float(*n)),
             Value::Str(s) if top => write!(f, "{s}"),
@@ -141,7 +152,8 @@ impl PartialEq for Value {
             (Nil, Nil) => true,
             (Bool(a), Bool(b)) => a == b,
             (Int(a, _), Int(b, _)) => a == b,
-            (Int(..) | Float(_), Int(..) | Float(_)) => num(self) == num(other),
+            (Int(..) | Big(..) | Frac(..), Int(..) | Big(..) | Frac(..)) => ratio(self) == ratio(other),
+            (Int(..) | Big(..) | Frac(..) | Float(_), Int(..) | Big(..) | Frac(..) | Float(_)) => num(self) == num(other),
             (Qty(..), Qty(..)) => compare(self, other) == Some(Ordering::Equal),
             (Str(a), Str(b)) => a == b,
             (Regex(a), Regex(b)) => a.as_str() == b.as_str(),
@@ -176,6 +188,19 @@ pub fn fmt_int(n: i64, r: Radix) -> String {
     }
 }
 
+/// Big ints ignore a bit width: two's complement only applies up to 64 bits.
+fn fmt_big(n: &BigInt, base: u32) -> String {
+    let sign = if n.is_negative() { "-" } else { "" };
+    let s = n.abs().to_str_radix(base);
+    match base {
+        10 => format!("{sign}{s}"),
+        16 => format!("{sign}0x{s}"),
+        2 => format!("{sign}0b{s}"),
+        8 => format!("{sign}0o{s}"),
+        b => format!("{sign}{b}#{s}"),
+    }
+}
+
 fn digits(mut m: u64, base: u32) -> String {
     let mut d = Vec::new();
     loop {
@@ -194,7 +219,7 @@ pub fn fits(n: i64, w: u32) -> bool {
     -(1i128 << (w - 1)) <= n && n < (1i128 << w)
 }
 
-fn mask(w: u32) -> u64 {
+pub fn mask(w: u32) -> u64 {
     u64::MAX >> (64 - w)
 }
 
@@ -218,8 +243,32 @@ pub fn fmt_float(x: f64) -> String {
 pub fn num(v: &Value) -> Option<f64> {
     match v {
         Value::Int(n, _) => Some(*n as f64),
+        Value::Big(n, _) => n.to_f64(),
+        Value::Frac(r, _) => r.to_f64(),
         Value::Float(n) => Some(*n),
         _ => None,
+    }
+}
+
+/// Ints and fractions as an exact ratio.
+pub fn ratio(v: &Value) -> Option<BigRational> {
+    match v {
+        Value::Int(n, _) => Some(BigRational::from_integer((*n).into())),
+        Value::Big(n, _) => Some(BigRational::from_integer((**n).clone())),
+        Value::Frac(r, _) => Some((**r).clone()),
+        _ => None,
+    }
+}
+
+/// An exact result as the smallest value that holds it: int, big int, or fraction.
+pub fn exact(r: BigRational, base: Radix, as_frac: bool) -> Value {
+    if !r.is_integer() {
+        return Value::Frac(Rc::new(r), as_frac);
+    }
+    let n = r.to_integer();
+    match n.to_i64() {
+        Some(i) => Value::Int(i, base),
+        None => Value::Big(Rc::new(n), base),
     }
 }
 
@@ -227,6 +276,7 @@ pub fn compare(a: &Value, b: &Value) -> Option<Ordering> {
     match (a, b) {
         (Value::Int(a, _), Value::Int(b, _)) => Some(a.cmp(b)),
         (Value::Str(a), Value::Str(b)) => Some(a.cmp(b)),
+        (Value::Int(..) | Value::Big(..) | Value::Frac(..), Value::Int(..) | Value::Big(..) | Value::Frac(..)) => Some(ratio(a)?.cmp(&ratio(b)?)),
         _ => modules::compare(a, b).or_else(|| num(a)?.partial_cmp(&num(b)?)),
     }
 }

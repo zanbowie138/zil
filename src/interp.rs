@@ -2,8 +2,12 @@ use crate::Error;
 use crate::ast::{BinOp, Expr, ExprKind, FnDef, Radix, Target, UnOp};
 use crate::lexer::Span;
 use crate::modules::{self, MODULES, units};
-use crate::value::{Value, compare, num};
+use crate::value::{Value, compare, exact, num, ratio};
 use indexmap::IndexMap;
+use num_bigint::BigInt;
+use num_integer::Integer;
+use num_rational::BigRational;
+use num_traits::{One, Signed, ToPrimitive, Zero};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -51,6 +55,20 @@ fn assign(env: &Env, name: &str, v: Value) -> Result<(), Value> {
 enum Ctl {
     Err(Error),
     Return(Value),
+    Break(Span),
+    Continue(Span),
+}
+
+impl Ctl {
+    /// What escapes a function body or the top level: the returned value, or an error.
+    fn finish(self) -> Result<Value, Error> {
+        match self {
+            Ctl::Return(v) => Ok(v),
+            Ctl::Err(e) => Err(e),
+            Ctl::Break(s) => Err(Error::new("`break` outside a loop", s)),
+            Ctl::Continue(s) => Err(Error::new("`continue` outside a loop", s)),
+        }
+    }
 }
 
 impl From<Error> for Ctl {
@@ -92,10 +110,7 @@ impl Interp {
         let globals = self.globals.clone();
         let mut last = Value::Nil;
         for stmt in prog {
-            last = match self.eval(stmt, &globals) {
-                Ok(v) | Err(Ctl::Return(v)) => v,
-                Err(Ctl::Err(e)) => return Err(e),
-            };
+            last = self.eval(stmt, &globals).or_else(Ctl::finish)?;
         }
         Ok(last)
     }
@@ -110,10 +125,7 @@ impl Interp {
                 for (p, a) in c.def.params.iter().zip(args) {
                     env.borrow_mut().vars.insert(p.clone(), a);
                 }
-                match self.eval(&c.def.body, &env) {
-                    Ok(v) | Err(Ctl::Return(v)) => Ok(v),
-                    Err(Ctl::Err(e)) => Err(e),
-                }
+                self.eval(&c.def.body, &env).or_else(Ctl::finish)
             }
             Value::Builtin(m, name) => (m.call)(self, name, &args, span).map_err(|f| f.error(name, &args, span)),
             v => Err(Error::new(format!("{} is not callable", v.type_name()), span.clone())),
@@ -126,6 +138,7 @@ impl Interp {
             ExprKind::Nil => Value::Nil,
             ExprKind::Bool(b) => Value::Bool(*b),
             ExprKind::Int(n, b) => Value::Int(*n, Radix { base: *b, width: 0 }),
+            ExprKind::Big(n, b) => Value::Big(n.clone(), Radix { base: *b, width: 0 }),
             ExprKind::Float(n) => Value::Float(*n),
             ExprKind::Str(s) => Value::Str(s.clone()),
             ExprKind::Regex(r) => Value::Regex(r.clone()),
@@ -166,13 +179,22 @@ impl Interp {
                     None => return Err(err(format!("cannot convert {} like that", v.type_name()))),
                 }
             }
+            ExprKind::Percent(x) => binary(BinOp::Div, &self.eval(x, env)?, &Value::int(100)).map_err(err)?,
+            ExprKind::Format(x, spec) => {
+                let v = self.eval(x, env)?;
+                let spec = modules::math::Spec::parse(spec).expect("parser checks specs");
+                Value::str(modules::math::render(&v, &spec).map_err(err)?)
+            }
             ExprKind::Unary(op, x) => match (op, self.eval(x, env)?) {
                 (UnOp::Not, v) => Value::Bool(!v.truthy()),
-                (UnOp::Neg, Value::Int(n, b)) => Value::Int(n.checked_neg().ok_or_else(|| err("integer overflow".into()))?, b),
+                (UnOp::Neg, Value::Int(n, b)) => n.checked_neg().map_or_else(|| Value::Big(Rc::new(-BigInt::from(n)), b), |n| Value::Int(n, b)),
+                (UnOp::Neg, Value::Big(n, b)) => exact(BigRational::from_integer(-&*n), b, false),
+                (UnOp::Neg, Value::Frac(r, f)) => Value::Frac(Rc::new(-&*r), f),
                 (UnOp::Neg, Value::Float(n)) => Value::Float(-n),
                 (UnOp::Neg, Value::Qty(n, u)) => Value::Qty(-n, u),
                 (UnOp::Neg, v) => return Err(err(format!("cannot negate {}", v.type_name()))),
                 (UnOp::BitNot, Value::Int(n, b)) => Value::Int(!n, b),
+                (UnOp::BitNot, Value::Big(n, b)) => exact(BigRational::from_integer(!&*n), b, false),
                 (UnOp::BitNot, v) => {
                     return Err(err(format!("cannot bit-invert {}", v.type_name())));
                 }
@@ -184,6 +206,22 @@ impl Interp {
             ExprKind::Binary(BinOp::Or, a, b) => {
                 let a = self.eval(a, env)?;
                 if a.truthy() { a } else { self.eval(b, env)? }
+            }
+            // `x in v` is `contains(v, x)`, even if `contains` is shadowed.
+            ExprKind::Binary(BinOp::In, x, v) => {
+                let (x, v) = (self.eval(x, env)?, self.eval(v, env)?);
+                self.call(&modules::builtin("contains"), vec![v, x], &e.span)?
+            }
+            ExprKind::Chain(first, rest) => {
+                let mut l = self.eval(first, env)?;
+                for (op, r) in rest {
+                    let r = self.eval(r, env)?;
+                    if !binary(*op, &l, &r).map_err(err)?.truthy() {
+                        return Ok(Value::Bool(false));
+                    }
+                    l = r;
+                }
+                Value::Bool(true)
             }
             ExprKind::Binary(op, a, b) => {
                 let (a, b) = (self.eval(a, env)?, self.eval(b, env)?);
@@ -312,7 +350,11 @@ impl Interp {
             }
             ExprKind::While(cond, body) => {
                 while self.eval(cond, env)?.truthy() {
-                    self.eval(body, env)?;
+                    match self.eval(body, env) {
+                        Ok(_) | Err(Ctl::Continue(_)) => {}
+                        Err(Ctl::Break(_)) => break,
+                        Err(c) => return Err(c),
+                    }
                 }
                 Value::Nil
             }
@@ -326,7 +368,11 @@ impl Interp {
                 for it in items {
                     let scope = child(env);
                     scope.borrow_mut().vars.insert(name.clone(), it);
-                    self.eval(body, &scope)?;
+                    match self.eval(body, &scope) {
+                        Ok(_) | Err(Ctl::Continue(_)) => {}
+                        Err(Ctl::Break(_)) => break,
+                        Err(c) => return Err(c),
+                    }
                 }
                 Value::Nil
             }
@@ -345,6 +391,8 @@ impl Interp {
                 };
                 return Err(Ctl::Return(v));
             }
+            ExprKind::Break => return Err(Ctl::Break(e.span.clone())),
+            ExprKind::Continue => return Err(Ctl::Continue(e.span.clone())),
         })
     }
 }
@@ -387,51 +435,115 @@ pub fn binary(op: BinOp, a: &Value, b: &Value) -> Result<Value, String> {
     if let Some(r) = modules::binary(op, a, b) {
         return r;
     }
-    Ok(match (op, a, b) {
-        (_, Int(x, bx), Int(y, by)) => {
-            let base = if *bx != Radix::DEC { *bx } else { *by };
-            let (x, y) = (*x, *y);
-            let zero = || "division by zero".to_string();
-            let r = match op {
-                BinOp::Add => x.checked_add(y),
-                BinOp::Sub => x.checked_sub(y),
-                BinOp::Mul => x.checked_mul(y),
-                BinOp::Div if y == 0 => return Err(zero()),
-                BinOp::Div if x % y != 0 => return Ok(Float(x as f64 / y as f64)),
-                BinOp::Div => x.checked_div(y),
-                BinOp::IntDiv if y == 0 => return Err(zero()),
-                BinOp::IntDiv => x.checked_div(y).map(|q| if x % y != 0 && (x < 0) != (y < 0) { q - 1 } else { q }),
-                BinOp::Rem if y == 0 => return Err(zero()),
-                BinOp::Rem => x.checked_rem_euclid(y),
-                BinOp::Pow if y < 0 => return Ok(Float((x as f64).powf(y as f64))),
-                BinOp::Pow => u32::try_from(y).ok().and_then(|y| x.checked_pow(y)),
-                BinOp::BitAnd => Some(x & y),
-                BinOp::BitOr => Some(x | y),
-                BinOp::BitXor => Some(x ^ y),
-                // ponytail: `<<` drops high bits like C instead of erroring on overflow.
-                BinOp::Shl | BinOp::Shr if !(0..64).contains(&y) => {
-                    return Err("shift must be 0-63".into());
-                }
-                BinOp::Shl => Some(x << y),
-                BinOp::Shr => Some(x >> y),
-                _ => return Err(mismatch()),
-            };
-            Int(r.ok_or("integer overflow")?, base)
-        }
-        _ => match (num(a), num(b)) {
-            (Some(x), Some(y)) => Float(match op {
-                BinOp::Add => x + y,
-                BinOp::Sub => x - y,
-                BinOp::Mul => x * y,
-                BinOp::Div => x / y,
-                BinOp::IntDiv => (x / y).floor(),
-                BinOp::Rem => x.rem_euclid(y),
-                BinOp::Pow => x.powf(y),
-                _ => return Err(mismatch()),
-            }),
+    if let (Int(x, bx), Int(y, by)) = (a, b)
+        && let Some(r) = int_op(op, *x, *y)?
+    {
+        return Ok(Int(r, if *bx != Radix::DEC { *bx } else { *by }));
+    }
+    if let (Some(x), Some(y)) = (ratio(a), ratio(b)) {
+        return exact_op(op, a, b, x, y);
+    }
+    Ok(match (num(a), num(b)) {
+        (Some(x), Some(y)) => Float(match op {
+            BinOp::Add => x + y,
+            BinOp::Sub => x - y,
+            BinOp::Mul => x * y,
+            BinOp::Div => x / y,
+            BinOp::IntDiv => (x / y).floor(),
+            BinOp::Rem => x.rem_euclid(y),
+            BinOp::Pow => x.powf(y),
             _ => return Err(mismatch()),
-        },
+        }),
+        _ => return Err(mismatch()),
     })
+}
+
+/// The i64 fast path; `None` hands over to `exact_op` (overflow, uneven division, negative powers).
+fn int_op(op: BinOp, x: i64, y: i64) -> Result<Option<i64>, String> {
+    Ok(match op {
+        BinOp::Add => x.checked_add(y),
+        BinOp::Sub => x.checked_sub(y),
+        BinOp::Mul => x.checked_mul(y),
+        BinOp::Div | BinOp::IntDiv | BinOp::Rem if y == 0 => return Err("division by zero".into()),
+        BinOp::Div if x.checked_rem(y) != Some(0) => None,
+        BinOp::Div => x.checked_div(y),
+        BinOp::IntDiv => x.checked_div(y).map(|q| if x % y != 0 && (x < 0) != (y < 0) { q - 1 } else { q }),
+        BinOp::Rem => x.checked_rem_euclid(y),
+        BinOp::Pow => u32::try_from(y).ok().and_then(|y| x.checked_pow(y)),
+        BinOp::BitAnd => Some(x & y),
+        BinOp::BitOr => Some(x | y),
+        BinOp::BitXor => Some(x ^ y),
+        // ponytail: `<<` drops high bits like C instead of erroring on overflow.
+        BinOp::Shl | BinOp::Shr if !(0..64).contains(&y) => return Err("shift must be 0-63".into()),
+        BinOp::Shl => Some(x << y),
+        BinOp::Shr => Some(x >> y),
+        _ => None,
+    })
+}
+
+/// Arithmetic on ints, big ints and fractions with no rounding; the result shrinks back to the smallest type.
+fn exact_op(op: BinOp, a: &Value, b: &Value, x: BigRational, y: BigRational) -> Result<Value, String> {
+    let radix = |v: &Value| match v {
+        Value::Int(_, r) | Value::Big(_, r) if *r != Radix::DEC => Some(*r),
+        _ => None,
+    };
+    let base = radix(a).or(radix(b)).unwrap_or(Radix::DEC);
+    let as_frac = matches!(a, Value::Frac(_, true)) || matches!(b, Value::Frac(_, true));
+    if matches!(op, BinOp::Div | BinOp::IntDiv | BinOp::Rem) && y.is_zero() {
+        return Err("division by zero".into());
+    }
+    let r = match op {
+        BinOp::Add => x + y,
+        BinOp::Sub => x - y,
+        BinOp::Mul => x * y,
+        BinOp::Div => x / y,
+        BinOp::IntDiv => (x / y).floor(),
+        BinOp::Rem => {
+            let m = y.abs();
+            let q = (&x / &m).floor();
+            x - m * q
+        }
+        BinOp::Pow if !y.is_integer() => {
+            return Ok(Value::Float(num(a).unwrap().powf(num(b).unwrap())));
+        }
+        BinOp::Pow => pow(x, y.to_integer())?,
+        BinOp::BitAnd | BinOp::BitOr | BinOp::BitXor | BinOp::Shl | BinOp::Shr if x.is_integer() && y.is_integer() => {
+            let (p, q) = (x.to_integer(), y.to_integer());
+            BigRational::from_integer(match op {
+                BinOp::BitAnd => p & q,
+                BinOp::BitOr => p | q,
+                BinOp::BitXor => p ^ q,
+                _ => {
+                    let s = q.to_u8().filter(|s| *s < 64).ok_or("shift must be 0-63")?;
+                    if op == BinOp::Shl { p << s } else { p >> s }
+                }
+            })
+        }
+        _ => return Err(mismatch(a, b)),
+    };
+    Ok(exact(r, base, as_frac))
+}
+
+/// Exact power, refusing results over ~4M bits (about 1.2M digits).
+fn pow(x: BigRational, e: BigInt) -> Result<BigRational, String> {
+    if x.is_zero() && e.is_negative() {
+        return Err("division by zero".into());
+    }
+    // 0, 1 and -1 only care whether e is zero, odd or even, however large it is.
+    if x.is_zero() || x.abs().is_one() {
+        return Ok(x.pow(if e.is_zero() {
+            0
+        } else if e.is_odd() {
+            1
+        } else {
+            2
+        }));
+    }
+    let bits = x.numer().bits().max(x.denom().bits());
+    match e.to_i32() {
+        Some(n) if bits.saturating_mul(n.unsigned_abs() as u64) <= 1 << 22 => Ok(x.pow(n)),
+        _ => Err("result too large".into()),
+    }
 }
 
 #[cfg(test)]
@@ -465,6 +577,22 @@ pub mod tests {
         assert_eq!(show("1e20"), "1e20");
         assert_eq!(show(r#""ab" * 3"#), "ababab");
         assert!(try_eval("1 / 0").is_err());
+    }
+
+    #[test]
+    fn percent() {
+        assert_eq!(show("[20%, 50 + 10%, 50 - 10%, 20% of 50, 50 * 10%, 7 % 3, 7%3, 20 % -3]"), "[0.2, 55, 45, 10, 5, 1, 1, 2]");
+        assert_eq!(show("[80 km + 25%, 15% of 2 h to min, 1.5%]"), "[100 km, 18 min, 0.015]");
+        assert_eq!(
+            show(
+                "x = 200
+x -= 5%
+x += 50%
+x"
+            ),
+            "285"
+        );
+        assert_eq!(show("(100 + 10%) + 10%"), "121");
     }
 
     #[test]
@@ -528,6 +656,93 @@ fib = fn(n) {
 }
 fib(10)";
         assert_eq!(show(src), "55");
+    }
+
+    #[test]
+    fn loop_control() {
+        assert_eq!(show("t = 0\nfor x in 1..10 { if x == 5 { break }\n if x % 2 == 0 { continue }\n t += x }\nt"), "4");
+        assert_eq!(show("n = 0\nwhile true { n += 1\n if n >= 3 { break } }\nn"), "3");
+        assert_eq!(show("f = fn() { for x in [1, 2] { return x } }\nf()"), "1");
+        assert!(try_eval("break").is_err());
+        assert!(try_eval("for x in [1] { [1].map(\\y -> continue) }").is_err());
+    }
+
+    #[test]
+    fn compound_assignment() {
+        assert_eq!(show("x = 5\nx += 2\nx *= 3\nx -= 1\nx //= 4\nx **= 2\nx"), "25");
+        assert_eq!(show("xs = [1, 2]\nxs[0] += 10\nu = {n: 1}\nu.n <<= 3\n[xs, u.n]"), "[[11, 2], 8]");
+        assert_eq!(show("s = \"a\"\ns += \"b\"\ns"), "ab");
+        assert!(try_eval("1 += 2").is_err());
+    }
+
+    #[test]
+    fn pipe_placeholder() {
+        assert_eq!(show("3.14159 |> round(_, 2)"), "3.14");
+        assert_eq!(show("5 |> _ * 2 |> [_, _]"), "[10, 10]");
+        assert_eq!(show("[1, 2] |> map(_, \\x -> x |> _ + 1)"), "[2, 3]");
+        assert_eq!(show("\"x\" |> upper"), "X");
+    }
+
+    #[test]
+    fn membership_and_chains() {
+        assert_eq!(show("[2 in [1, 2], \"b\" in \"abc\", \"k\" in {k: 1}, 9 in 1..5]"), "[true, true, true, false]");
+        assert_eq!(show("x = 3\n[x in [3], 2 in 1..=2]"), "[true, true]");
+        assert_eq!(show("5 in to cm"), "12.7 cm");
+        assert_eq!(show("[0 < 5 < 10, 0 < 15 < 10, 1 <= 1 < 2 <= 2]"), "[true, false, true]");
+        assert_eq!(show("n = 0\nf = fn() { n += 1\n 5 }\n0 < f() < 10\nn"), "1");
+    }
+
+    #[test]
+    fn ranges() {
+        assert_eq!(show("1..=4"), "[1, 2, 3, 4]");
+        assert_eq!(show("(0..=20).step(5)"), "[0, 5, 10, 15, 20]");
+        assert!(try_eval("(1..3).step(0)").is_err());
+    }
+
+    #[test]
+    fn big_ints() {
+        assert_eq!(show("2 ** 100"), "1267650600228229401496703205376");
+        assert_eq!(show("9223372036854775807 + 1"), "9223372036854775808");
+        assert_eq!(show("(2 ** 64) // 2 ** 60"), "16");
+        assert_eq!(type_of("2 ** 64 - 2 ** 64 + 1"), "Int");
+        assert_eq!(show("99999999999999999999 % 7"), "1");
+        assert_eq!(show("0xffffffffffffffffff + 1"), "0x1000000000000000000");
+        assert_eq!(show("(2 ** 100).digits.sum"), "115");
+        assert_eq!(show("-(-9223372036854775807 - 1)"), "9223372036854775808");
+        assert_eq!(show("\"123456789012345678901234567890\".int"), "123456789012345678901234567890");
+        assert_eq!(show("2 ** 64 > 2 ** 63"), "true");
+        assert_eq!(show("(-1) ** 99999999999"), "-1");
+        assert!(try_eval("2 ** 99999999999").is_err());
+    }
+
+    #[test]
+    fn fractions() {
+        assert_eq!(show("7 / 2"), "3.5");
+        assert_eq!(show("1 / 3 * 3"), "1");
+        assert_eq!(show("type(1 / 3)"), "frac");
+        assert_eq!(show("1/3 + 1/6 to frac"), "1/2");
+        assert_eq!(show("x = 2/3 to frac\nx + 1"), "5/3");
+        assert_eq!(show("0.1 + 0.2 to frac"), "3/10");
+        assert_eq!(show("2 ** -2"), "0.25");
+        assert_eq!(show("1/3 + 0.5"), "0.833333");
+        assert_eq!(show("[1/2 == 0.5, 1/3 < 1/2, round(7/2), floor(-7/2), int(-7/2)]"), "[true, true, 4, -4, -3]");
+        assert_eq!(show("str(1/3)"), "0.3333333333333333");
+        assert_eq!(show("(7/2 to frac) % 1"), "1/2");
+        assert_eq!(
+            show(
+                "h = 1/2
+h km to m"
+            ),
+            "500 m"
+        );
+    }
+
+    fn type_of(src: &str) -> &'static str {
+        match eval(src) {
+            Value::Int(..) => "Int",
+            Value::Big(..) => "Big",
+            _ => "other",
+        }
     }
 
     #[test]

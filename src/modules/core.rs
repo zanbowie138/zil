@@ -5,7 +5,9 @@ use crate::ast::{Expr, ExprKind, Radix, UnOp};
 use crate::help::help;
 use crate::interp::Interp;
 use crate::lexer::Span;
-use crate::value::{Value, fits, num};
+use crate::value::{Value, exact, fits, num};
+use num_bigint::BigInt;
+use num_rational::BigRational;
 
 pub const MODULE: Module = Module {
     name: "general",
@@ -13,10 +15,10 @@ pub const MODULE: Module = Module {
     example: "type(5 km)",
     #[rustfmt::skip]
     guide: &[
-        ("types", &[("nil", "nil"), ("bool", "true"), ("int", "0xff"), ("float", "1.5e3"), ("fn", r"\x -> x * 2")]),
+        ("types", &[("nil", "nil"), ("bool", "true"), ("int", "0xff"), ("float", "1.5e3"), ("frac", "7/2 to frac"), ("fn", r"\x -> x * 2")]),
         ("names", &[("input  (stdin as a string)", "")]),
         ("conversions", &[
-            ("to str int float bool list", r#""42" to int"#),
+            ("to str int float frac bool list", r#""42" to int"#),
             ("to hex bin oct dec", "255 to bin"),
             ("to hex(bits), to base(b)", "-1 to hex(16)"),
         ]),
@@ -25,14 +27,14 @@ pub const MODULE: Module = Module {
     #[rustfmt::skip]
     groups: &[
         ("values", &["type", "len", "parse"]),
-        ("convert", &["str", "int", "float", "bool", "list"]),
+        ("convert", &["str", "int", "float", "frac", "bool", "list"]),
         ("bases", &["hex", "bin", "oct", "dec", "base"]),
         ("io", &["print", "read_file", "write_file", "help"]),
     ],
     call,
     #[rustfmt::skip]
     targets: &[
-        ("str", "str"), ("int", "int"), ("float", "float"), ("bool", "bool"), ("list", "list"),
+        ("str", "str"), ("int", "int"), ("float", "float"), ("frac", "frac"), ("bool", "bool"), ("list", "list"),
         ("hex", "hex"), ("bin", "bin"), ("oct", "oct"), ("dec", "dec"), ("base", "base"),
     ],
     ident: Some(ident),
@@ -46,6 +48,7 @@ const FNS: &[Doc] = &[
     doc("str", "str(v)", "convert to a string (full float precision)", &["str(1/3)", "str(5 km)"], &["int", "float"]),
     doc("int", "int(v, base?)", "convert to an integer, parsing strings in an optional base", &["int(3.9)", r#""ff".int(16)"#, r#""0b101".int"#], &["float", "str"]),
     doc("float", "float(v)", "convert to a float; drops a quantity's unit", &[r#"float("2.5")"#, "float(5 km)"], &["int", "str"]),
+    doc("frac", "frac(v)", "show as a fraction; floats become the simplest fraction within 1e-12", &["7/2 to frac", "1/3 + 1/6 to frac", "0.75.frac"], &["float"]),
     doc("bool", "bool(v)", "truthiness: false only for nil and false", &["bool(0)", "nil to bool"], &["str"]),
     doc("hex", "hex(v, bits?)", "same as `v to hex` / `v to hex(bits)`; strings become hex bytes", &["hex(255)", "hex(-1, 16)", r#"hex("hi")"#], &["bin", "base", "int"]),
     doc("bin", "bin(v, bits?)", "same as `v to bin` / `v to bin(bits)`", &["bin(10)", "bin(5, 8)"], &["hex", "oct"]),
@@ -68,20 +71,26 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             println!("{}", parts.join(" "));
             Nil
         }
+        // A miss prints its own note: not finding help isn't an error in the user's code.
         ("help", []) => help(None).map(|_| Nil)?,
         ("help", [Str(s)]) => help(Some(s)).map(|_| Nil)?,
         ("help", [Builtin(_, f)]) => help(Some(f)).map(|_| Nil)?,
         ("help", [Fn(_)]) => return Err("user-defined function; no help available".into()),
         ("type", [v]) => Value::str(v.type_name()),
-        ("str", [Float(n)]) => Value::str(n.to_string()),
+        ("str", [v @ (Float(_) | Frac(_, false))]) => Value::str(num(v).unwrap().to_string()),
         ("str", [v]) => Value::str(v.to_string()),
         ("int", [Int(n, _)]) => Value::int(*n),
+        ("int", [Big(n, _)]) => Big(n.clone(), Radix::DEC),
+        ("int", [Frac(r, _)]) => exact(BigRational::from_integer(r.to_integer()), Radix::DEC, false),
         ("int", [Float(n)]) => Value::int(*n as i64),
         ("int", [Str(s)]) => parse_int(s, None).ok_or_else(|| format!("cannot parse {s:?}"))?,
         ("int", [Str(s), Int(b, _)]) if (2..=36).contains(b) => parse_int(s, Some(*b as u32)).ok_or_else(|| format!("cannot parse {s:?} in base {b}"))?,
-        ("float", [v @ (Int(..) | Float(_))]) => Float(num(v).unwrap()),
+        ("float", [v]) if num(v).is_some() => Float(num(v).unwrap()),
         ("float", [Qty(n, _)]) => Float(*n),
         ("float", [Str(s)]) => Float(s.trim().parse().map_err(|_| format!("cannot parse {s:?}"))?),
+        ("frac", [v @ (Int(..) | Big(..))]) => v.clone(),
+        ("frac", [Frac(r, _)]) => Frac(r.clone(), true),
+        ("frac", [Float(x)]) => exact(simplest(*x).ok_or("not a finite number")?, Radix::DEC, true),
         ("bool", [v]) => Bool(v.truthy()),
         ("hex" | "bin" | "oct" | "dec" | "base", [v, rest @ ..]) if rest.len() <= 1 => {
             let base = match name {
@@ -137,6 +146,8 @@ fn to_radix(v: &Value, r: Radix) -> Result<Value, String> {
     Ok(match v {
         Value::Int(n, _) if r.width == 0 || fits(*n, r.width) => Value::Int(*n, r),
         Value::Int(n, _) => return Err(format!("{n} does not fit in {} bits", r.width)),
+        Value::Big(n, _) if r.width == 0 => Value::Big(n.clone(), r),
+        Value::Big(n, _) => return Err(format!("{n} does not fit in {} bits", r.width)),
         Value::Float(x) if x.fract() == 0.0 && x.abs() < 9.2e18 => to_radix(&Value::int(*x as i64), r)?,
         Value::Str(s) if r == (Radix { base: 16, width: 0 }) => Value::str(hex(s.as_bytes())),
         v => return Err(format!("cannot convert {} like that", v.type_name())),
@@ -162,15 +173,40 @@ fn parse_int(s: &str, base: Option<u32>) -> Option<Value> {
             },
         },
     };
-    let n = i64::from_str_radix(digits, base).ok()?;
-    Some(Value::Int(if neg { -n } else { n }, Radix { base, width: 0 }))
+    if !digits.bytes().all(|c| c.is_ascii_alphanumeric()) {
+        return None;
+    }
+    let n = BigInt::parse_bytes(digits.as_bytes(), base)?;
+    Some(exact(BigRational::from_integer(if neg { -n } else { n }), Radix { base, width: 0 }, false))
+}
+
+/// The simplest fraction within 1e-12 of `x` (relative), by continued fractions: 0.1 + 0.2 is 3/10.
+fn simplest(x: f64) -> Option<BigRational> {
+    if x.fract() == 0.0 || !x.is_finite() {
+        return BigRational::from_float(x);
+    }
+    let (mut h, mut k) = ((1i128, 0i128), (0i128, 1i128)); // (current, previous) convergent numerators / denominators
+    let mut f = x;
+    loop {
+        let a = f.floor();
+        let next = (a as i128).checked_mul(h.0).and_then(|n| n.checked_add(h.1)).zip((a as i128).checked_mul(k.0).and_then(|d| d.checked_add(k.1)));
+        let Some((n, d)) = next.filter(|_| a.abs() < 1e18) else {
+            break;
+        };
+        (h, k) = ((n, h.0), (d, k.0));
+        if (n as f64 / d as f64 - x).abs() <= x.abs() * 1e-12 || f == a {
+            break;
+        }
+        f = 1.0 / (f - a);
+    }
+    Some(BigRational::new(h.0.into(), k.0.into()))
 }
 
 /// A single zil literal (number, string, list, map, quantity); anything that could run code is refused.
 fn parse_literal(s: &str) -> Result<Value, String> {
     fn literal(e: &Expr) -> bool {
         match &e.kind {
-            ExprKind::Nil | ExprKind::Bool(_) | ExprKind::Int(..) | ExprKind::Float(_) | ExprKind::Str(_) | ExprKind::Regex(_) => true,
+            ExprKind::Nil | ExprKind::Bool(_) | ExprKind::Int(..) | ExprKind::Big(..) | ExprKind::Float(_) | ExprKind::Str(_) | ExprKind::Regex(_) => true,
             ExprKind::List(items) => items.iter().all(literal),
             ExprKind::Map(entries) => entries.iter().all(|(_, v)| literal(v)),
             ExprKind::Qty(n, _) | ExprKind::Unary(UnOp::Neg, n) => literal(n),

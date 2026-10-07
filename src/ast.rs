@@ -1,4 +1,5 @@
 use crate::lexer::Span;
+use num_bigint::BigInt;
 use regex::Regex;
 use std::rc::Rc;
 
@@ -14,6 +15,7 @@ pub enum ExprKind {
     Bool(bool),
     /// Value and the base it was written in.
     Int(i64, u32),
+    Big(Rc<BigInt>, u32),
     Float(f64),
     Str(Rc<str>),
     Regex(Rc<Regex>),
@@ -22,8 +24,14 @@ pub enum ExprKind {
     Map(Vec<(String, Expr)>),
     /// Number literal with a unit attached: `5 km`, `60 km/h`.
     Qty(Box<Expr>, UnitSpec),
+    /// `20%`, which is 0.2; `x + 20%` is sugar for `x * (1 + 20%)`.
+    Percent(Box<Expr>),
+    /// `"{x:.2f}"`: an interpolated value and its format spec.
+    Format(Box<Expr>, Rc<str>),
     Unary(UnOp, Box<Expr>),
     Binary(BinOp, Box<Expr>, Box<Expr>),
+    /// Chained comparison `a < b <= c`: each operand evaluated once, stops at the first false.
+    Chain(Box<Expr>, Vec<(BinOp, Expr)>),
     To(Box<Expr>, Target),
     Assign(Box<Expr>, Box<Expr>),
     Call(Box<Expr>, Vec<Expr>),
@@ -36,6 +44,8 @@ pub enum ExprKind {
     For(String, Box<Expr>, Box<Expr>),
     Block(Vec<Expr>),
     Return(Option<Box<Expr>>),
+    Break,
+    Continue,
 }
 
 /// Unit names with powers, e.g. `km/h^2` = [("km", 1), ("h", -2)].
@@ -91,6 +101,8 @@ pub enum BinOp {
     Shl,
     Shr,
     Range,
+    RangeIncl,
+    In,
     Eq,
     Ne,
     Lt,

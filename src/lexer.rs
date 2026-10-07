@@ -1,5 +1,7 @@
 use crate::Error;
+use crate::ast::BinOp;
 use logos::Logos;
+use num_bigint::BigInt;
 
 #[derive(Logos, Debug, Clone, PartialEq)]
 #[logos(skip r"[ \t\r]+")]
@@ -19,8 +21,15 @@ pub enum Tok {
     In,
     #[token("to")]
     To,
+    /// `20% of 50`: multiplication.
+    #[token("of")]
+    Of,
     #[token("return")]
     Return,
+    #[token("break")]
+    Break,
+    #[token("continue")]
+    Continue,
     #[token("true")]
     True,
     #[token("false")]
@@ -39,6 +48,8 @@ pub enum Tok {
     #[regex(r"0o[0-7_]+", |l| radix(&l.slice()[2..], 8))]
     #[regex(r"[0-9]+#[0-9a-zA-Z_]+", |l| based(l.slice()))]
     Based((i64, u32)),
+    /// Integer literal too big for i64, and its base; made by `lex_at`, not logos.
+    Big((BigInt, u32)),
     /// Raw contents between the quotes; escapes and `{}` interpolation are handled by the parser.
     #[token("\"", lex_string)]
     Str(String),
@@ -69,6 +80,8 @@ pub enum Tok {
     Dot,
     #[token("..")]
     DotDot,
+    #[token("..=")]
+    DotDotEq,
     #[token("\\")]
     Backslash,
     #[token("->")]
@@ -77,6 +90,9 @@ pub enum Tok {
     Pipe,
     #[token("=")]
     Assign,
+    /// `+=`, `//=`, `<<=`, ...
+    #[regex(r"(\+|-|\*\*|\*|//|/|%|&|\||\^|<<|>>)=", |l| op_assign(l.slice()))]
+    OpAssign(BinOp),
     #[token("+")]
     Plus,
     #[token("-")]
@@ -163,6 +179,41 @@ fn radix(digits: &str, base: u32) -> Option<(i64, u32)> {
     Some((i64::from_str_radix(&digits.replace('_', ""), base).ok()?, base))
 }
 
+fn op_assign(s: &str) -> BinOp {
+    match &s[..s.len() - 1] {
+        "+" => BinOp::Add,
+        "-" => BinOp::Sub,
+        "*" => BinOp::Mul,
+        "**" => BinOp::Pow,
+        "/" => BinOp::Div,
+        "//" => BinOp::IntDiv,
+        "%" => BinOp::Rem,
+        "&" => BinOp::BitAnd,
+        "|" => BinOp::BitOr,
+        "^" => BinOp::BitXor,
+        "<<" => BinOp::Shl,
+        _ => BinOp::Shr,
+    }
+}
+
+/// An integer literal that overflowed i64: `99999999999999999999`, `0xffffffffffffffffff`, `36#zzzzzzzzzzzzzz`.
+fn big(s: &str) -> Option<(BigInt, u32)> {
+    let s = s.replace('_', "");
+    let (digits, base) = match s.get(..2) {
+        Some("0x") => (&s[2..], 16),
+        Some("0b") => (&s[2..], 2),
+        Some("0o") => (&s[2..], 8),
+        _ => match s.split_once('#') {
+            Some((b, d)) => (d, b.parse().ok()?),
+            None => (&s[..], 10),
+        },
+    };
+    if !(2..=36).contains(&base) || !digits.bytes().all(|c| c.is_ascii_alphanumeric()) {
+        return None;
+    }
+    Some((BigInt::parse_bytes(digits.as_bytes(), base)?, base))
+}
+
 pub type Span = std::ops::Range<usize>;
 
 /// Lex `src`, shifting spans by `offset` (used for `{...}` inside strings).
@@ -172,7 +223,10 @@ pub fn lex_at(src: &str, offset: usize) -> Result<Vec<(Tok, Span)>, Error> {
         let span = span.start + offset..span.end + offset;
         match tok {
             Ok(t) => toks.push((t, span)),
-            Err(()) => return Err(Error::new("unexpected character", span)),
+            Err(()) => match big(&src[span.start - offset..span.end - offset]) {
+                Some(b) => toks.push((Tok::Big(b), span)),
+                None => return Err(Error::new("unexpected character", span)),
+            },
         }
     }
     let end = src.len() + offset;

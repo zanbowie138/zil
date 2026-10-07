@@ -85,7 +85,7 @@ fn convert(v: &Value, t: &Target) -> Claim {
             }
             Ok(Value::Qty(t.value_from_si(u.to_si(*x)), t))
         }),
-        (Value::Int(..) | Value::Float(_), Target::Unit(_) | Target::Units(_)) => Err(format!("{v} has no unit; attach one like `{v} km`")),
+        (v, Target::Unit(_) | Target::Units(_)) if num(v).is_some() => Err(format!("{v} has no unit; attach one like `{v} km`")),
         _ => return None,
     };
     Some(r)

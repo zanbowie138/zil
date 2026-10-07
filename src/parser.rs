@@ -6,7 +6,7 @@ use std::rc::Rc;
 type PResult<T> = Result<T, Error>;
 
 pub fn parse(toks: Vec<(Tok, Span)>) -> PResult<Vec<Expr>> {
-    let mut p = Parser { toks, pos: 0, prev_end: 0 };
+    let mut p = Parser { toks, pos: 0, prev_end: 0, holes: 0 };
     let mut stmts = Vec::new();
     p.skip_nl();
     while *p.peek() != Tok::Eof {
@@ -23,24 +23,26 @@ struct Parser {
     toks: Vec<(Tok, Span)>,
     pos: usize,
     prev_end: usize,
+    /// `_` placeholders seen so far, so `x |> f(_, 2)` knows to bind `_` instead of inserting `x`.
+    holes: usize,
 }
 
 /// (left, right) binding power of infix operators; higher binds tighter.
 fn infix_bp(t: &Tok) -> Option<(u8, u8)> {
     Some(match t {
-        Tok::Assign => (2, 1),
+        Tok::Assign | Tok::OpAssign(_) => (2, 1),
         Tok::Pipe => (4, 5),
         Tok::Or => (6, 7),
         Tok::And => (8, 9),
         Tok::Eq | Tok::Ne => (10, 11),
-        Tok::Lt | Tok::Le | Tok::Gt | Tok::Ge => (12, 13),
-        Tok::DotDot => (14, 15),
+        Tok::Lt | Tok::Le | Tok::Gt | Tok::Ge | Tok::In => (12, 13),
+        Tok::DotDot | Tok::DotDotEq => (14, 15),
         Tok::Bar => (16, 17),
         Tok::Caret => (18, 19),
         Tok::Amp => (20, 21),
         Tok::Shl | Tok::Shr => (22, 23),
         Tok::Plus | Tok::Minus => (24, 25),
-        Tok::Star | Tok::Slash | Tok::SlashSlash | Tok::Percent => (26, 27),
+        Tok::Star | Tok::Slash | Tok::SlashSlash | Tok::Percent | Tok::Of => (26, 27),
         Tok::StarStar => (30, 29),
         _ => return None,
     })
@@ -60,9 +62,11 @@ fn binop(t: &Tok) -> BinOp {
         Tok::Gt => BinOp::Gt,
         Tok::Ge => BinOp::Ge,
         Tok::DotDot => BinOp::Range,
+        Tok::DotDotEq => BinOp::RangeIncl,
+        Tok::In => BinOp::In,
         Tok::Plus => BinOp::Add,
         Tok::Minus => BinOp::Sub,
-        Tok::Star => BinOp::Mul,
+        Tok::Star | Tok::Of => BinOp::Mul,
         Tok::Slash => BinOp::Div,
         Tok::SlashSlash => BinOp::IntDiv,
         Tok::Percent => BinOp::Rem,
@@ -177,13 +181,24 @@ impl Parser {
             }
             self.bump();
             self.skip_nl();
+            let outer_holes = (t == Tok::Pipe).then(|| std::mem::take(&mut self.holes));
             let rhs = self.expr(rbp)?;
+            let hole = outer_holes.is_some_and(|outer| std::mem::replace(&mut self.holes, outer) > 0);
             let kind = match t {
-                Tok::Assign => {
-                    if !matches!(lhs.kind, ExprKind::Ident(_) | ExprKind::Field(..) | ExprKind::Index(..)) {
-                        return Err(Error::new("invalid assignment target", lhs.span));
-                    }
-                    ExprKind::Assign(Box::new(lhs), Box::new(rhs))
+                Tok::Assign | Tok::OpAssign(_) if !matches!(lhs.kind, ExprKind::Ident(_) | ExprKind::Field(..) | ExprKind::Index(..)) => {
+                    return Err(Error::new("invalid assignment target", lhs.span));
+                }
+                Tok::Assign => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
+                // ponytail: `xs[f()] += 1` evaluates `xs` and `f()` twice; desugar to a temp if side effects there ever matter.
+                Tok::OpAssign(op) => {
+                    let value = self.mk(arith(op, lhs.clone(), rhs), start);
+                    ExprKind::Assign(Box::new(lhs), Box::new(value))
+                }
+                // `x |> f(_, 2)` => `(\_ -> f(_, 2))(x)`
+                Tok::Pipe if hole => {
+                    let span = rhs.span.clone();
+                    let f = Expr { kind: ExprKind::Fn(Rc::new(FnDef { params: vec!["_".into()], body: rhs })), span };
+                    ExprKind::Call(Box::new(f), vec![lhs])
                 }
                 // `x |> f(a)` => `f(x, a)`; `x |> f` => `f(x)`
                 Tok::Pipe => match rhs.kind {
@@ -193,7 +208,16 @@ impl Parser {
                     }
                     _ => ExprKind::Call(Box::new(rhs), vec![lhs]),
                 },
-                _ => ExprKind::Binary(binop(&t), Box::new(lhs), Box::new(rhs)),
+                // `a < b < c` => Chain(a, [(<, b), (<, c)])
+                Tok::Lt | Tok::Le | Tok::Gt | Tok::Ge => match lhs.kind {
+                    ExprKind::Binary(op @ (BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge), a, b) => ExprKind::Chain(a, vec![(op, *b), (binop(&t), rhs)]),
+                    ExprKind::Chain(a, mut rest) => {
+                        rest.push((binop(&t), rhs));
+                        ExprKind::Chain(a, rest)
+                    }
+                    _ => ExprKind::Binary(binop(&t), Box::new(lhs), Box::new(rhs)),
+                },
+                _ => arith(binop(&t), lhs, rhs),
             };
             lhs = self.mk(kind, start);
         }
@@ -203,18 +227,26 @@ impl Parser {
     fn prefix(&mut self) -> PResult<Expr> {
         let start = self.span().start;
         let tok_span = self.span();
+        if matches!(self.peek(), Tok::Ident(s) if s == "_") {
+            self.holes += 1;
+        }
         let kind = match self.bump() {
             Tok::Nil => ExprKind::Nil,
             Tok::True => ExprKind::Bool(true),
             Tok::False => ExprKind::Bool(false),
-            t @ (Tok::Int(_) | Tok::Based(_) | Tok::Float(_)) => {
+            t @ (Tok::Int(_) | Tok::Based(_) | Tok::Big(_) | Tok::Float(_)) => {
                 let kind = match t {
                     Tok::Int(n) => ExprKind::Int(n, 10),
                     Tok::Based((n, b)) => ExprKind::Int(n, b),
+                    Tok::Big((n, b)) => ExprKind::Big(Rc::new(n), b),
                     Tok::Float(n) => ExprKind::Float(n),
                     _ => unreachable!(),
                 };
-                if matches!(self.peek(), Tok::Ident(_) | Tok::In) {
+                // `20%` unless an operand follows: `20 % 3` and `7%3` stay remainders.
+                if *self.peek() == Tok::Percent && self.touching() && !starts_operand(self.peek_at(1)) {
+                    self.bump();
+                    ExprKind::Percent(Box::new(self.mk(kind, start)))
+                } else if self.unit_next() {
                     let num = self.mk(kind, start);
                     ExprKind::Qty(Box::new(num), self.unit_spec(true)?)
                 } else {
@@ -227,7 +259,7 @@ impl Parser {
                 Err(e) => return Err(Error::new(format!("bad regex: {e}"), tok_span)),
             },
             // `a m`: a variable holding a number, given a unit.
-            Tok::Ident(s) if matches!(self.peek(), Tok::Ident(_) | Tok::In) => {
+            Tok::Ident(s) if self.unit_next() => {
                 let var = self.mk(ExprKind::Ident(s), start);
                 ExprKind::Qty(Box::new(var), self.unit_spec(true)?)
             }
@@ -279,6 +311,8 @@ impl Parser {
                 let iter = self.expr(0)?;
                 ExprKind::For(name, Box::new(iter), Box::new(self.block()?))
             }
+            Tok::Break => ExprKind::Break,
+            Tok::Continue => ExprKind::Continue,
             Tok::Return => {
                 let val = match self.peek() {
                     Tok::Newline | Tok::RBrace | Tok::RParen | Tok::Eof => None,
@@ -289,6 +323,28 @@ impl Parser {
             t => return Err(Error::new(format!("unexpected {t:?}"), tok_span)),
         };
         Ok(self.mk(kind, start))
+    }
+
+    /// After a number or variable: a unit follows. `in` is inches only when no expression
+    /// follows it, so `5 in to cm` is inches but `5 in xs` is membership.
+    fn unit_next(&self) -> bool {
+        match self.peek() {
+            Tok::Ident(_) => true,
+            Tok::In => !matches!(
+                self.peek_at(1),
+                Tok::Ident(_)
+                    | Tok::Int(_)
+                    | Tok::Based(_)
+                    | Tok::Big(_)
+                    | Tok::Float(_)
+                    | Tok::Str(_)
+                    | Tok::Regex(_)
+                    | Tok::LParen
+                    | Tok::LBracket
+                    | Tok::LBrace
+            ),
+            _ => false,
+        }
     }
 
     fn params(&mut self, close: Tok) -> PResult<Vec<String>> {
@@ -425,12 +481,23 @@ impl Parser {
                 '{' => {
                     let end = close_brace(raw, i + 1)
                         .ok_or_else(|| Error::new("unclosed `{` in string (use `\\{` for a literal brace)", start + i..start + i + 1))?;
-                    let inner_toks = lex_at(&raw[i + 1..end], start + i + 1)?;
-                    let mut p = Parser { toks: inner_toks, pos: 0, prev_end: 0 };
+                    let (src_end, spec) = match spec_colon(&raw[i + 1..end]) {
+                        Some(c) => (i + 1 + c, Some(&raw[i + 2 + c..end])),
+                        None => (end, None),
+                    };
+                    if let Some(spec) = spec {
+                        crate::modules::math::Spec::parse(spec).map_err(|m| Error::new(m, start + i..start + end + 1))?;
+                    }
+                    let inner_toks = lex_at(&raw[i + 1..src_end], start + i + 1)?;
+                    let mut p = Parser { toks: inner_toks, pos: 0, prev_end: 0, holes: 0 };
                     p.skip_nl();
                     let e = p.expr(0)?;
                     p.skip_nl();
                     p.expect(Tok::Eof, "`}`")?;
+                    let e = match spec {
+                        Some(spec) => Expr { span: e.span.clone(), kind: ExprKind::Format(Box::new(e), spec.into()) },
+                        None => e,
+                    };
                     if !lit.is_empty() || parts.is_empty() {
                         parts.push(lit_expr(&mut lit));
                     }
@@ -512,6 +579,67 @@ impl Parser {
         self.bump();
         Ok(self.mk(ExprKind::Block(stmts), start))
     }
+}
+
+/// `a op b`, where `x + 20%` means `x * (1 + 20%)` and `x - 20%` means `x * (1 - 20%)`.
+fn arith(op: BinOp, lhs: Expr, rhs: Expr) -> ExprKind {
+    if matches!(op, BinOp::Add | BinOp::Sub) && matches!(rhs.kind, ExprKind::Percent(_)) {
+        let span = rhs.span.clone();
+        let one = Expr { kind: ExprKind::Int(1, 10), span: span.clone() };
+        let factor = Expr { kind: ExprKind::Binary(op, Box::new(one), Box::new(rhs)), span };
+        return ExprKind::Binary(BinOp::Mul, Box::new(lhs), Box::new(factor));
+    }
+    ExprKind::Binary(op, Box::new(lhs), Box::new(rhs))
+}
+
+fn starts_operand(t: &Tok) -> bool {
+    use Tok::*;
+    matches!(
+        t,
+        Ident(_)
+            | Int(_)
+            | Based(_)
+            | Big(_)
+            | Float(_)
+            | Str(_)
+            | Regex(_)
+            | LParen
+            | LBracket
+            | LBrace
+            | Minus
+            | Bang
+            | Tilde
+            | Backslash
+            | Fn
+            | If
+            | True
+            | False
+            | Nil
+    )
+}
+
+/// Byte index of a `:` starting a format spec in an interpolation (`x:.2f`), outside brackets and strings.
+fn spec_colon(s: &str) -> Option<usize> {
+    let (mut depth, mut in_str, mut esc) = (0, false, false);
+    for (i, c) in s.char_indices() {
+        if in_str {
+            match (esc, c) {
+                (true, _) => esc = false,
+                (_, '\\') => esc = true,
+                (_, '"') => in_str = false,
+                _ => {}
+            }
+            continue;
+        }
+        match c {
+            '"' => in_str = true,
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => depth -= 1,
+            ':' if depth == 0 => return Some(i),
+            _ => {}
+        }
+    }
+    None
 }
 
 /// Byte index of the `}` closing an interpolation that starts at `from`, skipping nested braces and strings.

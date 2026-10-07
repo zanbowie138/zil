@@ -18,6 +18,7 @@ zil -e "help(upper)" # live examples; help() for an overview, help("km") for uni
 rate = 0.08          # assignment creates or updates a variable
 price = 20
 price * (1 + rate)   # 21.6
+price += 5           # also -= *= /= //= %= **= &= |= ^= <<= >>=
 ```
 
 Statements end at a newline. A line starting with `|>` or `.` continues the
@@ -27,7 +28,11 @@ previous one, as does a line ending in an operator. Newlines are free inside
 ## Numbers
 
 ```zil
-7 / 2        # 3.5   (`/` gives an int only when it divides evenly: 6 / 3 is 2)
+7 / 2        # 3.5   an exact fraction; 6 / 3 is the int 2
+1 / 3 * 3    # 1     (fractions don't round: no 0.999999)
+1/3 + 1/6 to frac    # 1/2   `to frac` shows it as a fraction, and so do results from it
+0.75 to frac # 3/4   floats become the simplest fraction within 1e-12
+2 ** 100     # 1267650600228229401496703205376
 7 // 2       # 3     floor division
 -7 % 3       # 2     remainder is never negative for a positive divisor
 2 ** 10      # 1024  (`^` is xor; see Bitwise)
@@ -35,8 +40,10 @@ previous one, as does a line ending in an operator. Newlines are free inside
 1.5e3        # 1500
 ```
 
-Integers are 64-bit; overflow is an error. Floats display with 6 significant
-digits (`1/3` shows `0.333333`); `str(x)` gives full precision.
+Integers have no size limit (results over about a million digits are refused).
+Dividing ints gives an exact fraction (type `"frac"`) that displays like a float:
+`1/3` shows `0.333333`, and `str(x)` gives full precision. Mixing a fraction with a
+float gives a float. Floats display with 6 significant digits.
 
 ### Bases
 
@@ -102,6 +109,7 @@ A unit written right after a number literal attaches to it. `to` converts.
 - `to` with several units splits the value: `5.5 ft to ft in` → `"5 ft 6 in"` (a string).
 - `km/h`, `m^2` and `m/s^2` are one unit only when written **without spaces**.
   `60 km / h` divides by whatever `h` is. Inside a unit `^` is a power; elsewhere it is xor.
+- `1/2 km` is `1 / (2 km)`; write `(1/2) * km` or `0.5 km`.
 - With a variable, multiply by the unit: `d * km`. Units are also values when
   no variable has that name.
 - A variable named like a unit (`m = 3`) hides the unit in expressions, but
@@ -199,6 +207,15 @@ upper("hi")
 "hi" |> upper
 ```
 
+`_` in a pipe stands for the piped value, wherever it goes:
+
+```zil
+3.14159 |> round(_, 2)       # 3.14
+5 |> _ * 2                   # 10
+```
+
+(Outside a pipe, `_` in the REPL is the last result.)
+
 `x.f(a)` and `x |> f(a)` both mean `f(x, a)`, so you can chain calls:
 
 ```zil
@@ -219,6 +236,9 @@ xs[-1]           # 2
 xs[0..2]         # [3, 1]
 xs.push(4)       # mutates in place
 1..5             # [1, 2, 3, 4]
+1..=5            # [1, 2, 3, 4, 5]
+(0..=20).step(5) # [0, 5, 10, 15, 20]  every 5th item
+2 in xs          # true  (same as xs.contains(2); also strings and map keys)
 
 u = {name: "ann", age: 30}
 u.name           # "ann"
@@ -229,7 +249,7 @@ u.city = "Oslo"
 
 | Function                  | Notes                                       |
 |---------------------------|---------------------------------------------|
-| `len` `first` `last`      |                                             |
+| `len` `first` `last` `step(n)` |                                             |
 | `map(f)` `filter(f)`      | `[1, 2].map(\x -> x * 10)` → `[10, 20]`     |
 | `reduce(init, f)`         | `xs.reduce(0, \acc, x -> acc + x)`          |
 | `sum` `avg` `min` `max`   | work with units: `[1 m, 50 cm].sum` → `1.5 m` |
@@ -339,7 +359,11 @@ size = if n > 100 { "big" } else if n > 0 { "small" } else { "none" }
 for x in 1..4 { print(x) }
 for key in {a: 1, b: 2} { print(key) }  # maps iterate keys
 for ch in "abc" { print(ch) }           # strings iterate characters
-while n > 0 { n = n - 1 }
+while n > 0 { n -= 1 }
+for x in 1..100 {
+  if x % 2 == 0 { continue }            # next iteration
+  if x > 9 { break }                    # leave the loop
+}
 
 double = \x -> x * 2                    # short lambda
 area = \w, h -> w * h
@@ -357,8 +381,8 @@ A `{` at the start of an expression is a map; blocks only follow
 | Function                     | Notes                                     |
 |------------------------------|-------------------------------------------|
 | `print(a, b, ...)`           | prints values separated by spaces         |
-| `type(v)`                    | `"int"`, `"float"`, `"quantity"`, `"str"`, `"regex"`, `"date"`, `"list"`, `"map"`, `"fn"`, `"bool"`, `"nil"` |
-| `str` `int` `float` `bool`   | conversions; `int(s, base)` parses a base; `bool` is false only for `nil`/`false` |
+| `type(v)`                    | `"int"`, `"frac"`, `"float"`, `"quantity"`, `"str"`, `"regex"`, `"date"`, `"list"`, `"map"`, `"fn"`, `"bool"`, `"nil"` |
+| `str` `int` `float` `frac` `bool` | conversions; `int(s, base)` parses a base; `bool` is false only for `nil`/`false` |
 | `list`                       | `list("ab")` → `["a", "b"]`; maps give `[key, value]` pairs |
 | `v to str` / `int` / `float` / `list` / `bool` / `base64` | same as calling that function: `"0xff" to int` → `0xff` |
 | `hex` `bin` `oct` `dec` `(v, bits?)`, `base(v, b)` | same as `v to hex(bits)` etc.: `bin(5, 8)` → `0b00000101` |
@@ -374,14 +398,14 @@ Lowest to highest:
 
 | Operator               |                                   |
 |------------------------|-----------------------------------|
-| `=`                    | assignment                        |
+| `=` `+=` `-=` ...      | assignment                        |
 | `to`                   | conversion                        |
 | `\|>`                  | pipe                              |
 | `\|\|`                 |                                   |
 | `&&`                   |                                   |
 | `==` `!=`              | `1 m == 100 cm` is true           |
-| `<` `<=` `>` `>=`      | numbers, strings, quantities, dates |
-| `..`                   | range                             |
+| `<` `<=` `>` `>=` `in` | chain: `0 < x <= 10`              |
+| `..` `..=`             | range                             |
 | `\|`                   | bitwise or                        |
 | `^`                    | bitwise xor                       |
 | `&`                    | bitwise and                       |
