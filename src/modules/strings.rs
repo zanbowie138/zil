@@ -10,8 +10,23 @@ use sha2::Digest;
 
 pub const MODULE: Module = Module {
     name: "strings",
+    about: "case, splitting, search and regex, encodings, hashes",
     example: r#""a b".split.join("-")"#,
+    #[rustfmt::skip]
+    guide: &[
+        ("types", &[("str", r#""héllo\tworld""#), ("regex", r#"r"\d+""#)]),
+        ("operators", &[("str + v", r#""v" + 2"#), ("str * int", r#""ab" * 3"#)]),
+        ("conversions", &[("to base64", r#""hi" to base64"#)]),
+    ],
     fns: FNS,
+    #[rustfmt::skip]
+    groups: &[
+        ("shape", &["upper", "lower", "capitalize", "trim", "reverse", "repeat"]),
+        ("split", &["split", "lines", "chars", "join"]),
+        ("search", &["contains", "starts_with", "ends_with", "find", "count", "match", "find_all", "grep", "replace", "nums"]),
+        ("encode", &["base64", "encode", "decode", "sha256", "md5"]),
+        ("chars", &["ord", "chr", "bytes", "from_bytes"]),
+    ],
     call,
     targets: &[("base64", "base64")],
     binary: Some(binary),
@@ -37,6 +52,7 @@ const FNS: &[Doc] = &[
     ("count", "count(v, x)", "number of matches in a string or list", &[r#""banana".count("a")"#, "[1, 2, 1].count(1)"], &["find"]),
     ("match", "match(s, regex)", "first match, its capture groups, or nil", &[r#""2026-10-06".match(r"(\d+)-(\d+)")"#, r#""id 42".match(r"\d+")"#], &["find_all", "replace"]),
     ("find_all", "find_all(s, pat)", "list of all matches", &[r#""a1b22c333".find_all(r"\d+")"#], &["match", "count"]),
+    ("grep", "grep(v, pat)", "lines of a string (or items of a list) containing pat", &[r#""ok\nERROR 1\nERROR 2".grep("ERROR")"#, r#"["a1", "b", "c22"].grep(r"\d")"#], &["lines", "filter", "contains"]),
     ("repeat", "repeat(s, n)", "repeat a string n times", &[r#""ab".repeat(3)"#], &[]),
     ("base64", "base64(s)", "base64-encode a string; same as `s to base64`", &[r#"base64("hi there")"#, r#""hi" to base64"#], &["encode", "decode"]),
     ("encode", "encode(s, fmt)", "encode as \"base64\", \"url\" or \"hex\"", &[r#""hi there".encode("base64")"#, r#""a b&c".encode("url")"#], &["decode"]),
@@ -94,6 +110,16 @@ fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Re
         },
         ("find_all", [Str(s), Regex(r)]) => strs(r.find_iter(s).map(|m| m.as_str())),
         ("find_all", [Str(s), Str(sub)]) if !sub.is_empty() => strs(s.matches(&**sub)),
+        ("grep", [Str(s), Str(p)]) => strs(s.lines().filter(|l| l.contains(&**p))),
+        ("grep", [Str(s), Regex(r)]) => strs(s.lines().filter(|l| r.is_match(l))),
+        ("grep", [List(l), p @ (Str(_) | Regex(_))]) => {
+            let hit = |v: &Value| match (v.to_string(), p) {
+                (t, Str(p)) => t.contains(&**p),
+                (t, Regex(r)) => r.is_match(&t),
+                _ => unreachable!(),
+            };
+            Value::list(l.borrow().iter().filter(|v| hit(v)).cloned().collect())
+        }
         ("repeat", [Str(s), Int(n, _)]) => Value::str(s.repeat((*n).max(0) as usize)),
         ("base64", [Str(s)]) => Value::str(base64::engine::general_purpose::STANDARD.encode(s.as_bytes())),
         ("encode", [Str(s), Str(fmt)]) => Value::str(match &**fmt {
@@ -222,6 +248,8 @@ mod tests {
         assert_eq!(show(r#""x1 y22 z333".find_all(r"\d+")"#), r#"["1", "22", "333"]"#);
         assert_eq!(show(r#""  a  b ".split"#), r#"["a", "b"]"#);
         assert_eq!(show(r#""hello world".capitalize"#), "Hello world");
+        assert_eq!(show(r#""ok\nERROR 1\nfine\nERROR 2".grep("ERROR")"#), r#"["ERROR 1", "ERROR 2"]"#);
+        assert_eq!(show(r#"["a1", "b", "c22"].grep(r"\d")"#), r#"["a1", "c22"]"#);
     }
 
     #[test]

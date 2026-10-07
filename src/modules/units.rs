@@ -12,7 +12,19 @@ use std::rc::Rc;
 
 pub const MODULE: Module = Module {
     name: "units",
+    about: "numbers with units, combined and converted; currencies use live rates",
     example: "5 km to mi",
+    #[rustfmt::skip]
+    guide: &[
+        ("types", &[("quantity", "5 km")]),
+        ("operators", &[
+            ("qty ± qty", "1 km + 300 m"),
+            ("qty * / qty", "100 km / 2 h"),
+            ("qty ** int", "(3 m) ** 2"),
+            ("qty < qty", "1 mi > 1 km"),
+        ]),
+        ("conversions", &[("to unit", "5 km to mi"), ("to unit unit", "1.8 m to ft in"), ("to compound", "100 km / 2 h to mph")]),
+    ],
     ident: Some(|_, name| match unit(name) {
         Ok(u) => Some(Ok(Value::Qty(1.0, u))),
         Err(e) if e.starts_with("unknown unit") => None,
@@ -40,7 +52,9 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
                 Qty(x, u) => Some((*x, u.clone())),
                 _ => Some((num(v)?, Unit::default())),
             };
-            let (Some((x, u)), Some((y, w))) = (split(a), split(b)) else { return Some(Err(mismatch(a, b))) };
+            let (Some((x, u)), Some((y, w))) = (split(a), split(b)) else {
+                return Some(Err(mismatch(a, b)));
+            };
             if op == BinOp::Mul { Value::qty(x * y, u.mul(&w, 1)) } else { Value::qty(x / y, u.mul(&w, -1)) }
         }
         (BinOp::Pow, Qty(x, u), Int(n, _)) if (-9..=9).contains(n) => Value::qty(x.powi(*n as i32), u.pow(*n as i8)),
@@ -58,12 +72,12 @@ fn compare(a: &Value, b: &Value) -> Option<Ordering> {
 /// `to km`, and `to ft in` as a mixed-unit string.
 fn convert(v: &Value, t: &Target) -> Claim {
     let r = match (v, t) {
-        (Value::Qty(x, u), Target::Units(specs)) => specs.iter().map(unit_of).collect::<Result<Vec<_>, _>>().and_then(|us| {
-            match us.iter().find(|t| t.dim() != u.dim()) {
+        (Value::Qty(x, u), Target::Units(specs)) => {
+            specs.iter().map(unit_of).collect::<Result<Vec<_>, _>>().and_then(|us| match us.iter().find(|t| t.dim() != u.dim()) {
                 Some(t) => Err(format!("cannot convert {u} to {t}")),
                 None => Ok(Value::str(split(u.to_si(*x), &us))),
-            }
-        }),
+            })
+        }
         (Value::Qty(x, u), Target::Unit(spec)) => unit_of(spec).and_then(|t| {
             if u.dim() != t.dim() {
                 return Err(format!("cannot convert {u} to {t}"));
@@ -88,10 +102,12 @@ pub fn unit_of(spec: &UnitSpec) -> Result<Unit, String> {
 fn topic(topic: &str) -> bool {
     use crate::help::show;
     if topic == "units" {
+        println!("\nunits");
         for (kind, _) in DIMS {
-            println!("{kind:<12} {}", units_of(kind).join(" "));
+            println!("  {kind:<12} {}", units_of(kind).join(" "));
         }
-        println!("{:<12} 3-letter codes (USD EUR GBP ...), live rates fetched on first use", "currency");
+        println!("  {:<12} 3-letter codes (USD EUR GBP ...), live rates fetched on first use", "currency");
+        println!("help(\"length\") or help(\"km\") for details");
     } else if matches!(topic, "currency" | "money") {
         println!("currency: 3-letter codes like USD, EUR, GBP, JPY. Rates come from frankfurter.dev,");
         println!("are fetched on first use (with a prompt) and cached for a day.");
@@ -345,7 +361,9 @@ pub fn split(si: f64, units: &[Unit]) -> String {
 
 impl fmt::Display for Unit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let term = |u: &UnitDef, p: i8| if p == 1 { u.name.clone() } else { format!("{}^{p}", u.name) };
+        let term = |u: &UnitDef, p: i8| {
+            if p == 1 { u.name.clone() } else { format!("{}^{p}", u.name) }
+        };
         let num: Vec<_> = self.0.iter().filter(|(_, p)| *p > 0).map(|(u, p)| term(u, *p)).collect();
         let den: Vec<_> = self.0.iter().filter(|(_, p)| *p < 0).map(|(u, p)| term(u, -p)).collect();
         match (num.is_empty(), den.is_empty()) {
@@ -416,13 +434,12 @@ fn confirm_fetch() -> Result<(), String> {
 /// Units per 1 EUR from frankfurter.dev (ECB data), cached on disk for a day.
 fn load_rates() -> Result<Vec<(String, f64)>, String> {
     let cache = crate::cache_dir().map(|d| d.join("rates.json"));
-    let fresh = cache.as_ref().and_then(|p| p.metadata().ok()?.modified().ok()?.elapsed().ok())
-        .is_some_and(|age| age.as_secs() < 24 * 3600);
+    let fresh = cache.as_ref().and_then(|p| p.metadata().ok()?.modified().ok()?.elapsed().ok()).is_some_and(|age| age.as_secs() < 24 * 3600);
     let body = match &cache {
         Some(p) if fresh => std::fs::read_to_string(p).map_err(|e| e.to_string())?,
-        _ => match confirm_fetch().and_then(|()| {
-            ureq::get("https://api.frankfurter.dev/v1/latest").call().and_then(|mut r| r.body_mut().read_to_string()).map_err(|e| e.to_string())
-        }) {
+        _ => match confirm_fetch()
+            .and_then(|()| ureq::get("https://api.frankfurter.dev/v1/latest").call().and_then(|mut r| r.body_mut().read_to_string()).map_err(|e| e.to_string()))
+        {
             Ok(body) => {
                 if let Some(p) = &cache {
                     let _ = std::fs::create_dir_all(p.parent().unwrap());
@@ -438,12 +455,8 @@ fn load_rates() -> Result<Vec<(String, f64)>, String> {
         },
     };
     let json: serde_json::Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
-    let mut rates: Vec<(String, f64)> = json["rates"]
-        .as_object()
-        .ok_or("unexpected response")?
-        .iter()
-        .filter_map(|(k, v)| Some((k.clone(), v.as_f64()?)))
-        .collect();
+    let mut rates: Vec<(String, f64)> =
+        json["rates"].as_object().ok_or("unexpected response")?.iter().filter_map(|(k, v)| Some((k.clone(), v.as_f64()?))).collect();
     rates.push(("EUR".into(), 1.0));
     Ok(rates)
 }

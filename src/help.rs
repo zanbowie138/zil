@@ -1,20 +1,22 @@
 //! `help`: rendered from each module's docs; every example shown is evaluated live in a fresh interpreter.
 
 use crate::interp::Interp;
-use crate::modules::MODULES;
+use crate::modules::{MODULES, Module};
 
 pub fn help(topic: Option<&str>) -> Result<(), String> {
     let Some(topic) = topic else {
         println!("zil help: try help(upper), help(\"strings\"), help(\"km\"). In the REPL: help upper\n");
-        let rows: Vec<_> = MODULES.iter().map(|m| format!("{:<8} {}", m.name, m.example)).collect();
+        let types = |m: &Module| m.guide.iter().find(|s| s.0 == "types").map(|s| s.1.iter().map(|r| r.0).collect::<Vec<_>>().join(" "));
+        let names: Vec<_> = MODULES.iter().map(|m| types(m).map_or(m.name.into(), |t| format!("{} ({t})", m.name))).collect();
+        let rows: Vec<_> = names.iter().zip(MODULES).map(|(n, m)| format!("{n}  {}", m.example)).collect();
         let w = rows.iter().map(|r| r.chars().count()).max().unwrap_or(0);
         for (row, m) in rows.iter().zip(MODULES) {
             println!("{row:<w$}  → {}", eval(m.example));
             let names: Vec<_> = m.fns.iter().take(12).map(|f| f.0).collect();
             let more = if m.fns.len() > names.len() { " ..." } else { "" };
             match names.is_empty() {
-                true => println!("         help(\"{}\")", m.name),
-                false => println!("         {}{more}", names.join(" ")),
+                true => println!("  help(\"{}\")", m.name),
+                false => println!("  {}{more}", names.join(" ")),
             }
         }
         return Ok(());
@@ -30,18 +32,53 @@ pub fn help(topic: Option<&str>) -> Result<(), String> {
         }
         return Ok(());
     }
-    if let Some(m) = MODULES.iter().find(|m| m.name == topic && !m.fns.is_empty()) {
-        let w = m.fns.iter().map(|f| f.1.chars().count()).max().unwrap_or(0);
-        for (_, sig, desc, ..) in m.fns {
-            println!("{sig:<w$}  {desc}");
-        }
-        println!("examples: help(name), e.g. help({})", m.fns[0].0);
+    if let Some(m) = MODULES.iter().find(|m| m.name == topic) {
+        page(m);
         return Ok(());
     }
     if MODULES.iter().filter_map(|m| m.topic).any(|f| f(topic)) {
         return Ok(());
     }
     Err(format!("no help for {topic:?}; try help() for an overview"))
+}
+
+/// A module's page: what it adds (types, operators, conversions...), then its functions by group.
+fn page(m: &Module) {
+    println!("{}: {}", m.name, m.about);
+    let rows: Vec<_> = m.guide.iter().flat_map(|s| s.1).filter(|r| !r.1.is_empty()).collect();
+    let lw = rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0);
+    let ew = rows.iter().map(|r| r.1.chars().count()).max().unwrap_or(0);
+    for (heading, rows) in m.guide {
+        println!(
+            "
+{heading}"
+        );
+        for (label, ex) in *rows {
+            match eval(ex) {
+                _ if ex.is_empty() => println!("  {label}"),
+                v if v == *ex => println!("  {label:<lw$}  {ex}"),
+                v => println!("  {label:<lw$}  {ex:<ew$}  → {v}"),
+            }
+        }
+    }
+    if let Some(topic) = m.topic {
+        topic(m.name);
+    }
+    if m.fns.is_empty() {
+        return;
+    }
+    println!(
+        "
+functions"
+    );
+    let all = [("", m.fns.iter().map(|f| f.0).collect::<Vec<_>>())];
+    let groups: Vec<_> = m.groups.iter().map(|g| (g.0, g.1.to_vec())).collect();
+    let groups = if groups.is_empty() { &all[..] } else { &groups[..] };
+    let gw = groups.iter().map(|g| g.0.chars().count()).max().unwrap_or(0);
+    for (name, fns) in groups {
+        println!("  {}", format!("{name:<gw$}  {}", fns.join(" ")).trim_start());
+    }
+    println!("help(name) for details, e.g. help({})", m.fns[0].0);
 }
 
 /// Print each example with its live result, arrows aligned.
@@ -67,7 +104,8 @@ mod tests {
     #[test]
     fn docs_examples_run() {
         let fns: Vec<_> = MODULES.iter().flat_map(|m| m.fns).collect();
-        for ex in fns.iter().flat_map(|f| f.3.iter()).chain(MODULES.iter().map(|m| &m.example)) {
+        let guide = MODULES.iter().flat_map(|m| m.guide).flat_map(|s| s.1).map(|r| &r.1).filter(|e| !e.is_empty());
+        for ex in fns.iter().flat_map(|f| f.3.iter()).chain(MODULES.iter().map(|m| &m.example)).chain(guide) {
             assert!(!eval(ex).starts_with("error:"), "{ex}: {}", eval(ex));
         }
         for f in &fns {

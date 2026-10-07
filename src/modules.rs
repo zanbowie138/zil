@@ -21,16 +21,25 @@ use std::cmp::Ordering;
 /// Name, signature, summary, examples, see also.
 pub type Doc = (&'static str, &'static str, &'static str, &'static [&'static str], &'static [&'static str]);
 
+/// A help page section: heading, then (label, example) rows; examples run live, and an empty one prints the label alone.
+pub type Section = (&'static str, &'static [(&'static str, &'static str)]);
+
 /// A hook's answer: `None` means "not mine, ask the next module".
 pub type Claim = Option<Result<Value, String>>;
 
 pub struct Module {
     /// Help category.
     pub name: &'static str,
+    /// One line under the module's help page title.
+    pub about: &'static str,
     /// Shown with its result in the `help()` overview.
     pub example: &'static str,
+    /// Help page sections; the labels of a "types" section also show in the overview.
+    pub guide: &'static [Section],
     /// Exported builtins and their help.
     pub fns: &'static [Doc],
+    /// Function names by category for the help page; every fn in exactly one. Empty lists them all on one line.
+    pub groups: &'static [(&'static str, &'static [&'static str])],
     pub call: fn(&mut Interp, &'static str, Vec<Value>, &Span) -> Result<Value, Error>,
     pub consts: &'static [(&'static str, f64)],
     /// `to` keywords and the exported fn each calls: `x to UTC` is `utc(x)`, `x to hex(8)` is `hex(x, 8)`.
@@ -48,8 +57,11 @@ pub struct Module {
 impl Module {
     pub const EMPTY: Module = Module {
         name: "",
+        about: "",
         example: "",
+        guide: &[],
         fns: &[],
+        groups: &[],
         call: |_, name, args, span| Err(bad_args(name, &args, span)),
         consts: &[],
         targets: &[],
@@ -62,8 +74,7 @@ impl Module {
 }
 
 /// Also the `help()` overview order.
-pub const MODULES: &[Module] =
-    &[strings::MODULE, lists::MODULE, math::MODULE, dates::MODULE, random::MODULE, units::MODULE, core::MODULE];
+pub const MODULES: &[Module] = &[strings::MODULE, lists::MODULE, math::MODULE, dates::MODULE, random::MODULE, units::MODULE, core::MODULE];
 
 pub fn bad_args(name: &str, args: &[Value], span: &Span) -> Error {
     let types: Vec<_> = args.iter().map(Value::type_name).collect();
@@ -108,6 +119,13 @@ mod tests {
                 assert!(m.fns.iter().any(|d| d.0 == *f), "{}: target {kw} calls {f}, which it doesn't export", m.name);
                 let is_unit = units::TABLE.iter().any(|row| row.0.split(' ').any(|n| n == *kw));
                 assert!(!is_unit, "target {kw} would shadow the unit `to {kw}`");
+            }
+            let grouped: Vec<_> = m.groups.iter().flat_map(|g| g.1.iter()).collect();
+            for f in m.fns.iter().filter(|_| !m.groups.is_empty()) {
+                assert_eq!(grouped.iter().filter(|g| **g == &f.0).count(), 1, "{}: {} must be in exactly one group", m.name, f.0);
+            }
+            for g in grouped {
+                assert!(m.fns.iter().any(|f| f.0 == *g), "{}: group lists unknown fn {g}", m.name);
             }
         }
     }

@@ -8,8 +8,17 @@ use crate::lexer::Span;
 
 pub const MODULE: Module = Module {
     name: "math",
+    about: "digits, rounding, logs, trigonometry (angles as units)",
     example: "round(sqrt(2), 3)",
+    guide: &[("constants", &[("pi e", "")])],
     fns: FNS,
+    #[rustfmt::skip]
+    groups: &[
+        ("rounding", &["abs", "round", "floor", "ceil"]),
+        ("powers", &["sqrt", "ln", "log"]),
+        ("trig", &["sin", "cos", "tan", "asin", "acos", "atan"]),
+        ("digits", &["digits", "from_digits"]),
+    ],
     call,
     consts: &[("pi", std::f64::consts::PI), ("e", std::f64::consts::E)],
     ..Module::EMPTY

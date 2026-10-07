@@ -1,7 +1,10 @@
 use crate::Error;
 use crate::ast::{BinOp, Expr, ExprKind, FnDef, Radix, Target, UnOp};
 use crate::lexer::Span;
-use crate::modules::{self, MODULES, Module, units::{self, Unit}};
+use crate::modules::{
+    self, MODULES, Module,
+    units::{self, Unit},
+};
 use indexmap::IndexMap;
 use jiff::{Zoned, tz::TimeZone};
 use regex::Regex;
@@ -209,7 +212,9 @@ pub fn fmt_float(x: f64) -> String {
     if !x.is_finite() || x == 0.0 {
         return if x == 0.0 { "0".into() } else { x.to_string() };
     }
-    let trim = |s: String| if s.contains('.') { s.trim_end_matches('0').trim_end_matches('.').to_string() } else { s };
+    let trim = |s: String| {
+        if s.contains('.') { s.trim_end_matches('0').trim_end_matches('.').to_string() } else { s }
+    };
     let exp = x.abs().log10().floor() as i32;
     if !(-6..15).contains(&exp) {
         let s = format!("{x:.5e}");
@@ -325,10 +330,7 @@ impl Interp {
         match f {
             Value::Fn(c) => {
                 if args.len() != c.def.params.len() {
-                    return Err(Error::new(
-                        format!("expected {} args, got {}", c.def.params.len(), args.len()),
-                        span.clone(),
-                    ));
+                    return Err(Error::new(format!("expected {} args, got {}", c.def.params.len(), args.len()), span.clone()));
                 }
                 let env = child(&c.env);
                 for (p, a) in c.def.params.iter().zip(args) {
@@ -397,7 +399,9 @@ impl Interp {
                 (UnOp::Neg, Value::Qty(n, u)) => Value::Qty(-n, u),
                 (UnOp::Neg, v) => return Err(err(format!("cannot negate {}", v.type_name()))),
                 (UnOp::BitNot, Value::Int(n, b)) => Value::Int(!n, b),
-                (UnOp::BitNot, v) => return Err(err(format!("cannot bit-invert {}", v.type_name()))),
+                (UnOp::BitNot, v) => {
+                    return Err(err(format!("cannot bit-invert {}", v.type_name())));
+                }
             },
             ExprKind::Binary(BinOp::And, a, b) => {
                 let a = self.eval(a, env)?;
@@ -436,7 +440,9 @@ impl Interp {
                             (Value::Map(m), Value::Str(k)) => {
                                 m.borrow_mut().insert(k.to_string(), v.clone());
                             }
-                            (o, i) => return Err(err(format!("cannot index {} with {}", o.type_name(), i.type_name()))),
+                            (o, i) => {
+                                return Err(err(format!("cannot index {} with {}", o.type_name(), i.type_name())));
+                            }
                         }
                     }
                     _ => unreachable!("parser validates assignment targets"),
@@ -475,7 +481,9 @@ impl Interp {
                 match lookup(env, key) {
                     Some(f @ (Value::Fn(_) | Value::Builtin(..))) => self.call(&f, vec![o], &e.span)?,
                     _ if matches!(o, Value::Map(_)) => Value::Nil,
-                    _ => return Err(err(format!("{} has no field or method `{key}`", o.type_name()))),
+                    _ => {
+                        return Err(err(format!("{} has no field or method `{key}`", o.type_name())));
+                    }
                 }
             }
             ExprKind::Index(obj, idx) => match (self.eval(obj, env)?, self.eval(idx, env)?) {
@@ -489,7 +497,9 @@ impl Interp {
                     Value::str(s.chars().nth(i).unwrap().to_string())
                 }
                 (Value::Map(m), Value::Str(k)) => m.borrow().get(&*k).cloned().unwrap_or(Value::Nil),
-                (o, i) => return Err(err(format!("cannot index {} with {}", o.type_name(), i.type_name()))),
+                (o, i) => {
+                    return Err(err(format!("cannot index {} with {}", o.type_name(), i.type_name())));
+                }
             },
             ExprKind::Slice(obj, from, to) => {
                 let o = self.eval(obj, env)?;
@@ -625,7 +635,9 @@ pub fn binary(op: BinOp, a: &Value, b: &Value) -> Result<Value, String> {
                 BinOp::BitOr => Some(x | y),
                 BinOp::BitXor => Some(x ^ y),
                 // ponytail: `<<` drops high bits like C instead of erroring on overflow.
-                BinOp::Shl | BinOp::Shr if !(0..64).contains(&y) => return Err("shift must be 0-63".into()),
+                BinOp::Shl | BinOp::Shr if !(0..64).contains(&y) => {
+                    return Err("shift must be 0-63".into());
+                }
                 BinOp::Shl => Some(x << y),
                 BinOp::Shr => Some(x >> y),
                 _ => return Err(mismatch()),
@@ -707,10 +719,20 @@ pub mod tests {
         assert_eq!(show("0b1010 + 1"), "0b1011");
         assert_eq!(show("10 to bin"), "0b1010");
         assert_eq!(show("35 to base(36)"), "36#z");
-        assert_eq!(show("x = 36#z
-x + 1"), "36#10");
-        assert_eq!(show("x = 0b1010
-x + 1"), "0b1011");
+        assert_eq!(
+            show(
+                "x = 36#z
+x + 1"
+            ),
+            "36#10"
+        );
+        assert_eq!(
+            show(
+                "x = 0b1010
+x + 1"
+            ),
+            "0b1011"
+        );
         assert_eq!(show("2#1010"), "0b1010");
         assert_eq!(show("-3#12 to dec"), "-5");
         assert!(try_eval("37#1").is_err());
@@ -745,8 +767,13 @@ x + 1"), "0b1011");
         assert_eq!(show("dec(0xff)"), "255");
         assert_eq!(show("base(35, 36)"), "36#z");
         assert_eq!(show(r#"hex("hi")"#), "6869");
-        assert_eq!(show("hex = 3
-hex + 1"), "4");
+        assert_eq!(
+            show(
+                "hex = 3
+hex + 1"
+            ),
+            "4"
+        );
         assert!(try_eval("hex(256, 8)").is_err());
         assert!(try_eval("base(1, 99)").is_err());
     }
@@ -759,8 +786,13 @@ hex + 1"), "4");
         assert_eq!(show("1 << 4"), "16");
         assert_eq!(show("-16 >> 2"), "-4");
         assert_eq!(show("~0"), "-1");
-        assert_eq!(show("x = 0xff00 to hex
-x & 0x0ff0"), "0xf00");
+        assert_eq!(
+            show(
+                "x = 0xff00 to hex
+x & 0x0ff0"
+            ),
+            "0xf00"
+        );
         assert_eq!(show("1 | 2 == 3"), "true");
         assert_eq!(show("0xf0 >> 4 + 0"), "0xf");
         assert!(try_eval("1 << 64").is_err());
@@ -769,8 +801,13 @@ x & 0x0ff0"), "0xf00");
 
     #[test]
     fn strings() {
-        assert_eq!(show(r#"x = 2
-"x={x}, sq={x ** 2}""#), "x=2, sq=4");
+        assert_eq!(
+            show(
+                r#"x = 2
+"x={x}, sq={x ** 2}""#
+            ),
+            "x=2, sq=4"
+        );
         assert_eq!(show(r#""hello"[1..4]"#), "ell");
         assert_eq!(show(r#""hello"[-3..]"#), "llo");
         assert_eq!(show(r#""hello".upper"#), "HELLO");

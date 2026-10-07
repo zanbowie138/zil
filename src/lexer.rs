@@ -214,15 +214,7 @@ mod tests {
     fn units_and_strings() {
         assert_eq!(
             toks(r#"5km to mi "a{f("}")}" r"\d+" # c"#),
-            vec![
-                Tok::Int(5),
-                Tok::Ident("km".into()),
-                Tok::To,
-                Tok::Ident("mi".into()),
-                Tok::Str(r#"a{f("}")}"#.into()),
-                Tok::Regex(r"\d+".into()),
-                Tok::Eof
-            ]
+            vec![Tok::Int(5), Tok::Ident("km".into()), Tok::To, Tok::Ident("mi".into()), Tok::Str(r#"a{f("}")}"#.into()), Tok::Regex(r"\d+".into()), Tok::Eof]
         );
     }
 }

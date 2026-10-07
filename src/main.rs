@@ -54,7 +54,9 @@ fn run_or_exit(interp: &mut Interp, name: &str, src: &str) -> Value {
 
 /// More `(`/`[`/`{` than closers: the REPL keeps reading lines.
 fn unclosed(src: &str) -> bool {
-    let Ok(toks) = lexer::lex(src) else { return false };
+    let Ok(toks) = lexer::lex(src) else {
+        return false;
+    };
     let depth: i32 = toks
         .iter()
         .map(|(t, _)| match t {

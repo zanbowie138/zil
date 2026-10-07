@@ -179,6 +179,7 @@ pattern accept either a plain string (matched literally) or a regex.
 | `count(pat)`                 | number of matches                             |
 | `match(regex)`               | first match, or a list of its groups, or `nil` |
 | `find_all(pat)`              | list of all matches                           |
+| `grep(pat)`                  | lines (or list items) containing pat          |
 | `repeat(n)`                  | `"ab".repeat(2)` → `"abab"`                   |
 | `encode(fmt)` `decode(fmt)`  | fmt is `"base64"`, `"url"` or `"hex"`         |
 | `base64`                     | `"hi".base64` → `"aGk="`, same as `encode("base64")` |

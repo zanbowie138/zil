@@ -11,8 +11,33 @@ use jiff::{SignedDuration, Span, Timestamp, Zoned, tz::TimeZone};
 
 pub const MODULE: Module = Module {
     name: "dates",
+    about: "parsing, calendar math, relative text, month grids; weeks start Monday",
     example: r#"date("2026-12-25").weekday"#,
+    #[rustfmt::skip]
+    guide: &[
+        ("types", &[("date", r#"date("2026-12-25 18:30")"#)]),
+        ("names", &[("now today tomorrow yesterday", "")]),
+        ("operators", &[
+            ("date ± time", r#"date("2026-01-31") + 1 mo"#),
+            ("date - date", r#"date("2027-01-01") - date("2026-12-25")"#),
+            ("date < date", "yesterday < now"),
+        ]),
+        ("conversions", &[
+            ("to unix", r#"date("2026-12-25") to unix"#),
+            ("to UTC, to local", r#"date("2026-12-25 18:30") to UTC"#),
+            ("to \"Zone/Name\"", r#"date("2026-12-25 18:30") to "Asia/Tokyo""#),
+        ]),
+    ],
     fns: FNS,
+    #[rustfmt::skip]
+    groups: &[
+        ("fields", &["year", "month", "day", "hour", "minute", "second", "weekday", "weekday_num", "day_of_year", "iso_week", "quarter"]),
+        ("calendar", &["leap_year", "days_in_month", "days_in_year", "calendar"]),
+        ("checks", &["is_weekend", "is_weekday", "is_today", "is_past", "is_future"]),
+        ("moving", &["with", "start_of", "end_of", "next", "prev", "nth_weekday", "add_workdays"]),
+        ("between", &["diff", "workdays", "age", "relative", "parts"]),
+        ("convert", &["date", "format", "unix", "utc", "local"]),
+    ],
     call,
     targets: &[("unix", "unix"), ("UTC", "utc"), ("utc", "utc"), ("local", "local")],
     ident: Some(ident),
@@ -111,7 +136,9 @@ fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &crate::lexe
         ("with", [Date(z), Map(m)]) => {
             let mut fields = Vec::new();
             for (k, v) in m.borrow().iter() {
-                let Int(n, _) = v else { return Err(err(format!("{k} must be an integer"))) };
+                let Int(n, _) = v else {
+                    return Err(err(format!("{k} must be an integer")));
+                };
                 fields.push((k.clone(), *n));
             }
             Value::date(with(z, &fields).map_err(err)?)
@@ -144,9 +171,7 @@ fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &crate::lexe
         }
         ("calendar", [Date(z)]) => Value::str(calendar(z.year() as i64, z.month() as i64).map_err(err)?),
         ("calendar", [Int(y, _), Int(m, _)]) => Value::str(calendar(*y, *m).map_err(err)?),
-        ("format", [Date(z), Str(f)]) => {
-            Value::str(jiff::fmt::strtime::format(f.as_bytes(), &**z).map_err(|e| err(e.to_string()))?)
-        }
+        ("format", [Date(z), Str(f)]) => Value::str(jiff::fmt::strtime::format(f.as_bytes(), &**z).map_err(|e| err(e.to_string()))?),
         ("unix", [Date(z)]) => Value::int(z.timestamp().as_second()),
         ("utc", [Date(z)]) => Value::date(z.with_time_zone(TimeZone::UTC)),
         ("local", [Date(z)]) => Value::date(z.with_time_zone(TimeZone::system())),
@@ -183,7 +208,9 @@ fn compare(a: &Value, b: &Value) -> Option<std::cmp::Ordering> {
 
 /// `d to "Europe/Paris"`.
 fn convert(v: &Value, t: &Target) -> Claim {
-    let (Value::Date(z), Target::Str(name)) = (v, t) else { return None };
+    let (Value::Date(z), Target::Str(name)) = (v, t) else {
+        return None;
+    };
     Some(match name.as_str() {
         "local" => Ok(Value::date(z.with_time_zone(TimeZone::system()))),
         _ => z.in_tz(name).map(Value::date).map_err(e),
@@ -218,9 +245,22 @@ pub fn parse(s: &str, now: &Zoned) -> Option<Zoned> {
 }
 
 const DATE_FORMATS: &[&str] = &[
-    "%m/%d/%y", "%d/%m/%y", "%m/%d/%Y", "%d/%m/%Y", // US first; day/month only when month would be > 12
-    "%b %d %Y", "%b %d, %Y", "%d %b %Y", "%d %b, %Y", "%a %b %d %Y", "%a, %b %d, %Y", // abbreviated month
-    "%B %d %Y", "%B %d, %Y", "%d %B %Y", "%d %B, %Y", "%A %B %d %Y", "%A, %B %d, %Y", // full month
+    "%m/%d/%y",
+    "%d/%m/%y",
+    "%m/%d/%Y",
+    "%d/%m/%Y", // US first; day/month only when month would be > 12
+    "%b %d %Y",
+    "%b %d, %Y",
+    "%d %b %Y",
+    "%d %b, %Y",
+    "%a %b %d %Y",
+    "%a, %b %d, %Y", // abbreviated month
+    "%B %d %Y",
+    "%B %d, %Y",
+    "%d %B %Y",
+    "%d %B, %Y",
+    "%A %B %d %Y",
+    "%A, %B %d, %Y", // full month
 ];
 const TIME_FORMATS: &[&str] = &["", " %H:%M", " %H:%M:%S", " %I:%M %p", " %I:%M%p", " %I%p", " %I %p"];
 
@@ -240,10 +280,7 @@ fn strict(s: &str, tz: &TimeZone) -> Option<Zoned> {
     if let Ok(z) = jiff::fmt::rfc2822::parse(s) {
         return Some(z);
     }
-    DATE_FORMATS
-        .iter()
-        .flat_map(|d| TIME_FORMATS.iter().map(move |t| format!("{d}{t}")))
-        .find_map(|f| with_format(s, &f, tz))
+    DATE_FORMATS.iter().flat_map(|d| TIME_FORMATS.iter().map(move |t| format!("{d}{t}"))).find_map(|f| with_format(s, &f, tz))
 }
 
 /// Parse with explicit strftime codes; missing time means midnight, missing zone means `tz`.
@@ -274,9 +311,7 @@ fn natural(s: &str, now: &Zoned) -> Option<Zoned> {
         ["yesterday"] => at(today.yesterday().ok()?)?,
         ["in", n, u] | [n, u, "from", "now"] => add(now, count(n)?, &time_unit(u)?).ok()?,
         [n, u, "ago"] => add(now, -count(n)?, &time_unit(u)?).ok()?,
-        ["next" | "last", wd] if weekday(wd).is_some() => {
-            at(today.nth_weekday(if w[0] == "next" { 1 } else { -1 }, weekday(wd)?).ok()?)?
-        }
+        ["next" | "last", wd] if weekday(wd).is_some() => at(today.nth_weekday(if w[0] == "next" { 1 } else { -1 }, weekday(wd)?).ok()?)?,
         ["this", wd] | [wd] if weekday(wd).is_some() => {
             let wd = weekday(wd)?;
             at(if today.weekday() == wd { today } else { today.nth_weekday(1, wd).ok()? })?
@@ -391,7 +426,9 @@ pub fn start_of(z: &Zoned, period: &str) -> R<Zoned> {
     let day = match period {
         "second" => return z.with().subsec_nanosecond(0).build().map_err(e),
         "minute" => return z.with().second(0).subsec_nanosecond(0).build().map_err(e),
-        "hour" => return z.with().minute(0).second(0).subsec_nanosecond(0).build().map_err(e),
+        "hour" => {
+            return z.with().minute(0).second(0).subsec_nanosecond(0).build().map_err(e);
+        }
         "day" => d,
         "week" => d.checked_sub(Span::new().days(d.weekday().to_monday_zero_offset())).map_err(e)?,
         "month" => d.first_of_month(),
@@ -435,7 +472,9 @@ pub fn with(z: &Zoned, fields: &[(String, i64)]) -> R<Zoned> {
             "hour" => w.hour(small(n)?),
             "minute" => w.minute(small(n)?),
             "second" => w.second(small(n)?),
-            _ => return Err(format!("unknown field {k:?} (year, month, day, hour, minute, second)")),
+            _ => {
+                return Err(format!("unknown field {k:?} (year, month, day, hour, minute, second)"));
+            }
         };
     }
     w.build().map_err(e)

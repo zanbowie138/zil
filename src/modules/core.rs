@@ -9,8 +9,26 @@ use crate::lexer::Span;
 
 pub const MODULE: Module = Module {
     name: "general",
+    about: "values, printing, conversions, number bases, parsing, files",
     example: "type(5 km)",
+    #[rustfmt::skip]
+    guide: &[
+        ("types", &[("nil", "nil"), ("bool", "true"), ("int", "0xff"), ("float", "1.5e3"), ("fn", r"\x -> x * 2")]),
+        ("names", &[("input  (stdin as a string)", "")]),
+        ("conversions", &[
+            ("to str int float bool list", r#""42" to int"#),
+            ("to hex bin oct dec", "255 to bin"),
+            ("to hex(bits), to base(b)", "-1 to hex(16)"),
+        ]),
+    ],
     fns: FNS,
+    #[rustfmt::skip]
+    groups: &[
+        ("values", &["type", "len", "parse"]),
+        ("convert", &["str", "int", "float", "bool", "list"]),
+        ("bases", &["hex", "bin", "oct", "dec", "base"]),
+        ("io", &["print", "read_file", "write_file", "help"]),
+    ],
     call,
     #[rustfmt::skip]
     targets: &[
@@ -61,9 +79,7 @@ fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Re
         ("int", [Int(n, _)]) => Value::int(*n),
         ("int", [Float(n)]) => Value::int(*n as i64),
         ("int", [Str(s)]) => parse_int(s, None).ok_or_else(|| err(format!("cannot parse {s:?}")))?,
-        ("int", [Str(s), Int(b, _)]) if (2..=36).contains(b) => {
-            parse_int(s, Some(*b as u32)).ok_or_else(|| err(format!("cannot parse {s:?} in base {b}")))?
-        }
+        ("int", [Str(s), Int(b, _)]) if (2..=36).contains(b) => parse_int(s, Some(*b as u32)).ok_or_else(|| err(format!("cannot parse {s:?} in base {b}")))?,
         ("float", [v @ (Int(..) | Float(_))]) => Float(num(v).unwrap()),
         ("float", [Qty(n, _)]) => Float(*n),
         ("float", [Str(s)]) => Float(s.trim().parse().map_err(|_| err(format!("cannot parse {s:?}")))?),
@@ -190,8 +206,13 @@ mod tests {
     #[test]
     fn parse() {
         assert_eq!(show(r#""[1, -2.5, \"a\", 0xff, 5 km, \{k: [nil, true]}]".parse"#), r#"[1, -2.5, "a", 0xff, 5 km, {k: [nil, true]}]"#);
-        assert_eq!(show(r#"x = [1, "b"]
-str(x).parse == x"#), "true");
+        assert_eq!(
+            show(
+                r#"x = [1, "b"]
+str(x).parse == x"#
+            ),
+            "true"
+        );
         for bad in [r#""read_file(\"x\")".parse"#, r#""[x]".parse"#, r#""1 + 2".parse"#, r#""".parse"#] {
             assert!(try_eval(bad).is_err(), "{bad}");
         }

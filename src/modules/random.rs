@@ -5,7 +5,7 @@ use crate::Error;
 use crate::interp::{Interp, Value, num};
 use crate::lexer::Span;
 
-pub const MODULE: Module = Module { name: "random", example: "rand(1, 6)", fns: FNS, call, ..Module::EMPTY };
+pub const MODULE: Module = Module { name: "random", about: "numbers, picks, shuffles, UUIDs", example: "rand(1, 6)", fns: FNS, call, ..Module::EMPTY };
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[

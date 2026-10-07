@@ -9,8 +9,22 @@ use std::cmp::Ordering;
 
 pub const MODULE: Module = Module {
     name: "lists",
+    about: "ranges, higher-order fns, aggregates, sorting",
     example: r"[3, 1, 2].sort.map(\x -> x * 2)",
+    #[rustfmt::skip]
+    guide: &[
+        ("types", &[("list", "[1, 2, 3]"), ("map", "{a: 1, b: 2}")]),
+        ("operators", &[("a..b", "1..4"), ("list + list", "[1] + [2, 3]")]),
+    ],
     fns: FNS,
+    #[rustfmt::skip]
+    groups: &[
+        ("build", &["range", "push"]),
+        ("transform", &["map", "filter", "reduce", "sort", "unique"]),
+        ("aggregate", &["sum", "avg", "min", "max"]),
+        ("pick", &["first", "last"]),
+        ("maps", &["keys", "values"]),
+    ],
     call,
     binary: Some(binary),
     ..Module::EMPTY
@@ -127,7 +141,9 @@ fn range(a: i64, b: i64) -> Result<Value, String> {
 }
 
 fn sum(l: &[Value]) -> Result<Value, String> {
-    let Some((first, rest)) = l.split_first() else { return Ok(Value::int(0)) };
+    let Some((first, rest)) = l.split_first() else {
+        return Ok(Value::int(0));
+    };
     let mut acc = first.clone();
     for v in rest {
         acc = op(BinOp::Add, &acc, v)?;

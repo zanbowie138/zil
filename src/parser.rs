@@ -169,7 +169,9 @@ impl Parser {
                 lhs = self.mk(ExprKind::To(Box::new(lhs), target), start);
                 continue;
             }
-            let Some((lbp, rbp)) = infix_bp(&t) else { break };
+            let Some((lbp, rbp)) = infix_bp(&t) else {
+                break;
+            };
             if lbp < min_bp {
                 break;
             }
