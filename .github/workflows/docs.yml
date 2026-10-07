@@ -1,0 +1,23 @@
+name: docs
+on:
+  push:
+    branches: [main]
+    paths: [src/**, docs/**]
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: github-pages
+    env:
+      TZ: America/Chicago
+    steps:
+      - uses: actions/checkout@v4
+      - uses: peaceiris/actions-mdbook@v2
+      - run: cargo run --release -- --docs docs/book/src
+      - run: mdbook build docs/book
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: docs/book/book }
+      - uses: actions/deploy-pages@v4
