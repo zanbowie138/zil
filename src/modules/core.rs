@@ -3,8 +3,9 @@
 use super::{Call, Claim, Doc, Fail, Module, doc, strings::hex};
 use crate::ast::{Expr, ExprKind, Radix, UnOp};
 use crate::help::help;
-use crate::interp::{Interp, Value, fits, num};
+use crate::interp::Interp;
 use crate::lexer::Span;
+use crate::value::{Value, fits, num};
 
 pub const MODULE: Module = Module {
     name: "general",

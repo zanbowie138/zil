@@ -14,8 +14,9 @@ pub mod units;
 
 use crate::Error;
 use crate::ast::{BinOp, Target};
-use crate::interp::{Interp, Value};
+use crate::interp::Interp;
 use crate::lexer::Span;
+use crate::value::Value;
 use std::cmp::Ordering;
 
 /// A builtin's help.

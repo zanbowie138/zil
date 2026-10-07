@@ -2,8 +2,9 @@
 
 use super::{Call, Claim, Doc, Fail, Module, doc};
 use crate::ast::BinOp;
-use crate::interp::{Interp, Value};
+use crate::interp::Interp;
 use crate::lexer::Span;
+use crate::value::Value;
 use base64::Engine;
 use sha2::Digest;
 

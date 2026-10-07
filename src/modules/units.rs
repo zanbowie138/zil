@@ -2,7 +2,8 @@
 
 use super::{Claim, Module};
 use crate::ast::{BinOp, Target, UnitSpec};
-use crate::interp::{Value, mismatch, num};
+use crate::interp::mismatch;
+use crate::value::{Value, num};
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -353,7 +354,7 @@ pub fn split(si: f64, units: &[Unit]) -> String {
         }
     }
     if rest != 0.0 || parts.is_empty() {
-        parts.push(format!("{} {last}", crate::interp::fmt_float(rest)));
+        parts.push(format!("{} {last}", crate::value::fmt_float(rest)));
     }
     let sign = if si < 0.0 { "-" } else { "" };
     format!("{sign}{}", parts.join(" "))

@@ -4,7 +4,8 @@
 use super::units::{self, Unit};
 use super::{Call, Claim, Doc, Fail, Module, doc};
 use crate::ast::{BinOp, Target};
-use crate::interp::{Interp, Value};
+use crate::interp::Interp;
+use crate::value::Value;
 use jiff::civil::{self, Date, Time, Weekday};
 use jiff::{SignedDuration, Span, Timestamp, Zoned, tz::TimeZone};
 

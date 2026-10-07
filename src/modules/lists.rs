@@ -2,8 +2,9 @@
 
 use super::{Call, Claim, Doc, Fail, Module, doc};
 use crate::ast::BinOp;
-use crate::interp::{Interp, Value, binary as op, compare};
+use crate::interp::{Interp, binary as op};
 use crate::lexer::Span;
+use crate::value::{Value, compare};
 use std::cmp::Ordering;
 
 pub const MODULE: Module = Module {

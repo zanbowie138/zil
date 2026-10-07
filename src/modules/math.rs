@@ -2,8 +2,9 @@
 
 use super::{Call, Doc, Fail, Module, doc, units};
 use crate::ast::Radix;
-use crate::interp::{Interp, Value, num};
+use crate::interp::Interp;
 use crate::lexer::Span;
+use crate::value::{Value, num};
 
 pub const MODULE: Module = Module {
     name: "math",

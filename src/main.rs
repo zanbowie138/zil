@@ -4,13 +4,15 @@ mod interp;
 mod lexer;
 mod modules;
 mod parser;
+mod value;
 
 use ariadne::{Label, Report, ReportKind, Source};
-use interp::{Interp, Value};
+use interp::Interp;
 use lexer::{Span, Tok};
 use rustyline::error::ReadlineError;
 use std::path::PathBuf;
 use std::process::exit;
+use value::Value;
 
 #[derive(Debug)]
 pub struct Error {

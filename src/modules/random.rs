@@ -1,8 +1,9 @@
 //! Randomness: numbers, picks, shuffles, UUIDs.
 
 use super::{Call, Doc, Fail, Module, doc, strings::hex};
-use crate::interp::{Interp, Value, num};
+use crate::interp::Interp;
 use crate::lexer::Span;
+use crate::value::{Value, num};
 
 pub const MODULE: Module = Module { name: "random", about: "numbers, picks, shuffles, UUIDs", example: "rand(1, 6)", fns: FNS, call, ..Module::EMPTY };
 
@@ -52,7 +53,7 @@ mod tests {
 
     #[test]
     fn random() {
-        assert!(matches!(eval("rand(1, 6)"), crate::interp::Value::Int(1..=6, _)));
+        assert!(matches!(eval("rand(1, 6)"), crate::value::Value::Int(1..=6, _)));
         assert_eq!(eval("uuid().len").to_string(), "36");
         assert_eq!(eval("[1, 2, 3].shuffle.sort").to_string(), "[1, 2, 3]");
         assert!(try_eval("choice([])").is_err());
