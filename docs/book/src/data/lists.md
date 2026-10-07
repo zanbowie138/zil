@@ -26,7 +26,7 @@ ranges, map/filter/reduce, building lists
 | [`range(n: int) / range(a: int, b: int)`](#range) | integers in [0, n) or [a, b); same as a..b |
 | [`push(xs: list, v: any)`](#push) | append v in place and return the list |
 | [`map(xs: list, f: fn)`](#map) | apply f to every item |
-| [`filter(xs: list, f: fn)`](#filter) | keep items where f is truthy |
+| [`filter(xs: list, f: fn) / filter(m: map, f: fn)`](#filter) | keep items where f is truthy; for maps, f gets (key, value) |
 | [`reduce(xs: list, init: any, f: fn)`](#reduce) | fold with f(acc, item) |
 | [`flatten(xs: list)`](#flatten) | unpack nested lists one level |
 | [`zip(a: list, b: list)`](#zip) | pair up items, stopping at the shorter list |
@@ -72,14 +72,16 @@ See also: [filter](../data/lists.md#filter), [reduce](../data/lists.md#reduce)
 
 ### filter
 
-`filter(xs: list, f: fn)`: keep items where f is truthy
+`filter(xs: list, f: fn) / filter(m: map, f: fn)`: keep items where f is truthy; for maps, f gets (key, value)
 
 ```zil
 (1..10).filter(|x| x % 3 == 0)
 # → [3, 6, 9]
+{a: 1, b: 5}.filter(|k, v| v > 2)
+# → {b: 5}
 ```
 
-See also: [map](../data/lists.md#map), [reduce](../data/lists.md#reduce)
+See also: [map](../data/lists.md#map), [reduce](../data/lists.md#reduce), [filter_keys](../data/maps.md#filter_keys)
 
 ### reduce
 

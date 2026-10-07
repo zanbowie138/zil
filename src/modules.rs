@@ -275,7 +275,7 @@ pub const TREE: &[Module] = &[core::MODULE, text::MODULE, data::MODULE, math::MO
 
 /// Modules with hooks, in the order hooks are tried.
 pub const DISPATCH: &[&Module] =
-    &[&text::MODULE, &data::lists::MODULE, &math::bits::MODULE, &time::MODULE, &time::zones::MODULE, &units::MODULE, &core::MODULE];
+    &[&text::MODULE, &data::lists::MODULE, &data::maps::MODULE, &math::bits::MODULE, &time::MODULE, &time::zones::MODULE, &units::MODULE, &core::MODULE];
 
 /// Every module with its dotted path, each parent before its children, in tree order.
 pub static ALL: LazyLock<Vec<(String, &'static Module)>> = LazyLock::new(|| {

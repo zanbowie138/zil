@@ -41,7 +41,7 @@ const FNS: &[Doc] = &[
     doc("range", "range(n: int) / range(a: int, b: int)", "integers in [0, n) or [a, b); same as a..b", &["range(4)", "range(2, 5)"], &["map"]),
     doc("push", "push(xs: list, v: any)", "append v in place and return the list", &["[1, 2].push(3)"], &[]),
     doc("map", "map(xs: list, f: fn)", "apply f to every item", &[r"[1, 2, 3].map(|x| x * 10)"], &["filter", "reduce"]),
-    doc("filter", "filter(xs: list, f: fn)", "keep items where f is truthy", &[r"(1..10).filter(|x| x % 3 == 0)"], &["map", "reduce"]),
+    doc("filter", "filter(xs: list, f: fn) / filter(m: map, f: fn)", "keep items where f is truthy; for maps, f gets (key, value)", &[r"(1..10).filter(|x| x % 3 == 0)", r"{a: 1, b: 5}.filter(|k, v| v > 2)"], &["map", "reduce", "filter_keys"]),
     doc("reduce", "reduce(xs: list, init: any, f: fn)", "fold with f(acc, item)", &[r"[1, 2, 3].reduce(10, |acc, x| acc + x)"], &["sum", "map"]),
     doc("flatten", "flatten(xs: list)", "unpack nested lists one level", &["[[1, 2], [3], 4].flatten"], &["chunks"]),
     doc("zip", "zip(a: list, b: list)", "pair up items, stopping at the shorter list", &[r#"zip([1, 2, 3], ["a", "b"])"#], &["enumerate"]),
@@ -79,6 +79,15 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Cal
                 }
             }
             Value::list(out)
+        }
+        ("filter", [Map(m), f]) => {
+            let mut out = IndexMap::new();
+            for (k, v) in m.borrow().clone() {
+                if it.call(f, vec![Value::str(k.as_str()), v.clone()], span)?.truthy() {
+                    out.insert(k, v);
+                }
+            }
+            Value::map(out)
         }
         ("reduce", [List(l), init, f]) => {
             let items = l.borrow().clone();

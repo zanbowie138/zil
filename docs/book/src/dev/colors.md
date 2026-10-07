@@ -15,7 +15,6 @@ colors as "#rrggbb": RGB/HSL, mixing, lightening, WCAG contrast
 | [`mix(a: str\|list, b: str\|list, t?: num)`](#mix) | blend from a (t = 0) to b (t = 1), halfway by default |
 | [`lighten(c: str\|list, amount: num)`](#lighten) | raise HSL lightness by amount (0-1) |
 | [`darken(c: str\|list, amount: num)`](#darken) | lower HSL lightness by amount (0-1) |
-| [`invert(c: str\|list)`](#invert) | the opposite color |
 | [`grayscale(c: str\|list)`](#grayscale) | the gray with the same perceived brightness |
 | [`contrast(a: str\|list, b: str\|list)`](#contrast) | WCAG contrast ratio, 1 to 21; text wants 4.5+ |
 | [`swatch(c: str\|list)`](#swatch) | a colored block plus the hex, for truecolor terminals |
@@ -96,17 +95,6 @@ darken("#3478f6", 20%)
 
 See also: [lighten](../dev/colors.md#lighten), [mix](../dev/colors.md#mix)
 
-### invert
-
-`invert(c: str|list)`: the opposite color
-
-```zil
-invert("navy")
-# → "#ffff7f"
-```
-
-See also: [grayscale](../dev/colors.md#grayscale)
-
 ### grayscale
 
 `grayscale(c: str|list)`: the gray with the same perceived brightness
@@ -116,7 +104,7 @@ grayscale("tomato")
 # → "#969696"
 ```
 
-See also: [invert](../dev/colors.md#invert)
+See also: [invert](../data/maps.md#invert)
 
 ### contrast
 

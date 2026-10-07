@@ -22,7 +22,7 @@ pub const MODULE: Module = Module {
     #[rustfmt::skip]
     groups: &[
         ("make", &["color", "rgb", "hsl"]),
-        ("adjust", &["mix", "lighten", "darken", "invert", "grayscale"]),
+        ("adjust", &["mix", "lighten", "darken", "grayscale"]),
         ("inspect", &["contrast", "swatch"]),
     ],
     call,
@@ -37,7 +37,6 @@ const FNS: &[Doc] = &[
     doc("mix", "mix(a: str|list, b: str|list, t?: num)", "blend from a (t = 0) to b (t = 1), halfway by default", &[r#"mix("red", "blue")"#, r#"mix("white", "black", 25%)"#], &["lighten", "darken"]),
     doc("lighten", "lighten(c: str|list, amount: num)", "raise HSL lightness by amount (0-1)", &[r##"lighten("#3478f6", 20%)"##], &["darken", "mix"]),
     doc("darken", "darken(c: str|list, amount: num)", "lower HSL lightness by amount (0-1)", &[r##"darken("#3478f6", 20%)"##], &["lighten", "mix"]),
-    doc("invert", "invert(c: str|list)", "the opposite color", &[r#"invert("navy")"#], &["grayscale"]),
     doc("grayscale", "grayscale(c: str|list)", "the gray with the same perceived brightness", &[r#"grayscale("tomato")"#], &["invert"]),
     doc("contrast", "contrast(a: str|list, b: str|list)", "WCAG contrast ratio, 1 to 21; text wants 4.5+", &[r#"contrast("white", "black")"#, r##"contrast("#777", "white")"##], &["swatch"]),
     doc("swatch", "swatch(c: str|list)", "a colored block plus the hex, for truecolor terminals", &[r#"swatch("tomato")"#, r#"["red", "gold", "teal"].map(swatch).join(" ")"#], &["color"]),
@@ -45,7 +44,8 @@ const FNS: &[Doc] = &[
 
 type Rgb = [f64; 3];
 
-fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
+/// Also handles the color form of `invert`, which `data.maps` owns and forwards here.
+pub fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
     let c = |v: &Value| {
         parse(v).ok_or_else(|| Fail::from(format!("{v:?} is not a color\nhelp: use a name like \"tomato\", \"#f80\", \"#ff8800\" or [255, 136, 0]")))

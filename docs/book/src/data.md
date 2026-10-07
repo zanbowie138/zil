@@ -27,7 +27,7 @@ length, search, sorting and picking across strings, lists and maps; lists and ma
 | module | about |
 |---|---|
 | [lists](data/lists.md) | ranges, map/filter/reduce, building lists |
-| [maps](data/maps.md) | keys and values of maps |
+| [maps](data/maps.md) | keys, values, lookups, merging and transforming maps |
 
 ## Functions
 
