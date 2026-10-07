@@ -1,6 +1,6 @@
 //! Randomness: numbers, picks, shuffles, UUIDs.
 
-use super::{Call, Doc, Fail, Module, strings::hex};
+use super::{Call, Doc, Fail, Module, doc, strings::hex};
 use crate::interp::{Interp, Value, num};
 use crate::lexer::Span;
 
@@ -8,10 +8,10 @@ pub const MODULE: Module = Module { name: "random", about: "numbers, picks, shuf
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    ("rand", "rand() / rand(a, b)", "float in [0, 1), or a number from a to b inclusive", &["rand()", "rand(1, 6)"], &["choice", "shuffle"]),
-    ("choice", "choice(list)", "random item", &[r#"["rock", "paper", "scissors"].choice"#], &["rand", "shuffle"]),
-    ("shuffle", "shuffle(list)", "shuffled copy", &["(1..6).shuffle"], &["choice"]),
-    ("uuid", "uuid()", "random v4 UUID", &["uuid()"], &["rand"]),
+    doc("rand", "rand() / rand(a, b)", "float in [0, 1), or a number from a to b inclusive", &["rand()", "rand(1, 6)"], &["choice", "shuffle"]),
+    doc("choice", "choice(list)", "random item", &[r#"["rock", "paper", "scissors"].choice"#], &["rand", "shuffle"]),
+    doc("shuffle", "shuffle(list)", "shuffled copy", &["(1..6).shuffle"], &["choice"]),
+    doc("uuid", "uuid()", "random v4 UUID", &["uuid()"], &["rand"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {

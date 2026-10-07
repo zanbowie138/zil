@@ -1,6 +1,6 @@
 //! Lists and maps: ranges, higher-order fns, aggregates, sorting.
 
-use super::{Call, Claim, Doc, Fail, Module};
+use super::{Call, Claim, Doc, Fail, Module, doc};
 use crate::ast::BinOp;
 use crate::interp::{Interp, Value, binary as op, compare};
 use crate::lexer::Span;
@@ -31,21 +31,21 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    ("range", "range(n) / range(a, b)", "integers in [0, n) or [a, b); same as a..b", &["range(4)", "range(2, 5)"], &["map"]),
-    ("push", "push(list, v)", "append v in place and return the list", &["[1, 2].push(3)"], &[]),
-    ("map", "map(list, f)", "apply f to every item", &[r"[1, 2, 3].map(\x -> x * 10)"], &["filter", "reduce"]),
-    ("filter", "filter(list, f)", "keep items where f is truthy", &[r"(1..10).filter(\x -> x % 3 == 0)"], &["map", "reduce"]),
-    ("reduce", "reduce(list, init, f)", "fold with f(acc, item)", &[r"[1, 2, 3].reduce(10, \acc, x -> acc + x)"], &["sum", "map"]),
-    ("sum", "sum(list)", "add up a list; works with units", &["[1, 2, 3].sum", "[1 m, 50 cm].sum"], &["avg", "reduce"]),
-    ("avg", "avg(list)", "mean of a list", &["[1, 2, 4].avg", "[2 h, 30 min].avg"], &["sum"]),
-    ("min", "min(list) / min(a, b, ...)", "smallest value", &["min(3, 9, 4)", "[2 km, 1 mi].min"], &["max", "sort"]),
-    ("max", "max(list) / max(a, b, ...)", "largest value", &["max(3, 9, 4)", r#"["b", "a"].max"#], &["min", "sort"]),
-    ("sort", "sort(list, key?)", "sorted copy, optionally by key function", &["[3, 1, 2].sort", r#"["ccc", "a", "bb"].sort(\w -> w.len)"#], &["reverse", "unique"]),
-    ("unique", "unique(list)", "drop duplicates, keeping first occurrences", &["[1, 2, 1, 3].unique"], &["sort", "count"]),
-    ("first", "first(list)", "first item, or nil", &["[7, 8].first"], &["last"]),
-    ("last", "last(list)", "last item, or nil", &["[7, 8].last"], &["first"]),
-    ("keys", "keys(map)", "list of map keys", &["{a: 1, b: 2}.keys"], &["values"]),
-    ("values", "values(map)", "list of map values", &["{a: 1, b: 2}.values"], &["keys"]),
+    doc("range", "range(n) / range(a, b)", "integers in [0, n) or [a, b); same as a..b", &["range(4)", "range(2, 5)"], &["map"]),
+    doc("push", "push(list, v)", "append v in place and return the list", &["[1, 2].push(3)"], &[]),
+    doc("map", "map(list, f)", "apply f to every item", &[r"[1, 2, 3].map(\x -> x * 10)"], &["filter", "reduce"]),
+    doc("filter", "filter(list, f)", "keep items where f is truthy", &[r"(1..10).filter(\x -> x % 3 == 0)"], &["map", "reduce"]),
+    doc("reduce", "reduce(list, init, f)", "fold with f(acc, item)", &[r"[1, 2, 3].reduce(10, \acc, x -> acc + x)"], &["sum", "map"]),
+    doc("sum", "sum(list)", "add up a list; works with units", &["[1, 2, 3].sum", "[1 m, 50 cm].sum"], &["avg", "reduce"]),
+    doc("avg", "avg(list)", "mean of a list", &["[1, 2, 4].avg", "[2 h, 30 min].avg"], &["sum"]),
+    doc("min", "min(list) / min(a, b, ...)", "smallest value", &["min(3, 9, 4)", "[2 km, 1 mi].min"], &["max", "sort"]),
+    doc("max", "max(list) / max(a, b, ...)", "largest value", &["max(3, 9, 4)", r#"["b", "a"].max"#], &["min", "sort"]),
+    doc("sort", "sort(list, key?)", "sorted copy, optionally by key function", &["[3, 1, 2].sort", r#"["ccc", "a", "bb"].sort(\w -> w.len)"#], &["reverse", "unique"]),
+    doc("unique", "unique(list)", "drop duplicates, keeping first occurrences", &["[1, 2, 1, 3].unique"], &["sort", "count"]),
+    doc("first", "first(list)", "first item, or nil", &["[7, 8].first"], &["last"]),
+    doc("last", "last(list)", "last item, or nil", &["[7, 8].last"], &["first"]),
+    doc("keys", "keys(map)", "list of map keys", &["{a: 1, b: 2}.keys"], &["values"]),
+    doc("values", "values(map)", "list of map values", &["{a: 1, b: 2}.values"], &["keys"]),
 ];
 
 fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Call {

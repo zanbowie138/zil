@@ -300,7 +300,7 @@ impl Interp {
             let mut g = globals.borrow_mut();
             for m in MODULES {
                 for f in m.fns {
-                    g.vars.insert(f.0.to_string(), Value::Builtin(m, f.0));
+                    g.vars.insert(f.name.to_string(), Value::Builtin(m, f.name));
                 }
                 for (name, x) in m.consts {
                     g.vars.insert(name.to_string(), Value::Float(*x));

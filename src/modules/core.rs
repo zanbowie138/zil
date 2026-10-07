@@ -1,6 +1,6 @@
 //! General: printing, type conversions, number bases, parsing, files, help, `input`.
 
-use super::{Call, Claim, Doc, Fail, Module, strings::hex};
+use super::{Call, Claim, Doc, Fail, Module, doc, strings::hex};
 use crate::ast::{Expr, ExprKind, Radix, UnOp};
 use crate::help::help;
 use crate::interp::{Interp, Value, fits, num};
@@ -40,23 +40,23 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    ("print", "print(a, b, ...)", "print values separated by spaces", &[], &["str"]),
-    ("type", "type(v)", "the type name of a value", &["type(5 km)", r#"type("hi")"#, "type([1])"], &["str", "int", "float"]),
-    ("str", "str(v)", "convert to a string (full float precision)", &["str(1/3)", "str(5 km)"], &["int", "float"]),
-    ("int", "int(v, base?)", "convert to an integer, parsing strings in an optional base", &["int(3.9)", r#""ff".int(16)"#, r#""0b101".int"#], &["float", "str"]),
-    ("float", "float(v)", "convert to a float; drops a quantity's unit", &[r#"float("2.5")"#, "float(5 km)"], &["int", "str"]),
-    ("bool", "bool(v)", "truthiness: false only for nil and false", &["bool(0)", "nil to bool"], &["str"]),
-    ("hex", "hex(v, bits?)", "same as `v to hex` / `v to hex(bits)`; strings become hex bytes", &["hex(255)", "hex(-1, 16)", r#"hex("hi")"#], &["bin", "base", "int"]),
-    ("bin", "bin(v, bits?)", "same as `v to bin` / `v to bin(bits)`", &["bin(10)", "bin(5, 8)"], &["hex", "oct"]),
-    ("oct", "oct(v, bits?)", "same as `v to oct`", &["oct(8)"], &["hex", "bin"]),
-    ("dec", "dec(v, bits?)", "same as `v to dec`; with bits, reads two's complement as unsigned", &["dec(0xff)", "dec(-1, 8)"], &["hex", "int"]),
-    ("base", "base(v, b)", "same as `v to base(b)`, any base 2-36", &["base(35, 36)", "base(10, 3)"], &["hex", "digits"]),
-    ("list", "list(v)", "convert to a list: characters, a copy, or [key, value] pairs", &[r#"list("abc")"#, r#""abc" to list"#, "{a: 1, b: 2}.list"], &["chars", "parse"]),
-    ("parse", "parse(s)", "read a zil literal (number, string, list, map, quantity); never runs code", &[r#""[1, 2.5, 0xff]".parse"#, r#""5 km".parse to m"#], &["str", "nums"]),
-    ("len", "len(v)", "length of a string, list or map", &[r#""héllo".len"#, "[1, 2, 3].len", "{a: 1}.len"], &[]),
-    ("read_file", "read_file(path)", "file contents as a string", &[], &["write_file", "lines"]),
-    ("write_file", "write_file(path, v)", "write v to a file as text", &[], &["read_file"]),
-    ("help", "help(topic?)", "this help; topic is a function, unit or unit kind", &[], &[]),
+    doc("print", "print(a, b, ...)", "print values separated by spaces", &[], &["str"]),
+    doc("type", "type(v)", "the type name of a value", &["type(5 km)", r#"type("hi")"#, "type([1])"], &["str", "int", "float"]),
+    doc("str", "str(v)", "convert to a string (full float precision)", &["str(1/3)", "str(5 km)"], &["int", "float"]),
+    doc("int", "int(v, base?)", "convert to an integer, parsing strings in an optional base", &["int(3.9)", r#""ff".int(16)"#, r#""0b101".int"#], &["float", "str"]),
+    doc("float", "float(v)", "convert to a float; drops a quantity's unit", &[r#"float("2.5")"#, "float(5 km)"], &["int", "str"]),
+    doc("bool", "bool(v)", "truthiness: false only for nil and false", &["bool(0)", "nil to bool"], &["str"]),
+    doc("hex", "hex(v, bits?)", "same as `v to hex` / `v to hex(bits)`; strings become hex bytes", &["hex(255)", "hex(-1, 16)", r#"hex("hi")"#], &["bin", "base", "int"]),
+    doc("bin", "bin(v, bits?)", "same as `v to bin` / `v to bin(bits)`", &["bin(10)", "bin(5, 8)"], &["hex", "oct"]),
+    doc("oct", "oct(v, bits?)", "same as `v to oct`", &["oct(8)"], &["hex", "bin"]),
+    doc("dec", "dec(v, bits?)", "same as `v to dec`; with bits, reads two's complement as unsigned", &["dec(0xff)", "dec(-1, 8)"], &["hex", "int"]),
+    doc("base", "base(v, b)", "same as `v to base(b)`, any base 2-36", &["base(35, 36)", "base(10, 3)"], &["hex", "digits"]),
+    doc("list", "list(v)", "convert to a list: characters, a copy, or [key, value] pairs", &[r#"list("abc")"#, r#""abc" to list"#, "{a: 1, b: 2}.list"], &["chars", "parse"]),
+    doc("parse", "parse(s)", "read a zil literal (number, string, list, map, quantity); never runs code", &[r#""[1, 2.5, 0xff]".parse"#, r#""5 km".parse to m"#], &["str", "nums"]),
+    doc("len", "len(v)", "length of a string, list or map", &[r#""héllo".len"#, "[1, 2, 3].len", "{a: 1}.len"], &[]),
+    doc("read_file", "read_file(path)", "file contents as a string", &[], &["write_file", "lines"]),
+    doc("write_file", "write_file(path, v)", "write v to a file as text", &[], &["read_file"]),
+    doc("help", "help(topic?)", "this help; topic is a function, unit or unit kind", &[], &[]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {

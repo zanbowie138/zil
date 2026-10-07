@@ -1,6 +1,6 @@
 //! Numbers: digits, rounding, logs, trigonometry (angles as units).
 
-use super::{Call, Doc, Fail, Module, units};
+use super::{Call, Doc, Fail, Module, doc, units};
 use crate::ast::Radix;
 use crate::interp::{Interp, Value, num};
 use crate::lexer::Span;
@@ -25,21 +25,21 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    ("digits", "digits(n)", "list of digits in the number's own base", &["1234.digits", "0b1011.digits"], &["from_digits"]),
-    ("from_digits", "from_digits(list, base?)", "build a number from digits, kept in that base", &["[1, 2, 3].from_digits", "[1, 0, 1, 1].from_digits(2)"], &["digits"]),
-    ("sqrt", "sqrt(x)", "square root", &["sqrt(2)"], &[]),
-    ("abs", "abs(x)", "absolute value; keeps units", &["abs(-3)", "abs(-2 km)"], &["round"]),
-    ("round", "round(x, digits?)", "round to nearest; keeps units", &["round(pi, 2)", "round(2.5 km)"], &["floor", "ceil"]),
-    ("floor", "floor(x)", "round down", &["floor(2.7)"], &["ceil", "round"]),
-    ("ceil", "ceil(x)", "round up", &["ceil(2.1)"], &["floor", "round"]),
-    ("ln", "ln(x)", "natural log", &["ln(e)"], &["log"]),
-    ("log", "log(x, base?)", "log base 10, or another base", &["log(1000)", "log(8, 2)"], &["ln"]),
-    ("sin", "sin(x)", "sine of radians or an angle unit", &["sin(30 deg)", "sin(pi / 2)"], &["cos", "tan", "asin"]),
-    ("cos", "cos(x)", "cosine of radians or an angle unit", &["cos(60 deg)"], &["sin", "tan", "acos"]),
-    ("tan", "tan(x)", "tangent of radians or an angle unit", &["tan(45 deg)"], &["sin", "cos", "atan"]),
-    ("asin", "asin(x)", "arcsine, as an angle", &["asin(1) to deg"], &["sin"]),
-    ("acos", "acos(x)", "arccosine, as an angle", &["acos(0) to deg"], &["cos"]),
-    ("atan", "atan(x)", "arctangent, as an angle", &["atan(1) to deg"], &["tan"]),
+    doc("digits", "digits(n)", "list of digits in the number's own base", &["1234.digits", "0b1011.digits"], &["from_digits"]),
+    doc("from_digits", "from_digits(list, base?)", "build a number from digits, kept in that base", &["[1, 2, 3].from_digits", "[1, 0, 1, 1].from_digits(2)"], &["digits"]),
+    doc("sqrt", "sqrt(x)", "square root", &["sqrt(2)"], &[]),
+    doc("abs", "abs(x)", "absolute value; keeps units", &["abs(-3)", "abs(-2 km)"], &["round"]),
+    doc("round", "round(x, digits?)", "round to nearest; keeps units", &["round(pi, 2)", "round(2.5 km)"], &["floor", "ceil"]),
+    doc("floor", "floor(x)", "round down", &["floor(2.7)"], &["ceil", "round"]),
+    doc("ceil", "ceil(x)", "round up", &["ceil(2.1)"], &["floor", "round"]),
+    doc("ln", "ln(x)", "natural log", &["ln(e)"], &["log"]),
+    doc("log", "log(x, base?)", "log base 10, or another base", &["log(1000)", "log(8, 2)"], &["ln"]),
+    doc("sin", "sin(x)", "sine of radians or an angle unit", &["sin(30 deg)", "sin(pi / 2)"], &["cos", "tan", "asin"]),
+    doc("cos", "cos(x)", "cosine of radians or an angle unit", &["cos(60 deg)"], &["sin", "tan", "acos"]),
+    doc("tan", "tan(x)", "tangent of radians or an angle unit", &["tan(45 deg)"], &["sin", "cos", "atan"]),
+    doc("asin", "asin(x)", "arcsine, as an angle", &["asin(1) to deg"], &["sin"]),
+    doc("acos", "acos(x)", "arccosine, as an angle", &["acos(0) to deg"], &["cos"]),
+    doc("atan", "atan(x)", "arctangent, as an angle", &["atan(1) to deg"], &["tan"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {

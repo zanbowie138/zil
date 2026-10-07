@@ -1,6 +1,6 @@
 //! Text: case, splitting, search and regex, encodings, hashes, code points.
 
-use super::{Call, Claim, Doc, Fail, Module};
+use super::{Call, Claim, Doc, Fail, Module, doc};
 use crate::ast::BinOp;
 use crate::interp::{Interp, Value};
 use crate::lexer::Span;
@@ -34,35 +34,35 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    ("upper", "upper(s)", "uppercase a string", &[r#""hello".upper"#, r#"upper("zil")"#], &["lower", "capitalize"]),
-    ("lower", "lower(s)", "lowercase a string", &[r#""HeLLo".lower"#], &["upper", "capitalize"]),
-    ("trim", "trim(s)", "strip leading and trailing whitespace", &[r#""  hi  ".trim"#], &["split"]),
-    ("capitalize", "capitalize(s)", "uppercase the first character", &[r#""hello world".capitalize"#], &["upper"]),
-    ("reverse", "reverse(v)", "reverse a string or list", &[r#""abc".reverse"#, "[1, 2, 3].reverse"], &["sort"]),
-    ("split", "split(s, sep?)", "split on sep (string or regex); whitespace if omitted", &[r#""a b  c".split"#, r#""x,y;z".split(r"[,;]")"#], &["join", "lines", "chars"]),
-    ("lines", "lines(s)", "split into lines", &[r#""a\nb".lines"#], &["split"]),
-    ("chars", "chars(s)", "list of characters", &[r#""abc".chars"#], &["split"]),
-    ("join", "join(list, sep?)", "join items into a string", &[r#"["a", "b"].join("-")"#, "[1, 2].join"], &["split"]),
-    ("replace", "replace(s, pat, with)", "replace all matches; regex replacements can use $1", &[r#""a.b".replace(".", "-")"#, r#""a  b   c".replace(r"\s+", " ")"#], &["find_all", "match"]),
-    ("contains", "contains(v, x)", "substring/regex in a string, item in a list, key in a map", &[r#""price: $12".contains(r"\$\d+")"#, "[1, 2].contains(2)"], &["find", "starts_with"]),
-    ("starts_with", "starts_with(s, prefix)", "whether s starts with prefix", &[r#""abc".starts_with("a")"#], &["ends_with", "contains"]),
-    ("ends_with", "ends_with(s, suffix)", "whether s ends with suffix", &[r#""file.zil".ends_with(".zil")"#], &["starts_with"]),
-    ("find", "find(v, x)", "index of the first match, or nil", &[r#""hello".find("l")"#, "[5, 6].find(6)", r#""abc".find("z")"#], &["contains", "count"]),
-    ("count", "count(v, x)", "number of matches in a string or list", &[r#""banana".count("a")"#, "[1, 2, 1].count(1)"], &["find"]),
-    ("match", "match(s, regex)", "first match, its capture groups, or nil", &[r#""2026-10-06".match(r"(\d+)-(\d+)")"#, r#""id 42".match(r"\d+")"#], &["find_all", "replace"]),
-    ("find_all", "find_all(s, pat)", "list of all matches", &[r#""a1b22c333".find_all(r"\d+")"#], &["match", "count"]),
-    ("grep", "grep(v, pat)", "lines of a string (or items of a list) containing pat", &[r#""ok\nERROR 1\nERROR 2".grep("ERROR")"#, r#"["a1", "b", "c22"].grep(r"\d")"#], &["lines", "filter", "contains"]),
-    ("repeat", "repeat(s, n)", "repeat a string n times", &[r#""ab".repeat(3)"#], &[]),
-    ("base64", "base64(s)", "base64-encode a string; same as `s to base64`", &[r#"base64("hi there")"#, r#""hi" to base64"#], &["encode", "decode"]),
-    ("encode", "encode(s, fmt)", "encode as \"base64\", \"url\" or \"hex\"", &[r#""hi there".encode("base64")"#, r#""a b&c".encode("url")"#], &["decode"]),
-    ("decode", "decode(s, fmt)", "decode \"base64\", \"url\" or \"hex\"", &[r#""aGk=".decode("base64")"#, r#""6869".decode("hex")"#], &["encode"]),
-    ("sha256", "sha256(s)", "hex SHA-256 digest", &[r#""hello".sha256[..16]"#], &["md5"]),
-    ("md5", "md5(s)", "hex MD5 digest", &[r#""hello".md5"#], &["sha256"]),
-    ("ord", "ord(c)", "Unicode code point of a single character", &[r#""A".ord"#, r#""A".ord to hex"#], &["chr", "bytes"]),
-    ("chr", "chr(n)", "character for a Unicode code point", &["97.chr", "(65..70).map(chr).join"], &["ord"]),
-    ("nums", "nums(s)", "every number in a string", &[r#""x=3, y=-2.5; 1e3".nums"#], &["find_all", "parse"]),
-    ("bytes", "bytes(s)", "list of the string's UTF-8 bytes", &[r#""hé".bytes"#], &["from_bytes", "ord"]),
-    ("from_bytes", "from_bytes(list)", "string from a list of UTF-8 bytes", &["[104, 105].from_bytes"], &["bytes", "chr"]),
+    doc("upper", "upper(s)", "uppercase a string", &[r#""hello".upper"#, r#"upper("zil")"#], &["lower", "capitalize"]),
+    doc("lower", "lower(s)", "lowercase a string", &[r#""HeLLo".lower"#], &["upper", "capitalize"]),
+    doc("trim", "trim(s)", "strip leading and trailing whitespace", &[r#""  hi  ".trim"#], &["split"]),
+    doc("capitalize", "capitalize(s)", "uppercase the first character", &[r#""hello world".capitalize"#], &["upper"]),
+    doc("reverse", "reverse(v)", "reverse a string or list", &[r#""abc".reverse"#, "[1, 2, 3].reverse"], &["sort"]),
+    doc("split", "split(s, sep?)", "split on sep (string or regex); whitespace if omitted", &[r#""a b  c".split"#, r#""x,y;z".split(r"[,;]")"#], &["join", "lines", "chars"]),
+    doc("lines", "lines(s)", "split into lines", &[r#""a\nb".lines"#], &["split"]),
+    doc("chars", "chars(s)", "list of characters", &[r#""abc".chars"#], &["split"]),
+    doc("join", "join(list, sep?)", "join items into a string", &[r#"["a", "b"].join("-")"#, "[1, 2].join"], &["split"]),
+    doc("replace", "replace(s, pat, with)", "replace all matches; regex replacements can use $1", &[r#""a.b".replace(".", "-")"#, r#""a  b   c".replace(r"\s+", " ")"#], &["find_all", "match"]),
+    doc("contains", "contains(v, x)", "substring/regex in a string, item in a list, key in a map", &[r#""price: $12".contains(r"\$\d+")"#, "[1, 2].contains(2)"], &["find", "starts_with"]),
+    doc("starts_with", "starts_with(s, prefix)", "whether s starts with prefix", &[r#""abc".starts_with("a")"#], &["ends_with", "contains"]),
+    doc("ends_with", "ends_with(s, suffix)", "whether s ends with suffix", &[r#""file.zil".ends_with(".zil")"#], &["starts_with"]),
+    doc("find", "find(v, x)", "index of the first match, or nil", &[r#""hello".find("l")"#, "[5, 6].find(6)", r#""abc".find("z")"#], &["contains", "count"]),
+    doc("count", "count(v, x)", "number of matches in a string or list", &[r#""banana".count("a")"#, "[1, 2, 1].count(1)"], &["find"]),
+    doc("match", "match(s, regex)", "first match, its capture groups, or nil", &[r#""2026-10-06".match(r"(\d+)-(\d+)")"#, r#""id 42".match(r"\d+")"#], &["find_all", "replace"]),
+    doc("find_all", "find_all(s, pat)", "list of all matches", &[r#""a1b22c333".find_all(r"\d+")"#], &["match", "count"]),
+    doc("grep", "grep(v, pat)", "lines of a string (or items of a list) containing pat", &[r#""ok\nERROR 1\nERROR 2".grep("ERROR")"#, r#"["a1", "b", "c22"].grep(r"\d")"#], &["lines", "filter", "contains"]),
+    doc("repeat", "repeat(s, n)", "repeat a string n times", &[r#""ab".repeat(3)"#], &[]),
+    doc("base64", "base64(s)", "base64-encode a string; same as `s to base64`", &[r#"base64("hi there")"#, r#""hi" to base64"#], &["encode", "decode"]),
+    doc("encode", "encode(s, fmt)", "encode as \"base64\", \"url\" or \"hex\"", &[r#""hi there".encode("base64")"#, r#""a b&c".encode("url")"#], &["decode"]),
+    doc("decode", "decode(s, fmt)", "decode \"base64\", \"url\" or \"hex\"", &[r#""aGk=".decode("base64")"#, r#""6869".decode("hex")"#], &["encode"]),
+    doc("sha256", "sha256(s)", "hex SHA-256 digest", &[r#""hello".sha256[..16]"#], &["md5"]),
+    doc("md5", "md5(s)", "hex MD5 digest", &[r#""hello".md5"#], &["sha256"]),
+    doc("ord", "ord(c)", "Unicode code point of a single character", &[r#""A".ord"#, r#""A".ord to hex"#], &["chr", "bytes"]),
+    doc("chr", "chr(n)", "character for a Unicode code point", &["97.chr", "(65..70).map(chr).join"], &["ord"]),
+    doc("nums", "nums(s)", "every number in a string", &[r#""x=3, y=-2.5; 1e3".nums"#], &["find_all", "parse"]),
+    doc("bytes", "bytes(s)", "list of the string's UTF-8 bytes", &[r#""hé".bytes"#], &["from_bytes", "ord"]),
+    doc("from_bytes", "from_bytes(list)", "string from a list of UTF-8 bytes", &["[104, 105].from_bytes"], &["bytes", "chr"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
