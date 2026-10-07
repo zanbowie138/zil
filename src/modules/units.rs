@@ -40,7 +40,7 @@ pub const MODULE: Module = Module {
             ("qty ** int", "(3 m) ** 2"),
             ("qty < qty", "1 mi > 1 km"),
         ]),
-        ("conversions", &[("to unit", "5 km to mi"), ("to unit unit", "1.8 m to ft in"), ("to compound", "100 km / 2 h to mph")]),
+        ("conversions", &[("to unit", "5 km to mi"), ("in unit", "5 km in mi"), ("to unit unit", "1.8 m to ft in"), ("to compound", "100 km / 2 h to mph")]),
     ],
     ident: Some(|_, name| match unit(name) {
         Ok(u) => Some(Ok(Value::Qty(1.0, u))),
@@ -119,12 +119,7 @@ fn convert(v: &Value, t: &Target) -> Claim {
                 None => Ok(Value::str(split(u.to_si(*x), &us))),
             })
         }
-        (Value::Qty(x, u), Target::Unit(spec)) => unit_of(spec).and_then(|t| {
-            if u.dim() != t.dim() {
-                return Err(format!("cannot convert {u} to {t}"));
-            }
-            Ok(Value::Qty(convert_value(*x, u, &t)?, t))
-        }),
+        (Value::Qty(x, u), Target::Unit(spec)) => unit_of(spec).and_then(|t| to_unit(*x, u, t)),
         (v, Target::Unit(_) | Target::Units(_)) if num(v).is_some() => Err(format!("{v} has no unit; attach one like `{v} km`")),
         _ => return None,
     };
@@ -466,6 +461,14 @@ impl Unit {
     pub fn is(&self, name: &str) -> bool {
         matches!(self.0.as_slice(), [(u, 1)] if u.name == name)
     }
+}
+
+/// `x u` as a quantity in `t`, if the dimensions match.
+pub fn to_unit(x: f64, u: &Unit, t: Unit) -> Result<Value, String> {
+    if u.dim() != t.dim() {
+        return Err(format!("cannot convert {u} to {t}"));
+    }
+    Ok(Value::Qty(convert_value(x, u, &t)?, t))
 }
 
 /// `x` in `from` as a value in `to` (same dimension). Through `from / to`, so currencies that cancel

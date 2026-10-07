@@ -83,7 +83,12 @@ pub struct Interp {
     globals: Env,
     /// Stdin, read on first use of `input`.
     pub input: Option<Rc<str>>,
+    /// Nested user fn calls, capped at `MAX_DEPTH` so runaway recursion errors instead of overflowing.
+    depth: usize,
 }
+
+/// Fits in `main::STACK` with room to spare in release; debug frames are ~10x bigger, so heavy bodies can still overflow there.
+const MAX_DEPTH: usize = 10_000;
 
 impl Interp {
     pub fn new() -> Interp {
@@ -99,7 +104,7 @@ impl Interp {
                 }
             }
         }
-        Interp { globals, input: None }
+        Interp { globals, input: None, depth: 0 }
     }
 
     /// Shared handle to the global scope, so the REPL completer can peek at variables.
@@ -126,11 +131,17 @@ impl Interp {
                 if args.len() != c.def.params.len() {
                     return Err(Error::new(format!("expected {} args, got {}", c.def.params.len(), args.len()), span.clone()));
                 }
+                if self.depth >= MAX_DEPTH {
+                    return Err(Error::new("recursion too deep", span.clone()));
+                }
                 let env = child(&c.env);
                 for (p, a) in c.def.params.iter().zip(args) {
                     env.borrow_mut().vars.insert(p.clone(), a);
                 }
-                self.eval(&c.def.body, &env).or_else(Ctl::finish)
+                self.depth += 1;
+                let r = self.eval(&c.def.body, &env).or_else(Ctl::finish);
+                self.depth -= 1;
+                r
             }
             Value::Builtin(m, name) => (m.call)(self, name, &args, span).map_err(|f| f.error(name, &args, span)),
             v => Err(Error::new(format!("{} is not callable", v.type_name()), span.clone())),
@@ -213,11 +224,11 @@ impl Interp {
                 let a = self.eval(a, env)?;
                 if a.truthy() { a } else { self.eval(b, env)? }
             }
-            // `x in v` is `contains(v, x)`, even if `contains` is shadowed.
-            ExprKind::Binary(BinOp::In, x, v) => {
-                let (x, v) = (self.eval(x, env)?, self.eval(v, env)?);
-                self.call(&modules::builtin("contains"), vec![v, x], &e.span)?
-            }
+            // `x in v` is `contains(v, x)`, even if `contains` is shadowed; `5 km in mi` is `to`.
+            ExprKind::Binary(BinOp::In, x, v) => match (self.eval(x, env)?, self.eval(v, env)?) {
+                (Value::Qty(x, u), Value::Qty(_, t)) => units::to_unit(x, &u, t).map_err(err)?,
+                (x, v) => self.call(&modules::builtin("contains"), vec![v, x], &e.span)?,
+            },
             ExprKind::Chain(first, rest) => {
                 let mut l = self.eval(first, env)?;
                 for (op, r) in rest {
@@ -666,6 +677,17 @@ fib(10)";
     }
 
     #[test]
+    fn recursion_depth() {
+        let run = || {
+            let g = "g = |n| if n == 0 {0} else {g(n - 1)}
+";
+            assert_eq!(show(&format!("{g}g(5000)")), "0");
+            assert_eq!(try_eval(&format!("{g}g(10_000_000)")).unwrap_err().msg, "recursion too deep");
+        };
+        std::thread::Builder::new().stack_size(crate::STACK).spawn(run).unwrap().join().unwrap();
+    }
+
+    #[test]
     fn semicolons() {
         assert_eq!(show("x = 1; y = 2; x + y;"), "3");
         assert_eq!(show("f = fn(n) { a = n; a * 2 }; f(4)"), "8");
@@ -701,6 +723,8 @@ fib(10)";
         assert_eq!(show("[2 in [1, 2], \"b\" in \"abc\", \"k\" in {k: 1}, 9 in 1..5]"), "[true, true, true, false]");
         assert_eq!(show("x = 3\n[x in [3], 2 in 1..=2]"), "[true, true]");
         assert_eq!(show("5 in to cm"), "12.7 cm");
+        assert_eq!(show("[5 km in mi, (x = 3 ft) in cm]"), "[3.10686 mi, 91.44 cm]");
+        assert!(try_eval("5 km in kg").is_err());
         assert_eq!(show("[0 < 5 < 10, 0 < 15 < 10, 1 <= 1 < 2 <= 2]"), "[true, false, true]");
         assert_eq!(show("n = 0\nf = fn() { n += 1\n 5 }\n0 < f() < 10\nn"), "1");
     }

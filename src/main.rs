@@ -275,7 +275,18 @@ const USAGE: &str = "usage: zil              start the REPL
        zil <file.zil>   run a script
        zil --docs <dir> write the mdBook reference into dir";
 
+/// Interpreter thread stack: deep enough for `interp::MAX_DEPTH` nested calls in a debug build.
+/// Only reserved, not committed, so the size costs nothing until used.
+pub const STACK: usize = 1 << 30;
+
 fn main() {
+    let t = std::thread::Builder::new().stack_size(STACK).spawn(real_main).expect("spawn interpreter thread");
+    if t.join().is_err() {
+        exit(101)
+    }
+}
+
+fn real_main() {
     let mut interp = Interp::new();
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.as_slice() {

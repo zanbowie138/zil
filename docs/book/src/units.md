@@ -35,6 +35,9 @@ numbers with units, combined and converted; currencies use live rates
 # to unit
 5 km to mi
 # → 3.10686 mi
+# in unit
+5 km in mi
+# → 3.10686 mi
 # to unit unit
 1.8 m to ft in
 # → "5 ft 10.8661 in"
