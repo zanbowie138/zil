@@ -13,6 +13,14 @@ currencies shown as money, pay, interest, loans, splitting bills
 # → $1,234.50
 ```
 
+### pretty
+
+```zil
+# long and short: as money always shows
+pretty(1234567 USD, "short")
+# → "$1,234,567.00"
+```
+
 ### literals
 
 ```zil

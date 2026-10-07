@@ -47,6 +47,11 @@ pub const MODULE: Module = Module {
             ("qty ** int", "(3 m) ** 2"),
             ("qty < qty", "1 mi > 1 km"),
         ]),
+        ("pretty", &[
+            ("long: best prefix, thousands separators", "pretty(12345678 m)"),
+            ("short: best prefix, K M B T", r#"pretty(12345678 m, "short")"#),
+            ("durations split into d h min s, money keeps its own display: see time, money", ""),
+        ]),
         ("conversions", &[("to unit", "5 km to mi"), ("in unit", "5 km in mi"), ("to unit unit", "1.8 m to ft in"), ("to compound", "100 km / 2 h to mph")]),
         // Shown, not run: `unit` would define them in the session running help.
         ("your own units", &[

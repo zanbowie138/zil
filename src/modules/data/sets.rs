@@ -25,6 +25,10 @@ pub const MODULE: Module = Module {
         ("operators", &[("a | b  union", "set(1, 2) | set(2, 3)"), ("a & b  intersection", "set(1, 2) & set(2, 3)"),
             ("a - b  difference", "set(1, 2) - set(2, 3)"), ("a ^ b  symmetric difference", "set(1, 2) ^ set(2, 3)"), ("x in s", "2 in set(1, 2)")]),
         ("holds", &[("int, str, bool and nil only", "")]),
+        ("pretty", &[
+            ("long: one item per line, indented, items pretty", ""),
+            ("short: one line, items short", r#"pretty(set(1500, "a"), "short")"#),
+        ]),
     ],
     fns: FNS,
     #[rustfmt::skip]

@@ -46,6 +46,7 @@ const EXAMPLES: &[Section] = &[
 #[rustfmt::skip]
 const GUIDE: &[Section] = &[
     ("types", &[("money", "1234.5 USD")]),
+    ("pretty", &[("long and short: as money always shows", r#"pretty(1234567 USD, "short")"#)]),
     ("literals", &[
         ("$ € £ before a number", "$25/h"),
         ("any currency code", "1200 JPY"),

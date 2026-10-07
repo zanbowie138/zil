@@ -15,6 +15,17 @@ measurements with an error, `5 ± 0.1 m`, propagated through arithmetic and math
 # → 20 ± 1
 ```
 
+### pretty
+
+```zil
+# long: value's best prefix for both, separators
+pretty(1500 ± 20 m)
+# → "1.5 ± 0.02 km"
+# short: same, K M B T
+pretty(1234567 ± 1000, "short")
+# → "1.23M ± 1K"
+```
+
 ### propagation
 
 ```zil

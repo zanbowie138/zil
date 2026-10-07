@@ -29,6 +29,18 @@ numbers with units, combined and converted; currencies use live rates
 # → true
 ```
 
+### pretty
+
+```zil
+# long: best prefix, thousands separators
+pretty(12345678 m)
+# → "12,345.7 km"
+# short: best prefix, K M B T
+pretty(12345678 m, "short")
+# → "12.3K km"
+# durations split into d h min s, money keeps its own display: see time, money
+```
+
 ### conversions
 
 ```zil

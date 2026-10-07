@@ -20,6 +20,10 @@ pub const MODULE: Module = Module {
     #[rustfmt::skip]
     guide: &[
         ("types", &[("table", "[{a: 1, b: 2}] to table")]),
+        ("pretty", &[
+            ("long: the grid, cells pretty, strings bare, collections short", ""),
+            ("short: one line, rows as maps, cells short", r#"pretty([{a: 1234, b: "x"}].table, "short")"#),
+        ]),
         ("access", &[("t.col (a column)", "[{a: 1}, {a: 2}].table.a"), ("t[i] (a row)", "[{a: 1}, {a: 2}].table[1]")]),
     ],
     fns: FNS,
@@ -134,7 +138,7 @@ fn column(t: &Table, name: &str, arg: usize) -> Result<usize, Fail> {
 }
 
 /// A cell as the grid shows it: strings bare, nil blank, local times to the minute.
-fn cell(v: &Value) -> String {
+pub fn cell(v: &Value) -> String {
     match v {
         Value::Nil => String::new(),
         Value::Date(z) if z.time_zone().iana_name() == jiff::tz::TimeZone::system().iana_name() && z.time() != jiff::civil::Time::midnight() => {
@@ -148,6 +152,11 @@ fn cell(v: &Value) -> String {
 /// numbers right-aligned, cells colored by type when `color`.
 // ponytail: widths count chars, so wide (CJK, emoji) cells misalign; use unicode-width if that matters.
 pub fn grid(t: &Table, color: bool) -> String {
+    grid_with(t, color, &cell)
+}
+
+/// `grid`, with each cell shown by `cell`.
+pub fn grid_with(t: &Table, color: bool, cell: &dyn Fn(&Value) -> String) -> String {
     let paint = |c: &str, s: &str| if color && !c.is_empty() { format!("{c}{s}{RESET}") } else { s.to_string() };
     let cells: Vec<Vec<String>> = t.rows.iter().map(|r| r.iter().map(cell).collect()).collect();
     let n = t.cols.len();

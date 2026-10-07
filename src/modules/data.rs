@@ -27,6 +27,10 @@ pub const MODULE: Module = Module {
     guide: &[
         ("types", &[("list", "[1, 2, 3]"), ("map", "{a: 1, b: 2}")]),
         ("operators", &[("x in v", "2 in [1, 2]")]),
+        ("pretty", &[
+            ("long: one item per line, indented, items pretty, strings quoted", ""),
+            ("short: one line, items short", r#"pretty([1234567, "a", {b: 2500 g}], "short")"#),
+        ]),
     ],
     fns: FNS,
     #[rustfmt::skip]

@@ -16,6 +16,10 @@ pub const MODULE: Module = Module {
     #[rustfmt::skip]
     guide: &[
         ("operators", &[("x ± e (or x +- e)", "5 ± 0.1 m"), ("x ± n%", "20 ± 5%")]),
+        ("pretty", &[
+            ("long: value's best prefix for both, separators", "pretty(1500 ± 20 m)"),
+            ("short: same, K M B T", r#"pretty(1234567 ± 1000, "short")"#),
+        ]),
         ("propagation", &[
             ("errors add in quadrature", "(5 ± 0.3) + (2 ± 0.4)"),
             ("relative errors too", "(10 ± 1 m) * (2 ± 0.1 m)"),

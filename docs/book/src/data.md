@@ -22,6 +22,15 @@ length, search, sorting and picking across strings, lists, maps and sets; lists,
 # → true
 ```
 
+### pretty
+
+```zil
+# long: one item per line, indented, items pretty, strings quoted
+# short: one line, items short
+pretty([1234567, "a", {b: 2500 g}], "short")
+# → "[1.23M, \"a\", {b: 2.5 kg}]"
+```
+
 ## Submodules
 
 | module | about |

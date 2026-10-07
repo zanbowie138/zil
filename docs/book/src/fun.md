@@ -61,9 +61,9 @@ See also: [yes_or_no](fun.md#yes_or_no), [fortune](fun.md#fortune)
 
 ```zil
 coin()
-# → "heads"
+# → "tails"
 coin(3)
-# → ["heads", "tails", "heads"]
+# → ["heads", "tails", "tails"]
 ```
 
 See also: [rand](math/random.md#rand)
@@ -74,7 +74,7 @@ See also: [rand](math/random.md#rand)
 
 ```zil
 yes_or_no()
-# → "yes"
+# → "no"
 ```
 
 See also: [eight_ball](fun.md#eight_ball)
@@ -85,7 +85,7 @@ See also: [eight_ball](fun.md#eight_ball)
 
 ```zil
 excuse()
-# → "That's not a bug, it's undocumented behavior."
+# → "The compiler is being weird today."
 ```
 
 See also: [fortune](fun.md#fortune)
@@ -111,13 +111,13 @@ eight_ball("will it compile?")
 # → "Yes."
 # best of five
 coin(5)
-# → ["tails", "heads", "tails", "tails", "heads"]
+# → ["heads", "heads", "tails", "tails", "tails"]
 # standup
 excuse()
-# → "Mercury is in retrograde."
+# → "It was DNS."
 # should I ship it?
 yes_or_no()
-# → "no"
+# → "yes"
 ```
 
 ### roman

@@ -39,6 +39,13 @@ pub const MODULE: Module = Module {
             ("duration", "1h30m"),
         ]),
         ("names", &[("now today tomorrow yesterday", "")]),
+        ("pretty", &[
+            ("long date: time always shown", r#"pretty(date("2026-12-25"))"#),
+            ("short date", r#"pretty(date("2026-12-25 18:30"), "short")"#),
+            ("other zones add theirs", r#"pretty(date("2026-12-25 18:30") to "Asia/Tokyo")"#),
+            ("long duration: up to 3 of d h min s", "pretty(5000 s)"),
+            ("short duration: up to 2", r#"pretty(5000 s, "short")"#),
+        ]),
         ("operators", &[
             ("date ± time", r#"date("2026-01-31") + 1 mo"#),
             ("date - date", r#"date("2027-01-01") - date("2026-12-25")"#),
@@ -152,15 +159,7 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &crate::lexer
         ("age", [Date(z)]) => Value::int(age(z, &Zoned::now())),
         ("diff", [Date(a), Date(b)]) => Value::str(diff(a, b)?),
         ("relative", [Date(z)]) => Value::str(relative(z, &Zoned::now())),
-        // Automatic mixed units for a duration: up to three of d, h, min, s, last one rounded.
-        ("parts", [Qty(x, u)]) if u.dim() == units::unit("s").unwrap().dim() => {
-            let us: Vec<_> = ["d", "h", "min", "s"].iter().map(|n| units::unit(n).unwrap()).collect();
-            let si = u.to_si(*x);
-            let start = us.iter().position(|v| si.abs() >= v.scale()).unwrap_or(3);
-            let us = &us[start..(start + 3).min(4)];
-            let last = us.last().unwrap().scale();
-            Value::str(units::split((si / last).round() * last, us))
-        }
+        ("parts", [Qty(x, u)]) if is_duration(u) => Value::str(parts(u.to_si(*x), 3)),
         ("format", [Date(z), Str(f)]) => Value::str(jiff::fmt::strtime::format(f.as_bytes(), &**z).map_err(|e| e.to_string())?),
         ("format", [Str(f), rest @ ..]) => Value::str(crate::modules::math::formatting::printf(f, rest)?),
         ("unix", [Date(z)]) => Value::int(z.timestamp().as_second()),
@@ -546,6 +545,19 @@ pub fn diff(a: &Zoned, b: &Zoned) -> R<String> {
     let parts: Vec<String> = fields.iter().filter(|f| f.0 != 0).map(|(n, u)| format!("{} {u}", n.abs())).collect();
     let sign = if s.is_negative() { "-" } else { "" };
     Ok(if parts.is_empty() { "0 s".into() } else { format!("{sign}{}", parts.join(" ")) })
+}
+
+pub fn is_duration(u: &Unit) -> bool {
+    u.dim() == units::unit("s").unwrap().dim()
+}
+
+/// Automatic mixed units for `si` seconds: up to `n` of d, h, min, s, last one rounded.
+pub fn parts(si: f64, n: usize) -> String {
+    let us: Vec<_> = ["d", "h", "min", "s"].iter().map(|n| units::unit(n).unwrap()).collect();
+    let start = us.iter().position(|v| si.abs() >= v.scale()).unwrap_or(3);
+    let us = &us[start..(start + n).min(4)];
+    let last = us.last().unwrap().scale();
+    units::split((si / last).round() * last, us)
 }
 
 /// "in 3 days", "2 hours ago", "just now".

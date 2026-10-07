@@ -38,6 +38,15 @@ set(1, 2) ^ set(2, 3)
 # int, str, bool and nil only
 ```
 
+### pretty
+
+```zil
+# long: one item per line, indented, items pretty
+# short: one line, items short
+pretty(set(1500, "a"), "short")
+# → "set(1.5K, \"a\")"
+```
+
 ## Functions
 
 | function | description |

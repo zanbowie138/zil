@@ -13,6 +13,15 @@ rows under named columns: filter, pick columns, sort; list fns work on the rows
 # → table([{a: 1, b: 2}])
 ```
 
+### pretty
+
+```zil
+# long: the grid, cells pretty, strings bare, collections short
+# short: one line, rows as maps, cells short
+pretty([{a: 1234, b: "x"}].table, "short")
+# → "table([{a: 1.23K, b: \"x\"}])"
+```
+
 ### access
 
 ```zil

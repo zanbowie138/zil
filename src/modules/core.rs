@@ -1,11 +1,15 @@
 //! Core: printing, type conversions, parsing, help, `input`.
 
+use super::data::tables;
+use super::math::formatting::commas;
+use super::time;
+use super::units::{money, simplify};
 use super::{Call, Claim, Doc, Fail, Module, doc};
 use crate::ast::{BinOp, Expr, ExprKind, Radix, UnOp};
 use crate::help::help;
 use crate::interp::Interp;
 use crate::lexer::Span;
-use crate::value::{Value, exact, num};
+use crate::value::{Value, exact, fmt_float, num};
 use num_bigint::BigInt;
 use num_rational::BigRational;
 
@@ -24,11 +28,16 @@ pub const MODULE: Module = Module {
         ("types", &[("nil", "nil"), ("bool", "true"), ("int", "0xff"), ("float", "1.5e3"), ("frac", "7/2 to frac"), ("fn", r"|x| x * 2")]),
         ("names", &[("input  (stdin as a string): input.lines.len", "")]),
         ("conversions", &[("to str int float frac bool list", r#""42" to int"#)]),
+        ("pretty", &[
+            ("long: thousands separators, decimals kept", "pretty(1234567.891)"),
+            ("short: K M B T, 3 significant figures", r#"pretty(1234567, "short")"#),
+            ("pages for quantity, uncertain, date, list, map, set and table show theirs", ""),
+        ]),
     ],
     fns: FNS,
     #[rustfmt::skip]
     groups: &[
-        ("values", &["type", "parse"]),
+        ("values", &["type", "parse", "pretty"]),
         ("convert", &["str", "int", "float", "frac", "bool", "list"]),
         ("io", &["print", "help"]),
     ],
@@ -49,6 +58,7 @@ const FNS: &[Doc] = &[
     doc("frac", "frac(v: num)", "show as a fraction; floats become the simplest fraction within 1e-12", &["7/2 to frac", "1/3 + 1/6 to frac", "0.75.frac"], &["float"]),
     doc("bool", "bool(v: any)", "truthiness: false only for nil and false", &["bool(0)", "nil to bool"], &["str"]),
     doc("list", "list(v: str|list|map|set|table)", "convert to a list: characters, a copy, [key, value] pairs, a set's items, or a table's rows as maps", &[r#"list("abc")"#, r#""abc" to list"#, "{a: 1, b: 2}.list"], &["chars", "parse"]),
+    doc("pretty", "pretty(v: any) / pretty(v: any, style: str)", "human-readable text; style is \"long\" (default) or \"short\"; each type's module page has its rules", &["pretty(1234567)", r#"pretty(1234567, "short")"#, "pretty(5000 s)", r#"pretty(date("2026-12-25 18:30"))"#, "pretty([1500000 B, 2 ** 20], \"short\")"], &["str", "commas", "simplify", "parts", "format"]),
     doc("parse", "parse(s: str)", "read a zil literal (number, string, list, map, quantity); never runs code", &[r#""[1, 2.5, 0xff]".parse"#, r#""5 km".parse to m"#], &["str", "nums"]),
     doc("help", "help(topic?: any)", "this help, as text; topic is a function, module (\"trig\" or \"math.trig\"), unit, or any value to list functions for its type", &[], &[]).shown(&["help(upper)", r#"help("math.trig")"#, "help(today)", r#"help("text") |> grep("case")"#]),
 ];
@@ -97,8 +107,95 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("list", [Set(s)]) => Value::list(s.borrow().iter().cloned().collect()),
         ("list", [Map(m)]) => Value::list(m.borrow().iter().map(|(k, v)| Value::list(vec![Value::str(k.as_str()), v.clone()])).collect()),
         ("parse", [Str(s)]) => parse_literal(s)?,
+        ("pretty", [v]) => Value::str(pretty(v, false, 0, true)),
+        ("pretty", [v, Str(s)]) => match &**s {
+            "long" => Value::str(pretty(v, false, 0, true)),
+            "short" => Value::str(pretty(v, true, 0, true)),
+            _ => return Err(Fail::Arg(1, format!("unknown style {s:?}\nnote: styles are \"long\" and \"short\""))),
+        },
         _ => return Err(Fail::BadArgs),
     })
+}
+
+/// `pretty(v)`: `depth` indents a long collection's lines, `top` leaves a bare string unquoted.
+fn pretty(v: &Value, short: bool, depth: usize, top: bool) -> String {
+    use Value::*;
+    let n = |x: f64| if short { compact(x) } else { commas(&fmt_float(x)) };
+    let items = |vs: Vec<String>, open: &str, close: &str| {
+        if vs.is_empty() || short {
+            return format!("{open}{}{close}", vs.join(", "));
+        }
+        let pad = "  ".repeat(depth + 1);
+        format!("{open}\n{pad}{}\n{}{close}", vs.join(&format!("\n{pad}")), "  ".repeat(depth))
+    };
+    let inner = |v: &Value| pretty(v, short, depth + 1, false);
+    match v {
+        Int(..) | Big(..) | Frac(..) | Float(_) if short => compact(num(v).unwrap()),
+        // Full precision, as `str` gives it.
+        Float(_) | Frac(_, false) => commas(&num(v).unwrap().to_string()),
+        Int(..) | Big(..) | Frac(..) => commas(&v.to_string()),
+        Qty(x, u) if time::is_duration(u) => commas(&time::parts(u.to_si(*x), if short { 2 } else { 3 })),
+        Qty(x, u) => match money::show(*x, u) {
+            Some(s) => s,
+            None => match simplify(*x, u) {
+                Qty(x, u) if u.0.is_empty() => n(x),
+                Qty(x, u) => format!("{} {u}", n(x)),
+                v => v.to_string(),
+            },
+        },
+        Unc(c) => {
+            let (x, e, u) = &**c;
+            // Same prefix as the value, error scaled to match.
+            let (k, u) = match simplify(*x, u) {
+                Qty(y, v) if *x != 0.0 && !u.0.is_empty() => (y / x, v),
+                _ => (1.0, u.clone()),
+            };
+            let s = format!("{} ± {}", n(x * k), n(e * k));
+            if u.0.is_empty() { s } else { format!("{s} {u}") }
+        }
+        Date(z) => {
+            let f = if short { "%b %-d, %Y, %-I:%M %p" } else { "%A, %B %-d, %Y at %-I:%M %p" };
+            let zone = if z.time_zone().iana_name() == jiff::tz::TimeZone::system().iana_name() { "" } else { " %Z" };
+            z.strftime(&format!("{f}{zone}")).to_string()
+        }
+        List(l) => items(l.borrow().iter().map(inner).collect(), "[", "]"),
+        Set(s) => items(s.borrow().iter().map(inner).collect(), "set(", ")"),
+        Map(m) => items(m.borrow().iter().map(|(k, v)| format!("{k}: {}", inner(v))).collect(), "{", "}"),
+        Table(t) if short => format!("table({})", pretty(&Value::list(t.maps()), true, depth, false)),
+        Table(t) => {
+            // Strings stay bare and nil blank, as in any grid; nested collections go inline to keep rows one line.
+            let cell = |v: &Value| match v {
+                Nil | Str(_) => tables::cell(v),
+                List(_) | Map(_) | Set(_) | Table(_) => pretty(v, true, 0, false),
+                v => pretty(v, false, 0, false),
+            };
+            tables::grid_with(t, false, &cell).replace('\n', &format!("\n{}", "  ".repeat(depth)))
+        }
+        Str(s) if top => s.to_string(),
+        v => format!("{v:?}"),
+    }
+}
+
+/// `1.23M`: K M B T with 3 significant figures, scientific past that; under 1000 as is.
+fn compact(x: f64) -> String {
+    let round3 = |m: f64| {
+        let p = 10f64.powi((2 - m.abs().log10().floor() as i32).max(0));
+        (m * p).round() / p
+    };
+    if x.abs() < 1000.0 || !x.is_finite() {
+        return fmt_float(x);
+    }
+    let mut i = (x.abs().log10() / 3.0).floor() as usize;
+    let mut m = round3(x / 1000f64.powi(i as i32));
+    // 999,999 rounds to 1000K: that's 1M.
+    if m.abs() >= 1000.0 {
+        i += 1;
+        m = round3(x / 1000f64.powi(i as i32));
+    }
+    match ["", "K", "M", "B", "T"].get(i) {
+        Some(suffix) => format!("{}{suffix}", fmt_float(m)),
+        None => format!("{x:.2e}").replace(".00e", "e").replace("0e", "e"),
+    }
 }
 
 /// `input`: all of stdin, read once.
@@ -220,6 +317,28 @@ str(x).parse == x"#
         for bad in [r#""read_file(\"x\")".parse"#, r#""[x]".parse"#, r#""1 + 2".parse"#, r#""".parse"#] {
             assert!(try_eval(bad).is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn pretty() {
+        assert_eq!(show("pretty(1234567.891)"), "1,234,567.891");
+        assert_eq!(show("pretty(-1234)"), "-1,234");
+        assert_eq!(show(r#"pretty(1234567, "short")"#), "1.23M");
+        assert_eq!(show(r#"pretty(999999, "short")"#), "1M");
+        assert_eq!(show(r#"pretty(2 ** 100, "short")"#), "1.27e30");
+        assert_eq!(show(r#"pretty(1.5e15, "short")"#), "1.5e15");
+        assert_eq!(show(r#"pretty(999.9e12, "short")"#), "1e15");
+        assert_eq!(show(r#"pretty(12.5, "short")"#), "12.5");
+        assert_eq!(show("pretty(1500000 B)"), "1.5 MB");
+        assert_eq!(show("pretty(3725 s)"), "1 h 2 min 5 s");
+        assert_eq!(show(r#"pretty(3725 s, "short")"#), "1 h 2 min");
+        assert_eq!(show("pretty(5 ± 0.1 km)"), "5 ± 0.1 km");
+        assert_eq!(show(r#"pretty(date("2026-12-25"))"#), "Friday, December 25, 2026 at 12:00 AM");
+        assert_eq!(show(r#"pretty(date("2026-12-25 18:30"), "short")"#), "Dec 25, 2026, 6:30 PM");
+        assert_eq!(show(r#"pretty([1234, "a", {b: []}])"#), "[\n  1,234\n  \"a\"\n  {\n    b: []\n  }\n]");
+        assert_eq!(show(r#"pretty([1234, "a", set(2000)], "short")"#), r#"[1.23K, "a", set(2K)]"#);
+        assert_eq!(show(r#"pretty("hi")"#), "hi");
+        assert!(try_eval(r#"pretty(1, "tiny")"#).is_err());
     }
 
     #[test]

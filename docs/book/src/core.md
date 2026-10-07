@@ -39,6 +39,18 @@ true
 # → 42
 ```
 
+### pretty
+
+```zil
+# long: thousands separators, decimals kept
+pretty(1234567.891)
+# → "1,234,567.891"
+# short: K M B T, 3 significant figures
+pretty(1234567, "short")
+# → "1.23M"
+# pages for quantity, uncertain, date, list, map, set and table show theirs
+```
+
 ## Functions
 
 | function | description |
@@ -51,6 +63,7 @@ true
 | [`frac(v: num)`](#frac) | show as a fraction; floats become the simplest fraction within 1e-12 |
 | [`bool(v: any)`](#bool) | truthiness: false only for nil and false |
 | [`list(v: str\|list\|map\|set\|table)`](#list) | convert to a list: characters, a copy, [key, value] pairs, a set's items, or a table's rows as maps |
+| [`pretty(v: any) / pretty(v: any, style: str)`](#pretty) | human-readable text; style is "long" (default) or "short"; each type's module page has its rules |
 | [`parse(s: str)`](#parse) | read a zil literal (number, string, list, map, quantity); never runs code |
 | [`help(topic?: any)`](#help) | this help, as text; topic is a function, module ("trig" or "math.trig"), unit, or any value to list functions for its type |
 
@@ -162,6 +175,25 @@ list("abc")
 ```
 
 See also: [chars](text.md#chars), [parse](core.md#parse)
+
+### pretty
+
+`pretty(v: any) / pretty(v: any, style: str)`: human-readable text; style is "long" (default) or "short"; each type's module page has its rules
+
+```zil
+pretty(1234567)
+# → "1,234,567"
+pretty(1234567, "short")
+# → "1.23M"
+pretty(5000 s)
+# → "1 h 23 min 20 s"
+pretty(date("2026-12-25 18:30"))
+# → "Friday, December 25, 2026 at 6:30 PM"
+pretty([1500000 B, 2 ** 20], "short")
+# → "[1.5 MB, 1.05M]"
+```
+
+See also: [str](core.md#str), [commas](math/formatting.md#commas), [simplify](units.md#simplify), [parts](time.md#parts), [format](time.md#format)
 
 ### parse
 
