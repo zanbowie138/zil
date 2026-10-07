@@ -70,9 +70,8 @@ fn help_shorthand(src: &str) -> Option<Option<&str>> {
     (rest.starts_with(char::is_whitespace) && word).then_some(Some(topic))
 }
 
-/// REPL tab completion over builtins, constants, `to` targets, units and help topics.
-/// After `to`, offers every unit the left side converts to.
-// ponytail: names fixed at startup, so user variables don't complete.
+/// REPL tab completion over builtins, constants, `to` targets, units, help topics and
+/// variables in scope. After `.`, only functions; after `to`, every unit the left side converts to.
 struct Names(Vec<String>, interp::Env);
 
 impl Names {
@@ -121,11 +120,18 @@ impl rustyline::completion::Completer for Names {
     fn complete(&self, line: &str, pos: usize, _: &rustyline::Context<'_>) -> rustyline::Result<(usize, Vec<String>)> {
         let start = pos - line[..pos].chars().rev().take_while(|c| c.is_alphanumeric() || *c == '_').map(char::len_utf8).sum::<usize>();
         let word = &line[start..pos];
-        let hits = match (self.conversions(&line[..start]), word.is_empty()) {
-            (Some(units), _) => units.into_iter().filter(|n| n.starts_with(word)).collect(),
-            (None, true) => vec![],
-            (None, false) => self.0.iter().filter(|n| n.starts_with(word)).cloned().collect(),
+        let mut hits: Vec<String> = if let Some(units) = self.conversions(&line[..start]) {
+            units
+        } else if line[..start].ends_with('.') {
+            interp::methods(&self.1)
+        } else if word.is_empty() {
+            vec![]
+        } else {
+            self.0.iter().cloned().chain(interp::names(&self.1)).collect()
         };
+        hits.retain(|n| n.starts_with(word));
+        hits.sort();
+        hits.dedup();
         Ok((start, hits))
     }
 }
@@ -220,13 +226,12 @@ fn tint(v: &Value) -> &'static str {
     }
 }
 
-/// A REPL result, colored by type when `color_on`.
-fn show(v: &Value) -> String {
-    // Multi-line text, like `help(upper)`, reads better bare.
-    if !color_on() || matches!(v, Value::Str(s) if s.contains('\n')) {
-        return v.to_string();
+/// A REPL result labeled with the `_n` it's saved as, colored by type when `color_on`.
+fn show(n: usize, v: &Value) -> String {
+    if !color_on() {
+        return format!("_{n} = {v}");
     }
-    format!("{DIM}={RESET} {}{v}{RESET}", tint(v))
+    format!("{DIM}_{n} ={RESET} {}{v}{RESET}", tint(v))
 }
 impl rustyline::validate::Validator for Names {}
 impl rustyline::Helper for Names {}
@@ -240,6 +245,7 @@ fn repl(interp: &mut Interp) {
         let _ = rl.load_history(h);
     }
     let mut buf = String::new();
+    let mut n = 0;
     loop {
         let line = match rl.readline(if buf.is_empty() { "> " } else { ". " }) {
             Ok(line) => line,
@@ -273,8 +279,15 @@ fn repl(interp: &mut Interp) {
         }
         match run(interp, &src) {
             Ok(Value::Nil | Value::Fn(_)) => {}
+            // Multi-line text, like `help(upper)`, reads better bare and unnumbered.
+            Ok(v) if matches!(&v, Value::Str(s) if s.contains('\n')) => {
+                println!("{v}");
+                interp.set_global("_", v);
+            }
             Ok(v) => {
-                println!("{}", show(&v));
+                n += 1;
+                println!("{}", show(n, &v));
+                interp.set_global(&format!("_{n}"), v.clone());
                 interp.set_global("_", v);
             }
             Err(e) => report("<repl>", &src, e),
@@ -355,6 +368,11 @@ mod tests {
         run(&mut interp, "x = 3 kg").unwrap();
         assert!(to("x to ").contains(&"g".into()));
         assert!(to("z to ").is_empty());
+
+        run(&mut interp, "my_total = 1; my_fn = |x| x").unwrap();
+        assert_eq!(to("my_"), ["my_fn", "my_total"]);
+        assert_eq!(to("x.my_"), ["my_fn"]);
+        assert!(!to("x.").contains(&"km".into()) && to("x.").contains(&"upper".into()));
     }
 
     #[test]

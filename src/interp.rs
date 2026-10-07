@@ -556,7 +556,7 @@ fn slice_range(from: Option<i64>, to: Option<i64>, len: usize) -> (usize, usize)
 }
 
 /// Every name in scope, innermost first.
-fn names(env: &Env) -> Vec<String> {
+pub fn names(env: &Env) -> Vec<String> {
     let s = env.borrow();
     let mut out: Vec<String> = s.vars.keys().cloned().collect();
     out.extend(s.parent.as_ref().map(names).unwrap_or_default());
@@ -564,7 +564,7 @@ fn names(env: &Env) -> Vec<String> {
 }
 
 /// Names in scope that hold functions, for `x.method` suggestions.
-fn methods(env: &Env) -> Vec<String> {
+pub fn methods(env: &Env) -> Vec<String> {
     names(env).into_iter().filter(|n| matches!(lookup(env, n), Some(Value::Fn(_) | Value::Builtin(..)))).collect()
 }
 
