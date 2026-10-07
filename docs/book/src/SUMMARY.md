@@ -9,6 +9,7 @@
 - [text](text.md)
   - [layout](text/layout.md)
   - [compare](text/compare.md)
+  - [translation](text/translation.md)
   - [encoding](text/encoding.md)
   - [hash](text/hash.md)
   - [ciphers](text/ciphers.md)

@@ -51,9 +51,10 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 | [core](core.md) | values, printing, type conversions, parsing, help |
 | [fs](fs.md) | files and directories, path pieces, JSON and CSV; relative paths start at the current directory |
 | [sys](sys.md) | script arguments, environment variables, shell commands, HTTP GET, exit codes, network access |
-| [text](text.md) | case, splitting, search and regex; layout, comparison, encodings, hashes and ciphers below |
+| [text](text.md) | case, splitting, search and regex; layout, comparison, translation, encodings, hashes and ciphers below |
 | [text.layout](text/layout.md) | pad, center, wrap, truncate, dedent; snake_case, camelCase, kebab-case, Title Case, slugs; words |
 | [text.compare](text/compare.md) | edit distance, similarity, the closest of a list, line-by-line diffs |
+| [text.translation](text/translation.md) | translate text between languages online; cached translations work offline |
 | [text.encoding](text/encoding.md) | base64, base32, base58, URL and hex encodings, code points, UTF-8 bytes |
 | [text.hash](text/hash.md) | SHA-1/256/512, MD5, HMAC and CRC-32 of strings |
 | [text.ciphers](text/ciphers.md) | Caesar, ROT13, Atbash, Vigenère, Morse, Braille (for fun, not secrecy) |
