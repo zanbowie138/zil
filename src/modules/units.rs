@@ -157,7 +157,7 @@ fn topic(topic: &str) -> bool {
         let units = units_of(kind);
         println!("{kind} units: {}", units.join(" "));
         show(vec![format!("1 {} to {}", units[1], units[0]), format!("1 {} to {}", units[0], units[units.len() - 1])]);
-    } else if let Some((names, _, _, dim)) = TABLE.iter().find(|row| row.0.split(' ').any(|n| n == topic)) {
+    } else if let Some((names, _, _, dim)) = rows().find(|row| row.0.split(' ').any(|n| n == topic)) {
         let mut names = names.split(' ');
         let name = names.next().unwrap();
         let kind = DIMS.iter().find(|d| d.1 == *dim).unwrap().0;
@@ -183,7 +183,7 @@ pub type Dim = [i8; 10];
 pub const NONE: Dim = [0; 10];
 
 /// Length, mass, time, current.
-const fn d(l: i8, m: i8, t: i8, i: i8) -> Dim {
+pub const fn d(l: i8, m: i8, t: i8, i: i8) -> Dim {
     [l, m, t, i, 0, 0, 0, 0, 0, 0]
 }
 const LEN: Dim = d(1, 0, 0, 0);
@@ -196,7 +196,7 @@ const AMOUNT: Dim = [0, 0, 0, 0, 0, 1, 0, 0, 0, 0];
 const MOLAR: Dim = [-3, 0, 0, 0, 0, 1, 0, 0, 0, 0];
 const LIGHT: Dim = [0, 0, 0, 0, 0, 0, 1, 0, 0, 0];
 const LUX: Dim = [-2, 0, 0, 0, 0, 0, 1, 0, 0, 0];
-const DATA: Dim = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0];
+pub const DATA: Dim = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0];
 const RATE: Dim = [0, 0, -1, 0, 0, 0, 0, 1, 0, 0];
 pub const MONEY: Dim = [0, 0, 0, 0, 0, 0, 0, 0, 1, 0];
 const ANGLE: Dim = [0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
@@ -554,14 +554,24 @@ fn load_rates_once() {
     }
 }
 
+/// Every unit row: the real ones, then the goofy ones.
+pub fn rows() -> impl Iterator<Item = &'static (&'static str, f64, f64, Dim)> {
+    TABLE.iter().chain(super::goofy_units::TABLE)
+}
+
 fn builtin_units() -> HashMap<String, Rc<UnitDef>> {
     let mut map = HashMap::new();
-    for (names, scale, offset, dim) in TABLE {
+    for (names, scale, offset, dim) in rows() {
         let primary = names.split(' ').next().unwrap();
         let def = Rc::new(UnitDef { name: primary.into(), scale: Cell::new(*scale), offset: *offset, dim: *dim });
         for n in names.split(' ') {
             map.insert(n.to_string(), def.clone());
         }
+    }
+    // `banana_for_scale`.
+    for (names, ..) in super::goofy_units::TABLE {
+        let primary = names.split(' ').next().unwrap();
+        map.insert(format!("{primary}_for_scale"), map[primary].clone());
     }
     for code in CURRENCIES.split(' ') {
         let def = currency(code, if code == "EUR" { 1.0 } else { f64::NAN });

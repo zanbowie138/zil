@@ -300,7 +300,7 @@ mod tests {
         let length = to("5 km to ");
         assert!(length.contains(&"mi".into()) && length.contains(&"ly".into()));
         assert!(!length.contains(&"kg".into()) && !length.contains(&"kilometers".into()));
-        assert_eq!(to("print(5 km to m"), ["m", "mi", "mm"]);
+        assert_eq!(to("print(5 km to m"), ["m", "marathon", "mi", "mm"]);
         assert!(to("y = 60 km/h to ").contains(&"mph".into()));
         run(&mut interp, "x = 3 kg").unwrap();
         assert!(to("x to ").contains(&"g".into()));

@@ -4,12 +4,19 @@
 //! Hooks return `None` for "not mine"; dispatch tries modules in `MODULES` order, so order matters:
 //! strings before units (`"a" + 5 km` concatenates), dates before units (`date + 1 d` is calendar math).
 
+pub mod binary;
+pub mod ciphers;
+pub mod color;
 pub mod core;
 pub mod dates;
+pub mod fortune;
+pub mod goofy_units;
 pub mod lists;
 pub mod math;
 pub mod money;
+pub mod net;
 pub mod random;
+pub mod roman;
 pub mod strings;
 pub mod units;
 
@@ -129,7 +136,7 @@ impl Module {
 }
 
 /// Also the `help()` overview order.
-pub const MODULES: &[Module] = &[strings::MODULE, lists::MODULE, math::MODULE, dates::MODULE, random::MODULE, units::MODULE, money::MODULE, core::MODULE];
+pub const MODULES: &[Module] = &[strings::MODULE, lists::MODULE, math::MODULE, dates::MODULE, random::MODULE, units::MODULE, goofy_units::MODULE, money::MODULE, color::MODULE, net::MODULE, binary::MODULE, roman::MODULE, ciphers::MODULE, fortune::MODULE, core::MODULE];
 
 /// A builtin by name, ignoring any variable that shadows it.
 pub fn builtin(name: &str) -> Value {
@@ -172,7 +179,7 @@ mod tests {
             }
             for (kw, f) in m.targets {
                 assert!(m.fns.iter().any(|d| d.name == *f), "{}: target {kw} calls {f}, which it doesn't export", m.name);
-                let is_unit = units::TABLE.iter().any(|row| row.0.split(' ').any(|n| n == *kw));
+                let is_unit = units::rows().any(|row| row.0.split(' ').any(|n| n == *kw));
                 assert!(!is_unit, "target {kw} would shadow the unit `to {kw}`");
             }
             let grouped: Vec<_> = m.groups.iter().flat_map(|g| g.1.iter()).collect();
