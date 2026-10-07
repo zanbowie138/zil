@@ -125,6 +125,11 @@ static CITIES: LazyLock<Vec<City>> = LazyLock::new(|| {
         .collect()
 });
 
+/// Every city's name, biggest first.
+pub fn city_names() -> impl Iterator<Item = &'static str> {
+    CITIES.iter().map(|c| c.name)
+}
+
 #[rustfmt::skip]
 const COUNTRY_ALIASES: &[(&str, &str)] = &[
     ("america", "US"), ("united states of america", "US"), ("the united states", "US"),

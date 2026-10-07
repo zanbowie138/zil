@@ -12,7 +12,7 @@ pub const MODULE: Module = Module {
     #[rustfmt::skip]
     examples: &[
         ("binary", &[
-            ("look inside a string", r#"print(hexdump("héllo\tworld\n"))"#),
+            ("look inside a string", r#"hexdump("héllo\tworld\n")"#),
             ("how random is it?", r#""aaaaaaaa".entropy"#),
         ]),
     ],

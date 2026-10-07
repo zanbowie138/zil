@@ -1,7 +1,7 @@
 //! `zil --docs <dir>`: the mdBook reference, rendered from the same module tree as `help`, one page per module.
 //! Example results are evaluated live, so the pages are build output: CI regenerates them on deploy.
 
-use crate::help::{HIGHLIGHTS, eval};
+use crate::help::{ADVANCED, ADVANCED_UNRUN, HIGHLIGHTS, eval};
 use crate::modules::{ALL, Doc, Module, Section, modules, units};
 use std::fmt::Write;
 use std::path::Path;
@@ -26,11 +26,11 @@ pub fn write(dir: &Path) -> std::io::Result<()> {
 fn pages() -> Vec<(String, String)> {
     let date = jiff::Zoned::now().date();
     let note = format!("{NOTE}{date}.\n> Ones using `now`, `today` or randomness will differ when you run them.\n");
-    let mut summary = String::from("# Summary\n\n[Overview](index.md)\n\n- [Syntax](syntax.md)\n");
+    let mut summary = String::from("# Summary\n\n[Overview](index.md)\n\n- [Syntax](syntax.md)\n- [Advanced examples](advanced.md)\n");
     let mut index = format!("# zil\n\nAn expression calculator and scripting language with units, dates, exact fractions and big ints.\n\n{note}");
     sections(&mut index, HIGHLIGHTS);
     index.push_str("\n## Modules\n\n| module | about |\n|---|---|\n");
-    let mut out = vec![("syntax.md".into(), "{{#include ../../syntax.md}}\n".into())];
+    let mut out = vec![("syntax.md".into(), "{{#include ../../syntax.md}}\n".into()), ("advanced.md".into(), advanced(&note))];
     for (path, m) in ALL.iter() {
         let depth = path.matches('.').count();
         writeln!(summary, "{}- [{}]({})", "  ".repeat(depth), m.name, file(path)).unwrap();
@@ -40,6 +40,25 @@ fn pages() -> Vec<(String, String)> {
     out.push(("SUMMARY.md".into(), summary));
     out.push(("index.md".into(), index));
     out
+}
+
+/// Recipes combining several modules: a heading each, the modules it uses, then the script with its result.
+fn advanced(note: &str) -> String {
+    let mut s = format!("# Advanced examples\n\nLonger recipes that combine several modules.\n\n{note}");
+    let unrun = std::iter::once((ADVANCED_UNRUN, false));
+    for ((theme, recipes), run) in ADVANCED.iter().map(|t| (*t, true)).chain(unrun) {
+        writeln!(s, "\n## {theme}").unwrap();
+        for (title, uses, src) in recipes {
+            writeln!(s, "\n### {title}\n\n*{uses}*\n\n```zil").unwrap();
+            if run {
+                example(&mut s, src);
+            } else {
+                writeln!(s, "{src}").unwrap();
+            }
+            s.push_str("```\n");
+        }
+    }
+    s
 }
 
 /// A module's page file: `math.trig` is `math/trig.md`.

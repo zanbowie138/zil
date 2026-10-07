@@ -11,6 +11,8 @@ pub const MODPATH: &str = "\x1b[1;34m";
 const SUBMODULE: &str = "\x1b[34m";
 pub const NAME: &str = "\x1b[1;36m";
 const TYPE: &str = "\x1b[32m";
+/// Titles of `help("advanced")` recipes, set apart from the code under them.
+const RECIPE: &str = "\x1b[1;35m";
 
 thread_local! {
     /// What the page renderers below write to, read back by `capture`.
@@ -133,6 +135,10 @@ fn render(topic: Option<&str>) -> bool {
         sections(SYNTAX);
         return true;
     }
+    if topic == "advanced" {
+        advanced();
+        return true;
+    }
     if let Some(m) = modules::find(topic) {
         page(m);
         return true;
@@ -172,17 +178,20 @@ pub fn type_page(ty: &str) -> bool {
 pub const HIGHLIGHTS: &[Section] = &[(
     "a taste",
     &[
-        ("day of the week", r#"date("2026-12-25").weekday"#),
         ("4th Thursday of November", r#"date(2026, 11, 1).nth_weekday(4, "thu")"#),
-        ("3 business days later", r#"date("2026-12-24").add_workdays(3)"#),
-        ("time zones", r#"date("2026-12-25 18:30") to "Asia/Tokyo""#),
+        ("cities are time zones", r#"date("2026-12-25 18:30") to "Sao Paulo""#),
         ("units combine and convert", "100 km / 2 h to mph"),
-        ("split across units", "1.8 m to ft in"),
+        ("cups to grams", r#"1 cup * density("flour") to g"#),
+        ("money", "$25/h to USD/workyr"),
+        ("error bars", "5 ± 0.1 m * 2"),
         ("exact decimals", "0.1 + 0.2 == 0.3"),
-        ("big ints", "2 ** 100"),
-        ("bits", "0xf0 to bits"),
-        ("percentages", "80 + 15%"),
-        ("numbers out of text", r#""a1b22c333".nums.sum"#),
+        ("factoring big ints", "factors(2 ** 32 + 1)"),
+        ("calculus", "integrate(sin, 0, pi)"),
+        ("geography", r#"great_circle("Paris", "Tokyo")"#),
+        ("fuzzy matching", r#""recieve".closest(["deceive", "receive", "recipe"])"#),
+        ("subnets", r#"in_cidr("10.0.3.7", "10.0.0.0/22")"#),
+        ("odds in plain words", "odds(2 ** -64)"),
+        ("charts", "(0..20).map(|x| sin(x / 3)).sparkline"),
         (r"syntax: x.f(y) is f(x, y)   |x| x * 2 is a lambda   xs |> sum pipes   # comments", ""),
     ],
 )];
@@ -225,6 +234,141 @@ const SYNTAX: &[Section] = &[
     ("more", &[("full reference, with operator precedence: the Syntax page from zil --docs", "")]),
 ];
 
+/// A worked example drawing on several modules: (what it does, the modules it uses, a script whose result is shown).
+pub type Recipe = (&'static str, &'static str, &'static str);
+
+/// `help("advanced")`: recipes, by theme.
+#[rustfmt::skip]
+pub const ADVANCED: &[(&str, &[Recipe])] = &[
+    ("travel and sky", &[
+        ("a flight from Seattle to Tokyo: time in the air and local arrival", "geo · units · time.zones", r#"leave = date("2026-12-20T13:00-08:00") to "Seattle"
+flight = great_circle("Seattle", "Tokyo") / 900 km/h
+{in_the_air: flight.parts, landing: leave + flight to "Tokyo"}"#),
+        ("UTC hours when it's 9 to 5 in New York, London and Berlin at once", "time.zones · data.lists", r#"office = |t| 9 <= t.hour < 17
+day = date("2026-10-12T00:00Z") to UTC
+hours = (0..24).map(|h| day + h * 1 h)
+hours.filter(|t| office(t to "New York") && office(t to "London") && office(t to "Berlin")).map(|t| t.format("%H:%M"))"#),
+        ("hours of daylight on the 21st of each month, equator to arctic", "time.sky · geo · art.renderers · art.frames", r#"places = ["Singapore", "Cairo", "Paris", "Oslo", "Reykjavik"]
+rows = places.map(|p| (1..=12).map(|m| day_length(p, date(2026, m, 21)) / 1 h))
+places.map(|p| p.pad(10)).join("\n").beside(rows.heatmap)"#),
+        ("where the sun sets within the next hour", "geo · time.sky · time", r#"cities().filter(|c| now <= sunset(c.name, today) < now + 1 h).map(|c| c.name).take(6)"#),
+        ("the fastest a ping from New York could ever be: there and back through fiber at 2/3 c", "geo · units.constants", r#"["London", "Tokyo", "Sydney"].map(|p| 2 * great_circle("New York", p) / (2/3 * c) to ms)"#),
+        ("dig straight down from Madrid: where do you come out?", "geo", r#"m = city("Madrid")
+out = nearest(-m.lat, m.lon - 180)
+{city: out.name, country: out.country, apart: great_circle("Madrid", out.name) to km}"#),
+        ("the further north, the shorter December days: latitude vs. daylight across every city", "geo · time.sky · math.stats", r#"cs = cities()
+corr(cs.map(|c| c.lat), cs.map(|c| day_length(c.name, date(2026, 12, 21)) / 1 h))"#),
+        ("the day Oslo gains daylight fastest, and how fast", "time.sky · math.stats · time", r#"start = date(2026, 1, 1)
+gains = (0..365).map(|i| day_length("Oslo", start + i * 1 d)).deltas
+{day: start + (gains.find(gains.max) + 1) * 1 d, gained: gains.max to min, fastest_loss: gains.min to min}"#),
+    ]),
+    ("money and science", &[
+        ("a $400k mortgage from January 2027: cost, crossover, interest by year", "units.money · time · data.lists · data.charts", r#"plan = amortize($400000, 6.5%/yr, 30 yr)
+flip = plan.filter(|m| m.principal > m.interest).first
+yearly = plan.chunks(12).map(|y| y.map(|m| m.interest).sum / $1)
+{monthly: plan[0].payment, interest: plan.map(|m| m.interest).sum, crossover: date(2027, 1, 1) + (flip.n - 1) * 1 mo, by_year: yearly.sparkline}"#),
+        ("a ski trip: who owes whom", "units.money · data.maps", r#"paid = {ana: $640 + $85.50, ben: 3 * $42, cy: $0, dee: $310}
+{each: share(paid.values.sum, 4)[0], settle: settle(paid)}"#),
+        ("weigh the Earth with a pendulum; errors carry through every step", "math.uncertainty · units.constants", r#"L = 1.000 ± 0.005 m
+T = (20.07 ± 0.1 s) / 10    # timed 10 swings
+g = 4 * pi ** 2 * L / T ** 2 to m/s^2
+M = g * (6371 km) ** 2 / G to kg
+{g: g, off_by: percent(g.value / g0 - 1, 2), earth: M}"#),
+        ("a ball thrown at 20 m/s, 35° up: landing, peak and arc", "math.calculus · math.trig · data.charts", r#"v = 20; a = 35 deg; g = 9.81
+y = |t| v * sin(a) * t - g / 2 * t ** 2
+land = root(y, 0.1, 10)
+peak = root(|t| deriv(y, t), 0, land)
+{seconds: round(land, 2), meters: round(v * cos(a) * land, 1), peak: round(y(peak), 2), arc: (0..=30).map(|i| y(land * i / 30)).sparkline}"#),
+        ("fractions closing in on pi: convergents of its continued fraction, and how far off each is", "math.numtheory · data.lists", r#"terms = pi.cfrac(5)
+fold = |ts| ts.reverse.drop(1).reduce(ts.last, |acc, t| t + 1 / acc)
+(1..=5).map(|n| fold(terms.take(n))).map(|c| [c to frac, sci(abs(c - pi), 1)])"#),
+        ("a cookie recipe for 24, scaled to 60 and weighed instead of scooped", "units.kitchen · data.maps", r#"cups = {flour: 2.25 cup, sugar: 0.75 cup, butter: 1 cup, honey: 2 tbsp}
+cups.entries.map(|[k, v]| [k, round(v * 60 / 24 * density(k) to g)]).from_entries"#),
+        ("a Fermi estimate with honest error bars: piano tuners in Chicago", "math.uncertainty · units", r#"pianos = (2.7e6 ± 0.1e6) / (2.5 ± 0.5) * (5% ± 2%)    # people / household * share with a piano
+per_tuner = (4 ± 1) / d * 250 d / yr
+pianos / yr / per_tuner"#),
+        ("three receipts, three unknown prices: coffee, bagel, juice", "math.linalg · units.money", r#"# rows: [coffees, bagels, juices] on each receipt
+solve([[2, 1, 0], [1, 2, 1], [0, 1, 2]], [$9.50, $11.50, $8.50])"#),
+    ]),
+    ("text, data and dev", &[
+        ("how far apart were the errors in a log, and what were they?", "text · time · math.stats · data.lists", r#"log = "08:59:58 INFO start
+09:00:03 ERROR db timeout
+09:00:41 INFO retry
+09:02:15 ERROR db timeout
+09:07:50 ERROR disk full"
+errors = log.grep("ERROR")
+times = errors.map(|l| date("2026-10-06 " + l.match(r"^\S+")))
+{gaps: times.deltas.map(|d| d.parts), kinds: errors.map(|l| l.split("ERROR ")[1]).count_by(|k| k)}"#),
+        ("crack a Caesar cipher: try every shift, keep the one with the most real words", "text.ciphers · text.layout · data", r#"secret = "wkh vhfuhw sdvvzrug lv vzruglvk"
+common = ["the", "is", "and", "a", "of", "to", "secret", "password", "in"]
+score = |s| s.words.filter(|w| w in common).len
+(0..26).map(|k| secret.caesar(-k)).sort(score).last"#),
+        ("a running log as CSV; h:m:s times become durations by a dot product", "fs · data.tables · math.linalg · units", r#"runs = "date,km,time\n2026-09-01,5,0:27:30\n2026-09-04,10,0:58:10\n2026-09-08,5,0:26:05\n2026-09-12,21.1,2:05:40".from_csv
+dur = |t| dot(t.split(":").map(int), [1 h, 1 min, 1 s])
+pretty(runs.map(|r| {date: r.date, km: r.km, per_km: dur(r.time) / r.km to min}).table.sort_by("per_km"))"#),
+        ("carve a /22 into /24s and see which one each server lands in", "dev.net · data.tables", r#"servers = ["10.0.1.20", "10.0.3.7", "10.0.3.250", "10.0.0.9"]
+pretty(subnets("10.0.0.0/22", 24).map(|b| {
+  block: b, hosts: cidr(b).hosts, servers: servers.filter(|s| in_cidr(s, b)).join(" "),
+}).table)"#),
+        ("six hues, each as light as it can be while still readable on white", "dev.colors · data.lists", r#"readable = |h| (20..=70).map(|l| hsl(h, 75, l)).filter(|c| contrast(c, "white") >= 4.5).last
+(0..6).map(|i| readable(i * 60)).map(|c| "{swatch(c)} {round(contrast(c, "white"), 2)}").join("\n")"#),
+        ("when were this token and this ID minted, in Tokyo time?", "dev · time.zones", r#"token = jwt("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZGEiLCJpYXQiOjE1MTYyMzkwMjJ9.c2ln")
+id = uuid_info("01890a5d-ac96-774b-bcce-b302099a8057")
+[token.payload.iat, id.timestamp].map(|d| [d to "Tokyo", d.relative])"#),
+        ("anagram groups: words that sort to the same letters", "text.layout · data.lists", r#"words = "listen silent enlist google tinsel inlets banana stone tones notes onset".words
+words.group_by(|w| w.chars.sort.join).values.filter(|g| g.len > 1)"#),
+        ("a spellchecker in one line: each word's closest match in a dictionary", "text.compare · text.layout", r#"dict = "the quick brown fox jumps over lazy dog".words
+"teh qiuck bronw fox jumsp ovr the lazzy dgo".words.map(|w| w.closest(dict)).join(" ")"#),
+        ("newest release per major version, by semver precedence rather than string order", "dev · data.lists · data.maps", r#"tags = ["1.9.3", "1.10.0", "2.0.0-rc.1", "2.0.0", "1.2.11", "2.1.0-beta"]
+tags.group_by(|t| semver(t).major).map_values(|vs| vs.sort(semver).last)"#),
+        ("how many files until two CRC-32s probably collide?", "fun.games · math.calculus", r#"half = root(|k| birthday_paradox(round(k), 2 ** 32) - 0.5, 1, 1e6)
+{even_odds_at: round(half), at_10k_files: odds(birthday_paradox(10000, 2 ** 32))}"#),
+        ("proof of work: the first nonce whose SHA-256 starts with 000", "text.hash · math", r#"n = 0
+while !"zil:{n}".sha256.starts_with("000") { n += 1 }
+{nonce: n, hash: "zil:{n}".sha256[..16], expected_tries: 16 ** 3}"#),
+    ]),
+    ("puzzles and play", &[
+        ("prime dates: days of 2027 whose YYYYMMDD is prime", "math.numtheory · time · data.lists", r#"days = (0..365).map(|i| date(2027, 1, 1) + i * 1 d)
+primes = days.filter(|d| is_prime(int(d.format("%Y%m%d"))))
+{count: primes.len, first: primes.take(3).map(|d| d.format("%b %d")), by_month: primes.count_by(|d| d.format("%b"))}"#),
+        ("numbers that are palindromes in both decimal and binary", "math.bases · data.lists", r#"pal = |n| n.digits == n.digits.reverse
+(1..1000).filter(|n| pal(n) && pal(n to bin))"#),
+        ("which points are in the Mandelbrot set? escape step, or stays", "math.complex · data.maps", r#"escapes = fn(c) { z = 0; for n in 1..=50 { z = z * z + c; if abs(z) > 2 { return n } }; return "stays" }
+[0, -1, 1, 1i, 0.3 + 0.5i, -0.75 + 0.1i].map(|c| [str(c), escapes(c)]).from_entries"#),
+        ("the exact chance of a poker full house", "math.numtheory · fun.games", r#"p = 13 * choose(4, 3) * 12 * choose(4, 2) / choose(52, 5)
+[p to frac, odds(p)]"#),
+    ]),
+];
+
+/// Recipes that touch files, the shell or the network: shown, never run (help would change things or hang offline).
+#[rustfmt::skip]
+pub const ADVANCED_UNRUN: (&str, &[Recipe]) = ("files, shell and network (shown, not run)", &[
+    ("disk usage by file type, as a bar chart", "fs · data.lists · data.maps · data.charts", r#"files = glob("**/*").filter(|f| f.type == "file")
+files.group_by(|f| f.name.ext).map_values(|fs| fs.map(|f| f.size).sum to KB).bars"#),
+    ("which weekdays you commit on", "sys · time · data.lists · data.charts", r#"sh("git log --format=%ad --date=short").lines.count_by(|d| date(d).weekday).bars"#),
+    ("PATH entries that point nowhere", "sys · fs", r#"sep = if env("OS") == "Windows_NT" { ";" } else { ":" }
+env("PATH").split(sep).filter(|p| !exists(p))"#),
+    ("files with the most TODOs", "fs · text · data.tables", r#"todos = glob("src/**/*.rs").map(|f| {file: f.name, todos: read_file(f.name).grep("TODO").len})
+todos.filter(|r| r.todos > 0).table.sort_by_desc("todos")"#),
+    ("sort Downloads into a folder per month", "fs · time", r#"for f in ls("Downloads").where(|f| f.type == "file") {
+  dir = path_join("Downloads", f.modified.format("%Y-%m"))
+  mkdir(dir)
+  mv(path_join("Downloads", f.name), path_join(dir, f.name))
+}"#),
+    ("a weight log: zil weigh.zil 71.2 adds today's entry and charts them all", "sys · fs · time · data.charts", r#"if !exists("weight.csv") { write_file("weight.csv", "date,kg") }
+append_file("weight.csv", "{today.format("%Y-%m-%d")},{args()[0]}")
+read_file("weight.csv").from_csv.kg.sparkline"#),
+    ("describe any CSV column: zil stats.zil data.csv price", "sys · fs · math.stats", r#"[file, col] = args()
+read_file(file).from_csv.map(|r| r[col]).describe"#),
+    ("GitHub stars, straight from the API", "sys · fs", r#"["rust-lang/rust", "zanbowie138/zil"].map(|r| fetch("https://api.github.com/repos/{r}").from_json.stargazers_count)"#),
+    ("the weather in Oslo, in Fahrenheit", "sys · fs · units", r#"now_oslo = fetch("https://wttr.in/Oslo?format=j1").from_json.current_condition[0]
+{temp: int(now_oslo.temp_C) * 1 C to F, feels_like: int(now_oslo.FeelsLikeC) * 1 C to F, sky: now_oslo.weatherDesc[0].value}"#),
+    ("a 9-day trip at $150 a day, in local money (live rates)", "sys · units.money · geo", r#"allow_network_access()
+{japan: $150 * 9 to "Japan", vietnam: $150 * 9 to "Vietnam", mexico: $150 * 9 to "Mexico"}"#),
+    ("one phrase, three languages", "text.translation · sys", r#"allow_network_access()
+["es", "ja", "de"].map(|l| "where is the train station?".translate(l))"#),
+]);
+
 /// `help()`: what zil is, its module tree, and how to dig deeper.
 fn overview() {
     out!("{}: an expression calculator and scripting language with units, dates, exact fractions and big ints.", paint(MODPATH, "zil"));
@@ -242,6 +386,7 @@ fn overview() {
     let rows = [
         (r#"help("examples")"#, "start here: a few dozen one-liners, module by module"),
         (r#"help("syntax")"#, "the language at a glance"),
+        (r#"help("advanced")"#, "longer recipes that combine several modules"),
         (r#"help("text")"#, "a module: its types, operators and every function"),
         (r#"help("math.trig")"#, "a submodule, by path or just help(\"trig\")"),
         ("help(upper)", "a function: signature, live examples, related functions"),
@@ -265,6 +410,23 @@ fn examples() {
         sections(m.examples);
     }
     out!("\n{}", paint(DIM, r#"help("time") etc. for a module's full function list"#));
+}
+
+/// `help("advanced")`: each recipe's title and modules, its script, then its live result.
+fn advanced() {
+    let unrun = std::iter::once((ADVANCED_UNRUN, false));
+    for ((theme, recipes), run) in ADVANCED.iter().map(|t| (*t, true)).chain(unrun) {
+        out!("\n{}", paint(HEADING, theme));
+        for (title, uses, src) in recipes {
+            out!("\n  {}  {}", paint(RECIPE, title), paint(DIM, &format!("({uses})")));
+            for line in src.lines() {
+                out!("    {}", code(line));
+            }
+            if run {
+                out!("    {} {}", paint(DIM, "→"), below(&result(src).1));
+            }
+        }
+    }
 }
 
 /// Every builtin, with its module.
@@ -319,7 +481,8 @@ fn search(topic: &str) -> Vec<(&'static Module, &'static Doc)> {
 /// Up to three function, module, unit or topic names a typo or two from `topic`, closest first.
 fn near(topic: &str) -> Vec<&'static str> {
     let units = crate::modules::units::TABLE.iter().flat_map(|u| u.0.split(' '));
-    let names = docs().map(|(_, f)| f.name).chain(ALL.iter().flat_map(|(path, m)| [path.as_str(), m.name])).chain(["examples", "syntax"]).chain(units);
+    let names =
+        docs().map(|(_, f)| f.name).chain(ALL.iter().flat_map(|(path, m)| [path.as_str(), m.name])).chain(["examples", "syntax", "advanced"]).chain(units);
     crate::error::near(topic, names)
 }
 
@@ -378,7 +541,7 @@ fn sections(guide: &[Section]) {
             if plain == *ex {
                 out!("  {label}  {}", code(ex));
             } else {
-                out!("  {label}  {}{}  {} {colored}", code(ex), pad(ex, ew), paint(DIM, "→"));
+                out!("  {label}  {}{}  {} {}", code(ex), pad(ex, ew), paint(DIM, "→"), below(&colored));
             }
         }
     }
@@ -388,7 +551,7 @@ fn sections(guide: &[Section]) {
 pub fn show(examples: Vec<String>) {
     let w = examples.iter().map(|e| e.chars().count()).max().unwrap_or(0);
     for ex in &examples {
-        out!("  {}{}  {} {}", code(ex), pad(ex, w), paint(DIM, "→"), result(ex).1);
+        out!("  {}{}  {} {}", code(ex), pad(ex, w), paint(DIM, "→"), below(&result(ex).1));
     }
 }
 
@@ -396,9 +559,20 @@ pub fn eval(src: &str) -> String {
     result(src).0
 }
 
+/// A multi-line result on its own indented lines, so art keeps its shape.
+fn below(r: &str) -> String {
+    if r.contains('\n') { r.lines().map(|l| format!("\n      {l}")).collect() } else { r.to_string() }
+}
+
 /// `src`'s result, plain and colored by type like a REPL result.
+/// Text art (multi-line or colored strings) comes back bare, as the REPL prints it.
 fn result(src: &str) -> (String, String) {
     match crate::run(&mut Interp::new(), src) {
+        Ok(crate::value::Value::Str(s)) if s.contains(['\n', '\x1b']) => {
+            let plain = crate::modules::art::strip_ansi(&s);
+            let colored = if COLOR.get() { s.to_string() } else { plain.clone() };
+            (plain, colored)
+        }
         Ok(v) => {
             let s = format!("{v:?}");
             (s.clone(), paint(crate::tint(&v), &s))
@@ -449,7 +623,8 @@ mod tests {
         let fns: Vec<_> = modules().flat_map(|m| m.fns).collect();
         let guide =
             modules().flat_map(|m| m.guide.iter().chain(m.examples)).chain(HIGHLIGHTS).chain(SYNTAX).flat_map(|s| s.1).map(|r| &r.1).filter(|e| !e.is_empty());
-        for ex in fns.iter().flat_map(|f| f.examples.iter()).chain(guide) {
+        let recipes = ADVANCED.iter().flat_map(|t| t.1).map(|r| &r.2);
+        for ex in fns.iter().flat_map(|f| f.examples.iter()).chain(guide).chain(recipes) {
             assert!(!eval(ex).starts_with("error:"), "{ex}: {}", eval(ex));
         }
         let found = |t| help(Some(t), false).is_ok();
@@ -467,6 +642,10 @@ mod tests {
         assert!(help(Some("upper"), true).unwrap().contains(NAME));
         assert!(!help(Some("km"), false).unwrap().contains('\x1b'));
         assert!(found("syntax"));
+        assert!(found("advanced"));
+        for (_, _, src) in ADVANCED_UNRUN.1 {
+            assert!(crate::parser::parse(src).is_ok(), "{src}");
+        }
         assert!(found("quantity"));
         assert!(!found("nope"));
         assert!(help(Some("upper"), false).unwrap().contains("upper(s: str)"));

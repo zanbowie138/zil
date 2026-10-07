@@ -16,7 +16,7 @@ pub const MODULE: Module = Module {
             ("sum a map", "{a: 1, b: 2}.values.sum"),
             ("as [key, value] pairs", "{a: 1, b: 2}.list"),
             ("defaults, overridden", "{color: \"red\", size: 1} + {size: 3}"),
-            ("loop over entries", "for [k, v] in {a: 1, b: 2}.entries { print(\"{k}={v}\") }"),
+            ("loop over entries", "out = []; for [k, v] in {a: 1, b: 2}.entries { out.push(\"{k}={v}\") }; out"),
         ]),
     ],
     #[rustfmt::skip]

@@ -41,8 +41,15 @@ fn f(v: &Value) -> Option<f64> {
     }
 }
 
+/// Numbers, or quantities of one kind in the first one's unit, so 1 km and 700 m chart to scale.
 fn floats(l: &[Value]) -> Result<Vec<f64>, Fail> {
-    l.iter().map(f).collect::<Option<_>>().ok_or_else(|| "expected a list of numbers".into())
+    let unit = l.iter().find_map(|v| if let Value::Qty(_, u) = v { Some(u) } else { None });
+    let x = |v: &Value| match (v, unit) {
+        (Value::Qty(x, w), Some(u)) if w.dim() == u.dim() => Some(u.value_from_si(w.to_si(*x))),
+        (Value::Qty(..), _) => None,
+        _ => num(v),
+    };
+    l.iter().map(x).collect::<Option<_>>().ok_or_else(|| "expected numbers, or quantities of one kind".into())
 }
 
 fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Call {
@@ -137,7 +144,7 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Cal
 
 /// `label │█████▌ value` rows, the longest bar `width` cells; eighth-blocks for the remainder.
 fn bars(rows: &[(String, Value)], width: usize) -> Result<String, Fail> {
-    let xs = rows.iter().map(|r| f(&r.1).ok_or_else(|| format!("expected numbers, got {}", r.1.type_name()))).collect::<Result<Vec<_>, _>>()?;
+    let xs = floats(&rows.iter().map(|r| r.1.clone()).collect::<Vec<_>>())?;
     let max = xs.iter().fold(0f64, |m, x| m.max(x.abs()));
     let label_w = rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0);
     let lines = rows.iter().zip(&xs).map(|((label, v), x)| {
@@ -158,6 +165,10 @@ mod tests {
         assert_eq!(show("[5, 5].sparkline"), "▄▄");
         assert_eq!(show("bars({a: 2, bb: 4}, 4)"), " a │██ 2\nbb │████ 4");
         assert_eq!(show("[1, 3].bars(8)"), "0 │██▋ 1\n1 │████████ 3");
+        // Quantities chart in one unit: 1 km outdraws 500 m.
+        assert_eq!(show("[1 km, 500 m].bars(4)"), "0 │████ 1 km\n1 │██ 500 m");
+        assert_eq!(show("[1 h, 30 min, 2 h].sparkline"), "▃▁█");
+        assert!(try_eval("[1 km, 1 h].bars").is_err());
         assert_eq!(show("[1, 1, 2].histogram(2)"), format!("1–1.5 │{} 2\n1.5–2 │{} 1", "█".repeat(40), "█".repeat(20)));
         let p = show("plot(|x| x, 0, 1)");
         assert_eq!(p.lines().count(), 17);

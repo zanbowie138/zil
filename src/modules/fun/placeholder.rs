@@ -25,7 +25,7 @@ pub const MODULE: Module = Module {
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
     doc("lorem", "lorem(words?: int)", "the classic lorem ipsum paragraph, or its first n words (repeating past the end)", &["lorem(5)"], &["fortune"]),
-    doc("team_name", "team_name()", "a random team name, like \"The Crimson Otters\"", &["team_name()"], &["person_name"]),
+    doc("team_name", "team_name()", "a random team name in one of several styles, like \"The Crimson Otters\", \"Taco Squad\" or \"Lagos Lobsters\"", &["team_name()"], &["person_name"]),
     doc("person_name", "person_name()", "a random first and last name", &["person_name()"], &["team_name"]),
 ];
 
@@ -55,6 +55,31 @@ const TEAM_ADJECTIVES: &[&str] = &[
     "Undefeated",
     "Rusty",
     "Lazy",
+    "Furious",
+    "Glorious",
+    "Sleepy",
+    "Fuzzy",
+    "Majestic",
+    "Grumpy",
+    "Dancing",
+    "Invisible",
+    "Galactic",
+    "Spicy",
+    "Neon",
+    "Feral",
+    "Velvet",
+    "Stormy",
+    "Jolly",
+    "Clumsy",
+    "Radiant",
+    "Unstoppable",
+    "Wobbly",
+    "Sparkly",
+    "Chaotic",
+    "Legendary",
+    "Funky",
+    "Hungry",
+    "Dramatic",
 ];
 const TEAM_NOUNS: &[&str] = &[
     "Otters",
@@ -77,18 +102,206 @@ const TEAM_NOUNS: &[&str] = &[
     "Yetis",
     "Narwhals",
     "Goblins",
+    "Raccoons",
+    "Moose",
+    "Platypuses",
+    "Sharks",
+    "Pandas",
+    "Capybaras",
+    "Flamingos",
+    "Walruses",
+    "Possums",
+    "Vikings",
+    "Wizards",
+    "Robots",
+    "Meatballs",
+    "Potatoes",
+    "Pickles",
+    "Tacos",
+    "Gnomes",
+    "Unicorns",
+    "Bananas",
+    "Hamsters",
+    "Geese",
+    "Lobsters",
+    "Sloths",
+    "Thunderbolts",
+    "Dumplings",
 ];
 const FIRST_NAMES: &[&str] = &[
-    "Alex", "Sam", "Jordan", "Taylor", "Morgan", "Casey", "Riley", "Jamie", "Avery", "Quinn", "Maria", "James", "Priya", "Wei", "Fatima", "Diego", "Aisha",
-    "Liam", "Yuki", "Olga", "Kofi", "Elena", "Noah", "Sofia", "Omar", "Hana", "Lucas", "Amara", "Ivan", "Mei",
+    "Alex",
+    "Sam",
+    "Jordan",
+    "Taylor",
+    "Morgan",
+    "Casey",
+    "Riley",
+    "Jamie",
+    "Avery",
+    "Quinn",
+    "Maria",
+    "James",
+    "Priya",
+    "Wei",
+    "Fatima",
+    "Diego",
+    "Aisha",
+    "Liam",
+    "Yuki",
+    "Olga",
+    "Kofi",
+    "Elena",
+    "Noah",
+    "Sofia",
+    "Omar",
+    "Hana",
+    "Lucas",
+    "Amara",
+    "Ivan",
+    "Mei",
+    "Chloe",
+    "Mateo",
+    "Zara",
+    "Ravi",
+    "Ingrid",
+    "Tomás",
+    "Leila",
+    "Arjun",
+    "Nia",
+    "Hiroshi",
+    "Sven",
+    "Ananya",
+    "Kwame",
+    "Isabella",
+    "Mohammed",
+    "Freya",
+    "Lucia",
+    "Tariq",
+    "Siobhan",
+    "Valentina",
+    "Jin",
+    "Rosa",
+    "Emeka",
+    "Astrid",
+    "Malik",
+    "Camila",
+    "Dmitri",
+    "Leilani",
+    "Kai",
+    "Nadia",
+    "Pablo",
+    "Saanvi",
+    "Tenzin",
+    "Zeynep",
+    "Bongani",
+    "Ewa",
+    "Rahul",
+    "Ama",
 ];
 const LAST_NAMES: &[&str] = &[
-    "Smith", "Garcia", "Nguyen", "Kim", "Patel", "Müller", "Rossi", "Silva", "Cohen", "Okafor", "Tanaka", "Ivanova", "Johnson", "Lopez", "Chen", "Haddad",
-    "Novak", "Andersen", "Murphy", "Kowalski", "Dubois", "Santos", "Ahmed", "Brown", "Park", "Yilmaz", "Larsen", "Mensah",
+    "Smith",
+    "Garcia",
+    "Nguyen",
+    "Kim",
+    "Patel",
+    "Müller",
+    "Rossi",
+    "Silva",
+    "Cohen",
+    "Okafor",
+    "Tanaka",
+    "Ivanova",
+    "Johnson",
+    "Lopez",
+    "Chen",
+    "Haddad",
+    "Novak",
+    "Andersen",
+    "Murphy",
+    "Kowalski",
+    "Dubois",
+    "Santos",
+    "Ahmed",
+    "Brown",
+    "Park",
+    "Yilmaz",
+    "Larsen",
+    "Mensah",
+    "Sato",
+    "Wang",
+    "Singh",
+    "Kumar",
+    "Fernández",
+    "Hernández",
+    "Jansen",
+    "Adeyemi",
+    "Kariuki",
+    "Nakamura",
+    "Petrov",
+    "Horvat",
+    "Popescu",
+    "Nowak",
+    "Rahman",
+    "Mendoza",
+    "Castillo",
+    "Okonkwo",
+    "Kaur",
+    "Takahashi",
+    "O'Brien",
+    "MacLeod",
+    "Bianchi",
+    "Moreau",
+    "Schmidt",
+    "Lindqvist",
+    "Dlamini",
+    "Abebe",
+    "Tran",
+    "Pham",
+    "Reyes",
+    "Papadopoulos",
+    "Kaya",
+    "Khan",
+    "Rivera",
 ];
 
 fn pick(list: &[&'static str]) -> &'static str {
     list[fastrand::usize(..list.len())]
+}
+
+const GROUPS: &[&str] =
+    &["Squad", "Crew", "Gang", "Collective", "Brigade", "Society", "Club", "Posse", "Syndicate", "Alliance", "Patrol", "Guild", "Federation"];
+const CLUBS: &[&str] = &["FC", "United", "Athletic", "Rovers", "Wanderers", "All-Stars", "City"];
+
+/// A team name in one of several styles: "The Crimson Otters", "The Wobbly Walruses", "Lagos Lobsters",
+/// "Neon Hamsters FC", "Taco Squad", "Team Spicy", "Pickles & Penguins", "Osaka Wanderers".
+fn team_name() -> String {
+    let (adj, noun) = (pick(TEAM_ADJECTIVES), pick(TEAM_NOUNS));
+    // Same first letter as the noun when one exists, for alliteration.
+    let rhyme = |words: Vec<&'static str>| {
+        let same: Vec<_> = words.iter().copied().filter(|w| w.chars().next() == noun.chars().next()).collect();
+        pick(if same.is_empty() { &words } else { &same })
+    };
+    match fastrand::u8(..8) {
+        0 => format!("The {adj} {noun}"),
+        1 => format!("The {} {noun}", rhyme(TEAM_ADJECTIVES.to_vec())),
+        2 => format!("{} {noun}", rhyme(crate::modules::geo::city_names().collect())),
+        3 => format!("{adj} {noun} {}", pick(CLUBS)),
+        4 => format!("{} {}", singular(noun), pick(GROUPS)),
+        5 => format!("Team {adj}"),
+        6 => format!("{noun} & {}", pick(TEAM_NOUNS)),
+        _ => format!("{} {}", pick(&crate::modules::geo::city_names().take(200).collect::<Vec<_>>()), pick(CLUBS)),
+    }
+}
+
+/// "Geese" is "Goose", "Wolves" is "Wolf", "Walruses" is "Walrus", "Tacos" is "Taco".
+fn singular(noun: &str) -> String {
+    match noun {
+        "Geese" => "Goose".into(),
+        "Moose" => noun.into(),
+        _ if noun.ends_with("ves") => format!("{}f", &noun[..noun.len() - 3]),
+        _ if noun.ends_with("uses") || noun.ends_with("oes") => noun[..noun.len() - 2].into(),
+        _ => noun.trim_end_matches('s').into(),
+    }
 }
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -98,7 +311,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             let words: Vec<_> = LOREM.split(' ').cycle().take(*n as usize).collect();
             Value::str(format!("{}.", words.join(" ").trim_end_matches([',', '.'])))
         }
-        ("team_name", []) => Value::str(format!("The {} {}", pick(TEAM_ADJECTIVES), pick(TEAM_NOUNS))),
+        ("team_name", []) => Value::str(team_name()),
         ("person_name", []) => Value::str(format!("{} {}", pick(FIRST_NAMES), pick(LAST_NAMES))),
         ("lorem", [Value::Int(n, _)]) => return Err(Fail::Arg(0, format!("word count must be 1 to 100000, got {n}"))),
         _ => return Err(Fail::BadArgs),
@@ -119,7 +332,12 @@ mod tests {
 
     #[test]
     fn names() {
-        assert!(show("team_name()").starts_with("The "));
+        for _ in 0..500 {
+            let t = super::team_name();
+            assert!(!t.is_empty() && !t.contains("  ") && t.trim() == t, "{t:?}");
+        }
+        let one: Vec<_> = ["Geese", "Moose", "Wolves", "Walruses", "Platypuses", "Potatoes", "Tacos", "Honey Badgers"].map(super::singular).to_vec();
+        assert_eq!(one, ["Goose", "Moose", "Wolf", "Walrus", "Platypus", "Potato", "Taco", "Honey Badger"]);
         assert_eq!(show("person_name().split.len"), "2");
     }
 }

@@ -86,7 +86,7 @@ impl Names {
         );
         v.extend(modules::units::TABLE.iter().flat_map(|u| u.0.split_whitespace()).map(String::from));
         v.extend(modules::units::DIMS.iter().map(|d| d.0.to_string()));
-        v.extend(["syntax", "examples"].map(String::from));
+        v.extend(["syntax", "examples", "advanced"].map(String::from));
         v.sort();
         v.dedup();
         Names(v, globals)
