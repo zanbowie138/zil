@@ -46,7 +46,7 @@ $25/h to USD/workyr
 ### currencies
 
 ```zil
-# rates load (with a prompt) only to convert between currencies: 20 USD to EUR
+# rates load (from cache, or online after allow_network_access()) only to convert between currencies: 20 USD to EUR
 ```
 
 ## Functions

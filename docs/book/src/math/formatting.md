@@ -36,6 +36,8 @@ format("%5.2f|%-4d|", pi, 7)
 | [`sci(x: num\|quantity, digits?: int)`](#sci) | string in scientific notation |
 | [`percent(x: num\|quantity, digits?: int)`](#percent) | string as a percentage |
 | [`commas(x: num\|quantity, digits?: int)`](#commas) | string with thousands separators |
+| [`spell(n: int)`](#spell) | an integer in English words; same as `n to words` |
+| [`ordinal(n: int)`](#ordinal) | 1st, 2nd, 3rd, 4th, ..., 11th, 12th, 13th, 21st |
 | [`human_bytes(n: num\|quantity)`](#human_bytes) | a byte count (or data quantity) in binary units (KiB = 1024 B), one decimal |
 
 ### fixed
@@ -89,6 +91,36 @@ See also: [fixed](../math/formatting.md#fixed)
 ```
 
 See also: [fixed](../math/formatting.md#fixed)
+
+### spell
+
+`spell(n: int)`: an integer in English words; same as `n to words`
+
+```zil
+spell(42)
+# → "forty-two"
+1999 to words
+# → "one thousand nine hundred ninety-nine"
+-1000001 to words
+# → "minus one million one"
+```
+
+See also: [ordinal](../math/formatting.md#ordinal), [roman](../fun.md#roman)
+
+### ordinal
+
+`ordinal(n: int)`: 1st, 2nd, 3rd, 4th, ..., 11th, 12th, 13th, 21st
+
+```zil
+ordinal(3)
+# → "3rd"
+(1..=4).map(ordinal)
+# → ["1st", "2nd", "3rd", "4th"]
+ordinal(112)
+# → "112th"
+```
+
+See also: [spell](../math/formatting.md#spell)
 
 ### human_bytes
 

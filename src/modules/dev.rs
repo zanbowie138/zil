@@ -1,6 +1,7 @@
 //! Developer tools: JWTs, UUIDs, URLs, semver, file permissions, and the parent of net, binary and colors.
 
 pub mod binary;
+pub mod codes;
 pub mod colors;
 pub mod net;
 
@@ -17,7 +18,7 @@ use std::cmp::Ordering;
 
 pub const MODULE: Module = Module {
     name: "dev",
-    about: "developer tools: JWTs, UUIDs, URLs, semver, file permissions, IP addresses and subnets, raw bytes, colors",
+    about: "developer tools: JWTs, UUIDs, URLs, semver, file permissions, IP addresses and subnets, raw bytes, colors, check digits and lookups",
     #[rustfmt::skip]
     examples: &[
         ("dev", &[
@@ -31,7 +32,7 @@ pub const MODULE: Module = Module {
     fns: FNS,
     call,
     compare: Some(compare),
-    children: &[net::MODULE, binary::MODULE, colors::MODULE],
+    children: &[net::MODULE, binary::MODULE, colors::MODULE, codes::MODULE],
     ..Module::EMPTY
 };
 

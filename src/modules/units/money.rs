@@ -59,7 +59,7 @@ const GUIDE: &[Section] = &[
         ("functions tell arguments apart by unit: $1000 a sum, $500/mo a payment,", ""),
         ("7%/yr a rate, 10 yr a time, \"monthly\" how often interest compounds", ""),
     ]),
-    ("currencies", &[("rates load (with a prompt) only to convert between currencies: 20 USD to EUR", "")]),
+    ("currencies", &[("rates load (from cache, or online after allow_network_access()) only to convert between currencies: 20 USD to EUR", "")]),
 ];
 
 #[rustfmt::skip]

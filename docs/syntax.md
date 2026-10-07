@@ -138,6 +138,8 @@ A unit written right after a number literal attaches to it. `to` converts.
 Long names work too: `meters`, `miles`, `hours`, `celsius`, `bytes`, ...
 Currency rates come from frankfurter.dev (ECB data), are fetched only when two
 currencies meet (`$25/h * 40 h` never goes online), and are cached for a day.
+Network access is off in every new session: until `allow_network_access()` is
+called, conversions use the cached rates (with a note if they're stale) or fail.
 If you're offline, the last cached rates are used.
 
 ## Money

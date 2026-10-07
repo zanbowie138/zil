@@ -1,7 +1,10 @@
 //! Just for fun: oracles of questionable reliability (fortune cookies, a magic 8-ball, coins, excuses)
-//! and Roman numerals; placeholder text below.
+//! and Roman numerals; placeholder text, mangled text, games and toys below.
 
+pub mod games;
+pub mod mangle;
 pub mod placeholder;
+pub mod toys;
 
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -11,7 +14,7 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 
 pub const MODULE: Module = Module {
     name: "fun",
-    about: "fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; lorem ipsum placeholder text below",
+    about: "fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; placeholder text, mangled text, dice and zodiac, ASCII toys below",
     #[rustfmt::skip]
     examples: &[
         ("fortune", &[
@@ -30,7 +33,7 @@ pub const MODULE: Module = Module {
     fns: FNS,
     call,
     targets: &[("roman", "roman")],
-    children: &[placeholder::MODULE],
+    children: &[placeholder::MODULE, mangle::MODULE, games::MODULE, toys::MODULE],
     ..Module::EMPTY
 };
 

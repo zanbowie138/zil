@@ -948,6 +948,7 @@ dependencies = [
  "ariadne",
  "base64",
  "fastrand",
+ "getrandom",
  "indexmap",
  "jiff",
  "logos",

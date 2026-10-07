@@ -12,6 +12,7 @@ categories = ["command-line-utilities", "mathematics"]
 ariadne = "0.6.0"
 base64 = "0.23.1"
 fastrand = "2.5.0"
+getrandom = "0.2"
 indexmap = "2.14.2"
 jiff = "0.2.38"
 logos = "0.16.1"

@@ -94,6 +94,7 @@ numbers with units, combined and converted; currencies use live rates
 | [constants](units/constants.md) | physical constants (CODATA 2018) as quantities; `h` is still hours, so Planck's constant is `h_planck` |
 | [money](units/money.md) | currencies shown as money, pay, interest, loans, splitting bills |
 | [goofy](units/goofy.md) | bananas for scale, smoots, fortnights; every item also works as item_for_scale |
+| [kitchen](units/kitchen.md) | cups to grams with ingredient densities, decibels, and CSS pixels (px) |
 
 ## Functions
 

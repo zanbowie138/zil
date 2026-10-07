@@ -1,7 +1,8 @@
 //! Dates: parsing (fixed formats and natural language), fields, date math, relative text.
-//! Calendar math and time zones are children.
+//! Calendar math, time zones and the sky (sunrise, moon) are children.
 
 pub mod calendar_math;
+pub mod sky;
 pub mod zones;
 
 use crate::ast::BinOp;
@@ -63,7 +64,7 @@ pub const MODULE: Module = Module {
     ident: Some(ident),
     binary: Some(binary),
     compare: Some(compare),
-    children: &[calendar_math::MODULE, zones::MODULE],
+    children: &[calendar_math::MODULE, zones::MODULE, sky::MODULE],
     ..Module::EMPTY
 };
 

@@ -1,8 +1,10 @@
 //! Text: case, splitting, search and regex.
 
 pub mod ciphers;
+pub mod compare;
 pub mod encoding;
 pub mod hash;
+pub mod layout;
 
 use super::{Call, Claim, Doc, Fail, Module, doc};
 use crate::ast::BinOp;
@@ -12,7 +14,7 @@ use crate::value::Value;
 
 pub const MODULE: Module = Module {
     name: "text",
-    about: "case, splitting, search and regex; encodings, hashes and ciphers below",
+    about: "case, splitting, search and regex; layout, comparison, encodings, hashes and ciphers below",
     #[rustfmt::skip]
     examples: &[
         ("text", &[
@@ -38,7 +40,7 @@ pub const MODULE: Module = Module {
     ],
     call,
     binary: Some(binary),
-    children: &[encoding::MODULE, hash::MODULE, ciphers::MODULE],
+    children: &[layout::MODULE, compare::MODULE, encoding::MODULE, hash::MODULE, ciphers::MODULE],
     ..Module::EMPTY
 };
 

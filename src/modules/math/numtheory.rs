@@ -4,7 +4,7 @@ use super::{big, int};
 use crate::interp::Interp;
 use crate::lexer::Span;
 use crate::modules::{Call, Doc, Fail, Module, doc};
-use crate::value::Value;
+use crate::value::{Value, num, ratio};
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::{One, Signed, Zero};
@@ -19,6 +19,9 @@ pub const MODULE: Module = Module {
             ("is a Mersenne number prime", "is_prime(2 ** 61 - 1)"),
             ("poker hands", "choose(52, 5)"),
             ("modular power", "mod_pow(3, 1000, 7)"),
+            ("a 209-digit Fibonacci", "fib(1000).str.len"),
+            ("π's famous fractions", "pi.cfrac(4)"),
+            ("the next prime after a googol", "(10 ** 100).next_prime - 10 ** 100"),
         ]),
     ],
     fns: FNS,
@@ -35,6 +38,11 @@ const FNS: &[Doc] = &[
     doc("factorial", "factorial(n: int)", "n!, exact", &["factorial(5)", "factorial(30)"], &["choose"]),
     doc("choose", "choose(n: int, k: int)", "ways to pick k of n, exact", &["choose(5, 2)", "choose(52, 5)"], &["factorial"]),
     doc("mod_pow", "mod_pow(b: int, e: int, m: int)", "b ** e % m without the huge power", &["mod_pow(2, 100, 7)", "mod_pow(3, 10 ** 18, 1000000007)"], &["gcd"]),
+    doc("fib", "fib(n: int)", "the nth Fibonacci number (fib(0) = 0), exact", &["fib(10)", "fib(100)"], &["factorial"]),
+    doc("next_prime", "next_prime(n: int)", "the smallest prime greater than n", &["next_prime(100)", "next_prime(2 ** 64)"], &["is_prime"]),
+    doc("totient", "totient(n: int)", "Euler's φ: how many of 1..n share no factor with n", &["totient(36)", "totient(97)"], &["factors", "gcd"]),
+    doc("isqrt", "isqrt(n: int)", "the integer square root, floor(√n), exact at any size", &["isqrt(99)", "isqrt(10 ** 40)"], &["sqrt"]),
+    doc("cfrac", "cfrac(x: num, terms?: int)", "continued fraction terms [a0; a1, a2, ...]; exact for fractions, up to terms (default 20) for floats", &["(415/93).cfrac", "pi.cfrac(5)", "sqrt(2).cfrac(6)"], &["frac"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -84,6 +92,74 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
                 return Err(Fail::Arg(2, format!("the modulus must be positive, got {m}")));
             }
             big(b.modpow(&e, &m))
+        }
+        ("fib", [Int(n, _)]) if (0..=100_000).contains(n) => {
+            let (mut a, mut b) = (BigInt::zero(), BigInt::one());
+            for _ in 0..*n {
+                (a, b) = (b.clone(), a + b);
+            }
+            big(a)
+        }
+        ("fib", [Int(n, _)]) => return Err(Fail::Arg(0, format!("n must be from 0 to 100000, got {n}"))),
+        ("next_prime", [v]) => {
+            let mut n = int(v)?.max(BigInt::one()) + 1u32;
+            while !is_prime(&n) {
+                n += 1u32;
+            }
+            big(n)
+        }
+        ("totient", [v]) => {
+            let n = int(v)?;
+            if !n.is_positive() {
+                return Err(Fail::Arg(0, format!("expected a positive integer, got {n}")));
+            }
+            let mut ps = vec![];
+            let mut m = n.clone();
+            for p in [2u32, 3, 5] {
+                while (&m % p).is_zero() {
+                    m /= p;
+                    ps.push(BigInt::from(p));
+                }
+            }
+            factor(m, &mut ps);
+            ps.sort();
+            ps.dedup();
+            big(ps.iter().fold(n, |acc, p| acc / p * (p - 1u32)))
+        }
+        ("isqrt", [v]) => {
+            let n = int(v)?;
+            if n.is_negative() {
+                return Err(Fail::Arg(0, format!("expected 0 or more, got {n}")));
+            }
+            big(n.sqrt())
+        }
+        ("cfrac", [v, rest @ ..]) if rest.len() <= 1 => {
+            let terms = match rest {
+                [] => 20,
+                [Int(t, _)] if (1..=1000).contains(t) => *t as usize,
+                _ => return Err(Fail::Arg(1, "terms must be an int from 1 to 1000".into())),
+            };
+            let mut out = vec![];
+            if let Some(r) = ratio(v) {
+                let (mut p, mut q) = (r.numer().clone(), r.denom().clone());
+                while !q.is_zero() && out.len() < terms {
+                    let (a, rem) = p.div_mod_floor(&q);
+                    out.push(big(a));
+                    (p, q) = (q, rem);
+                }
+            } else {
+                let mut x = num(v).ok_or(Fail::BadArgs)?;
+                for _ in 0..terms {
+                    let a = x.floor();
+                    out.push(Value::int(a as i64));
+                    // ponytail: stop once the float's error swamps the remainder; exact input avoids this.
+                    if (x - a).abs() < 1e-9 {
+                        break;
+                    }
+                    x = 1.0 / (x - a);
+                }
+            }
+            Value::list(out)
         }
         _ => return Err(Fail::BadArgs),
     })
@@ -173,6 +249,15 @@ mod tests {
         assert_eq!(show("[factorial(0), factorial(20), factorial(25)]"), "[1, 2432902008176640000, 15511210043330985984000000]");
         assert_eq!(show("[choose(5, 2), choose(52, 5), choose(3, 5), choose(100, 50)]"), "[10, 2598960, 0, 100891344545564193334812497256]");
         assert_eq!(show("[mod_pow(2, 100, 7), mod_pow(-2, 3, 5), mod_pow(3, 10 ** 18, 1000000007)]"), "[2, 2, 246336683]");
+        assert_eq!(show("[fib(0), fib(1), fib(10), fib(100)]"), "[0, 1, 55, 354224848179261915075]");
+        assert_eq!(
+            show("[next_prime(0), next_prime(13), next_prime(2 ** 61 - 2), totient(1), totient(36), totient(97)]"),
+            "[2, 17, 2305843009213693951, 1, 12, 96]"
+        );
+        assert_eq!(show("[isqrt(0), isqrt(99), isqrt(100), isqrt(10 ** 40)]"), "[0, 9, 10, 100000000000000000000]");
+        assert_eq!(show("[(415/93).cfrac, 3.cfrac, (-7/2).cfrac, pi.cfrac(4), 0.75.cfrac]"), "[[4, 2, 6, 7], [3], [-4, 2], [3, 7, 15, 1], [0, 1, 3]]");
+        assert!(try_eval("isqrt(-1)").is_err());
+        assert!(try_eval("totient(0)").is_err());
         assert!(try_eval("factors(0)").is_err());
         assert!(try_eval("factorial(-1)").is_err());
         assert!(try_eval("mod_pow(2, 3, 0)").is_err());

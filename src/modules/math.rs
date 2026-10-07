@@ -1,9 +1,11 @@
-//! Numbers: rounding, roots, logs; trig, stats, number theory, bits, bases, formatting and randomness below.
+//! Numbers: rounding, roots, logs; trig, stats, number theory, bits, bases, formatting, randomness, linear algebra and calculus below.
 
 pub mod bases;
 pub mod bits;
+pub mod calculus;
 pub mod complex;
 pub mod formatting;
+pub mod linalg;
 pub mod numtheory;
 pub mod random;
 pub mod stats;
@@ -43,7 +45,7 @@ pub const MODULE: Module = Module {
     fns: FNS,
     #[rustfmt::skip]
     groups: &[
-        ("rounding", &["abs", "round", "floor", "ceil", "trunc", "sign", "clamp"]),
+        ("rounding", &["abs", "round", "sig", "floor", "ceil", "trunc", "sign", "clamp"]),
         ("powers", &["sqrt", "cbrt", "exp", "ln", "log", "hypot", "is_nan"]),
     ],
     call,
@@ -62,6 +64,8 @@ pub const MODULE: Module = Module {
         random::MODULE,
         uncertainty::MODULE,
         complex::MODULE,
+        linalg::MODULE,
+        calculus::MODULE,
     ],
     ..Module::EMPTY
 };
@@ -71,6 +75,7 @@ const FNS: &[Doc] = &[
     doc("sqrt", "sqrt(x: num|complex)", "square root", &["sqrt(2)"], &["cbrt"]),
     doc("abs", "abs(x: num|quantity|complex)", "absolute value; keeps units. A complex number's magnitude", &["abs(-3)", "abs(-2 km)"], &["round", "sign"]),
     doc("round", "round(x: num|quantity, digits?: int) / round(x: num|quantity, step: num|quantity)", "round to nearest; keeps units. A non-int second arg rounds to a multiple of it", &["round(pi, 2)", "round(2.5 km)", "round(7.3, 0.25)", "round(17 min, 15 min)"], &["floor", "ceil", "trunc"]),
+    doc("sig", "sig(x: num|quantity, digits: int)", "round to that many significant figures; keeps units", &["3.14159.sig(3)", "123456.sig(2)", "0.0004567.sig(2)", "(1 mi to m).sig(3)"], &["round", "sci"]),
     doc("floor", "floor(x: num|quantity)", "round down", &["floor(2.7)"], &["ceil", "round"]),
     doc("ceil", "ceil(x: num|quantity)", "round up", &["ceil(2.1)"], &["floor", "round"]),
     doc("trunc", "trunc(x: num|quantity)", "round toward zero; keeps units", &["trunc(-2.7)"], &["floor", "round"]),
@@ -94,6 +99,20 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Call
         ("abs" | "round" | "floor" | "ceil" | "trunc", [v]) => round_like(name, v, 0).ok_or(Fail::BadArgs)?,
         ("round", [v, Int(n, _)]) => round_like(name, v, *n).ok_or(Fail::BadArgs)?,
         ("round", [v, step]) => round_to(v, step).ok_or(Fail::BadArgs)?,
+        ("sig", [v, Int(n, _)]) if (1..=17).contains(n) => {
+            let sig = |x: f64| {
+                if x == 0.0 || !x.is_finite() {
+                    return x;
+                }
+                let p = 10f64.powi(*n as i32 - 1 - x.abs().log10().floor() as i32);
+                (x * p).round() / p
+            };
+            match v {
+                Qty(x, u) => Qty(sig(*x), u.clone()),
+                v => Float(sig(num(v).ok_or(Fail::BadArgs)?)),
+            }
+        }
+        ("sig", [_, Int(n, _)]) => return Err(Fail::Arg(1, format!("digits must be from 1 to 17, got {n}"))),
         ("sign", [v]) => {
             let x = match v {
                 Qty(x, _) => *x,
@@ -211,6 +230,10 @@ mod tests {
         assert_eq!(show("round(pi, 2)"), "3.14");
         assert_eq!(show("round(2.5 km)"), "3 km");
         assert_eq!(show("log(1000)"), "3");
+        assert_eq!(
+            show("[3.14159.sig(3), 123456.sig(2), 0.0004567.sig(2), -987.sig(1), 0.sig(3), (1 mi to m).sig(3)]"),
+            "[3.14, 120000, 0.00046, -1000, 0, 1610 m]"
+        );
     }
 
     #[test]

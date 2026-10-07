@@ -20,10 +20,10 @@ cargo install --git https://github.com/zanbowie138/zil
 ## Usage
 
 ```
-zil              start the REPL
-zil -e <code>    evaluate code and print the result
-zil <file.zil>   run a script
-zil --docs <dir> write the mdBook reference into dir
+zil                        start the REPL
+zil -e <code> [args...]   evaluate code and print the result
+zil <file.zil> [args...]  run a script; args() lists the extra arguments
+zil --docs <dir>          write the mdBook reference into dir
 ```
 
 Try `zil examples/demo.zil`, or `help` inside the REPL.

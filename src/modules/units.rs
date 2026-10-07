@@ -2,6 +2,7 @@
 
 pub mod constants;
 pub mod goofy;
+pub mod kitchen;
 pub mod money;
 
 use crate::ast::{BinOp, Target, UnitSpec};
@@ -67,7 +68,7 @@ pub const MODULE: Module = Module {
     convert: Some(convert),
     topic: Some(topic),
     units: TABLE,
-    children: &[constants::MODULE, money::MODULE, goofy::MODULE],
+    children: &[constants::MODULE, money::MODULE, goofy::MODULE, kitchen::MODULE],
     ..Module::EMPTY
 };
 
@@ -237,7 +238,7 @@ fn topic(topic: &str) -> bool {
         out!("help(\"length\") or help(\"km\") for details");
     } else if topic == "currency" {
         out!("currency: 3-letter codes like USD, EUR, GBP, JPY. Rates come from frankfurter.dev,");
-        out!("are fetched (with a prompt) only when two currencies meet, and cached for a day.");
+        out!("are fetched only when two currencies meet, after allow_network_access(), and cached for a day.");
         out!("  100 USD to EUR");
     } else if let Some(kind) = DIMS.iter().map(|d| d.0).find(|k| *k == topic) {
         let units = units_of(kind);
@@ -691,9 +692,9 @@ fn load_rates_once() {
     }
 }
 
-/// Every unit row: the real ones, then the goofy ones.
+/// Every unit row: the real ones, then those children add.
 pub fn rows() -> impl Iterator<Item = &'static Row> {
-    TABLE.iter().chain(goofy::TABLE)
+    TABLE.iter().chain(goofy::TABLE).chain(kitchen::TABLE)
 }
 
 fn builtin_units() -> HashMap<String, Rc<UnitDef>> {
@@ -769,31 +770,25 @@ pub fn unit(name: &str) -> Result<Unit, String> {
     Ok(Unit(vec![(lookup(name)?, 1)]))
 }
 
-/// Asks on the terminal before going online; non-interactive runs never fetch.
-fn confirm_fetch() -> Result<(), String> {
-    use std::io::{IsTerminal, Write};
-    if !std::io::stdin().is_terminal() {
-        return Err("rates not cached and stdin is not a terminal to confirm a fetch".into());
+/// Lets the next currency conversion try loading rates again, now that it may go online.
+pub fn retry_rates() {
+    RATES_LOADED.with(|l| *l.borrow_mut() = false);
+}
+
+fn fetch_rates() -> Result<String, String> {
+    if !crate::modules::sys::network_allowed() {
+        return Err("not cached; call allow_network_access() to fetch them".into());
     }
-    eprint!("Fetch currency rates from api.frankfurter.dev? [y/N] ");
-    let _ = std::io::stderr().flush();
-    let mut answer = String::new();
-    std::io::stdin().read_line(&mut answer).map_err(|e| e.to_string())?;
-    match answer.trim() {
-        "y" | "Y" | "yes" => Ok(()),
-        _ => Err("fetch declined".into()),
-    }
+    ureq::get("https://api.frankfurter.dev/v1/latest").call().and_then(|mut r| r.body_mut().read_to_string()).map_err(|e| e.to_string())
 }
 
 /// Units per 1 EUR from frankfurter.dev (ECB data), cached on disk for a day.
 fn load_rates() -> Result<Vec<(String, f64)>, String> {
     let cache = crate::cache_dir().map(|d| d.join("rates.json"));
-    let fresh = cache.as_ref().and_then(|p| p.metadata().ok()?.modified().ok()?.elapsed().ok()).is_some_and(|age| age.as_secs() < 24 * 3600);
+    let age = cache.as_ref().and_then(|p| p.metadata().ok()?.modified().ok()?.elapsed().ok());
     let body = match &cache {
-        Some(p) if fresh => std::fs::read_to_string(p).map_err(|e| e.to_string())?,
-        _ => match confirm_fetch()
-            .and_then(|()| ureq::get("https://api.frankfurter.dev/v1/latest").call().and_then(|mut r| r.body_mut().read_to_string()).map_err(|e| e.to_string()))
-        {
+        Some(p) if age.is_some_and(|a| a.as_secs() < 24 * 3600) => std::fs::read_to_string(p).map_err(|e| e.to_string())?,
+        _ => match fetch_rates() {
             Ok(body) => {
                 if let Some(p) = &cache {
                     let _ = std::fs::create_dir_all(p.parent().unwrap());
@@ -801,9 +796,13 @@ fn load_rates() -> Result<Vec<(String, f64)>, String> {
                 }
                 body
             }
-            // Offline: fall back to a stale cache if there is one.
+            // Offline or not allowed online: fall back to a stale cache if there is one.
             Err(e) => match cache.as_ref().and_then(|p| std::fs::read_to_string(p).ok()) {
-                Some(body) => body,
+                Some(body) => {
+                    let days = age.map_or(0, |a| a.as_secs() / 86400);
+                    eprintln!("note: using currency rates cached {days} day{} ago", if days == 1 { "" } else { "s" });
+                    body
+                }
                 None => return Err(e),
             },
         },

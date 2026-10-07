@@ -30,6 +30,7 @@ length, search, sorting and picking across strings, lists, maps and sets; lists,
 | [maps](data/maps.md) | keys, values, lookups, merging and transforming maps |
 | [sets](data/sets.md) | unique values in insertion order: union, intersection, difference |
 | [tables](data/tables.md) | rows under named columns: filter, pick columns, sort; list fns work on the rows |
+| [charts](data/charts.md) | sparklines, bar charts, histograms and braille function plots, as text |
 
 ## Functions
 

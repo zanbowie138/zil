@@ -19,6 +19,15 @@ sums, averages, spread and extremes of lists; units welcome
 | [`stdev(xs: list)`](#stdev) | sample standard deviation (n - 1); works with units |
 | [`min(xs: list) / min(a: any, b: any, ...)`](#min) | smallest value |
 | [`max(xs: list) / max(a: any, b: any, ...)`](#max) | largest value |
+| [`describe(xs: list)`](#describe) | n, mean, stdev, min, quartiles and max in one map; units welcome |
+| [`corr(xs: list, ys: list)`](#corr) | Pearson correlation, from -1 to 1 |
+| [`fit(xs: list, ys: list)`](#fit) | least-squares line: {slope, intercept, r2} |
+| [`zscore(xs: list)`](#zscore) | how many standard deviations each item is from the mean |
+| [`normalize(xs: list)`](#normalize) | rescale so the min is 0 and the max is 1 |
+| [`cumsum(xs: list)`](#cumsum) | running totals |
+| [`deltas(xs: list)`](#deltas) | the difference between each item and the one before |
+| [`lerp(a: any, b: any, t: num)`](#lerp) | a + (b - a) * t: the point a fraction t of the way from a to b; numbers, units or dates |
+| [`remap(x: any, lo: any, hi: any, to_lo: any, to_hi: any)`](#remap) | x moved from the range lo..hi to the range to_lo..to_hi, proportionally |
 
 ### sum
 
@@ -148,6 +157,115 @@ max(3, 9, 4)
 
 See also: [min](../math/stats.md#min), [sort](../data.md#sort)
 
+### describe
+
+`describe(xs: list)`: n, mean, stdev, min, quartiles and max in one map; units welcome
+
+```zil
+[3, 1, 4, 1, 5, 9, 2, 6].describe
+# → {n: 8, mean: 3.875, stdev: 2.74838, min: 1, p25: 1.75, median: 3.5, p75: 5.25, max: 9}
+```
+
+See also: [avg](../math/stats.md#avg), [percentile](../math/stats.md#percentile)
+
+### corr
+
+`corr(xs: list, ys: list)`: Pearson correlation, from -1 to 1
+
+```zil
+corr([1, 2, 3, 4], [2, 4, 5, 9])
+# → 0.964764
+```
+
+See also: [fit](../math/stats.md#fit)
+
+### fit
+
+`fit(xs: list, ys: list)`: least-squares line: {slope, intercept, r2}
+
+```zil
+fit([1, 2, 3], [2, 4, 6])
+# → {slope: 2, intercept: 0, r2: 1}
+fit([1, 2, 3, 4], [2.1, 3.9, 6.2, 7.8])
+# → {slope: 1.94, intercept: 0.15, r2: 0.995661}
+```
+
+See also: [corr](../math/stats.md#corr)
+
+### zscore
+
+`zscore(xs: list)`: how many standard deviations each item is from the mean
+
+```zil
+[2, 4, 4, 4, 5, 5, 7, 9].zscore
+# → [-1.40312, -0.467707, -0.467707, -0.467707, 0, 0, 0.935414, 1.87083]
+```
+
+See also: [normalize](../math/stats.md#normalize), [stdev](../math/stats.md#stdev)
+
+### normalize
+
+`normalize(xs: list)`: rescale so the min is 0 and the max is 1
+
+```zil
+[10, 15, 20].normalize
+# → [0, 0.5, 1]
+```
+
+See also: [zscore](../math/stats.md#zscore), [remap](../math/stats.md#remap)
+
+### cumsum
+
+`cumsum(xs: list)`: running totals
+
+```zil
+[1, 2, 3, 4].cumsum
+# → [1, 3, 6, 10]
+[1 km, 500 m].cumsum
+# → [1 km, 1.5 km]
+```
+
+See also: [deltas](../math/stats.md#deltas), [sum](../math/stats.md#sum)
+
+### deltas
+
+`deltas(xs: list)`: the difference between each item and the one before
+
+```zil
+[1, 4, 9, 16].deltas
+# → [3, 5, 7]
+[1, 4, 9, 16].deltas.deltas
+# → [2, 2]
+```
+
+See also: [cumsum](../math/stats.md#cumsum), [windows](../data/lists.md#windows)
+
+### lerp
+
+`lerp(a: any, b: any, t: num)`: a + (b - a) * t: the point a fraction t of the way from a to b; numbers, units or dates
+
+```zil
+lerp(10, 20, 0.25)
+# → 12.5
+lerp(0 C, 100 C, 0.37)
+# → 37 C
+```
+
+See also: [remap](../math/stats.md#remap)
+
+### remap
+
+`remap(x: any, lo: any, hi: any, to_lo: any, to_hi: any)`: x moved from the range lo..hi to the range to_lo..to_hi, proportionally
+
+```zil
+remap(5, 0, 10, 100, 200)
+# → 150
+remap(72 F, 32 F, 212 F, 0, 100)
+# → 22.2222
+```
+
+See also: [lerp](../math/stats.md#lerp), [normalize](../math/stats.md#normalize)
+
 ## More examples
 
 ### stats
@@ -159,4 +277,19 @@ See also: [min](../math/stats.md#min), [sort](../data.md#sort)
 # percentile
 (1..=100).percentile(90)
 # → 90.1
+# summary
+[3, 1, 4, 1, 5, 9, 2, 6].describe
+# → {n: 8, mean: 3.875, stdev: 2.74838, min: 1, p25: 1.75, median: 3.5, p75: 5.25, max: 9}
+# trend line
+fit([1, 2, 3, 4], [2.1, 3.9, 6.2, 7.8])
+# → {slope: 1.94, intercept: 0.15, r2: 0.995661}
+# running total
+[$5, $12, $3].cumsum
+# → [$5.00, $17.00, $20.00]
+# halfway between dates
+lerp(date("2026-01-01"), date("2026-12-31"), 1/2)
+# → 2026-07-02
+# °C to a 0-255 byte
+remap(25, 0, 40, 0, 255).round
+# → 159
 ```

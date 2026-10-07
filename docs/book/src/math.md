@@ -35,9 +35,11 @@ rounding, roots, logs, constants; exact fractions and big ints
 | [bits](math/bits.md) | count, test, set, rotate and swap bits |
 | [bases](math/bases.md) | hex, binary, octal and any base 2-36; digits of a number |
 | [formatting](math/formatting.md) | format specs in strings, printf, fixed/sci/percent/commas, and human_bytes |
-| [random](math/random.md) | numbers, picks, shuffles, UUIDs |
+| [random](math/random.md) | numbers, picks, shuffles, UUIDs; passwords, passphrases, ULIDs and nano IDs from the OS's secure generator |
 | [uncertainty](math/uncertainty.md) | measurements with an error, `5 ± 0.1 m`, propagated through arithmetic and math (first order, independent errors) |
 | [complex](math/complex.md) | complex numbers, `2 + 3i`; a number touching `i` is imaginary |
+| [linalg](math/linalg.md) | dot and cross products, norms, matrix multiply, transpose, determinant, inverse, linear systems; exact with fractions |
+| [calculus](math/calculus.md) | numeric roots, derivatives and integrals of functions |
 
 ## Functions
 
@@ -46,6 +48,7 @@ rounding, roots, logs, constants; exact fractions and big ints
 | [`sqrt(x: num\|complex)`](#sqrt) | square root |
 | [`abs(x: num\|quantity\|complex)`](#abs) | absolute value; keeps units. A complex number's magnitude |
 | [`round(x: num\|quantity, digits?: int) / round(x: num\|quantity, step: num\|quantity)`](#round) | round to nearest; keeps units. A non-int second arg rounds to a multiple of it |
+| [`sig(x: num\|quantity, digits: int)`](#sig) | round to that many significant figures; keeps units |
 | [`floor(x: num\|quantity)`](#floor) | round down |
 | [`ceil(x: num\|quantity)`](#ceil) | round up |
 | [`trunc(x: num\|quantity)`](#trunc) | round toward zero; keeps units |
@@ -98,6 +101,23 @@ round(17 min, 15 min)
 ```
 
 See also: [floor](math.md#floor), [ceil](math.md#ceil), [trunc](math.md#trunc)
+
+### sig
+
+`sig(x: num|quantity, digits: int)`: round to that many significant figures; keeps units
+
+```zil
+3.14159.sig(3)
+# → 3.14
+123456.sig(2)
+# → 120000
+0.0004567.sig(2)
+# → 0.00046
+(1 mi to m).sig(3)
+# → 1610 m
+```
+
+See also: [round](math.md#round), [sci](math/formatting.md#sci)
 
 ### floor
 

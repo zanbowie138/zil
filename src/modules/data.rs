@@ -1,5 +1,6 @@
 //! Collections: functions shared by strings, lists, maps and sets, with each of those below.
 
+pub mod charts;
 pub mod lists;
 pub mod maps;
 pub mod sets;
@@ -37,7 +38,7 @@ pub const MODULE: Module = Module {
         ("test", &["any", "all"]),
     ],
     call,
-    children: &[lists::MODULE, maps::MODULE, sets::MODULE, tables::MODULE],
+    children: &[lists::MODULE, maps::MODULE, sets::MODULE, tables::MODULE, charts::MODULE],
     ..Module::EMPTY
 };
 

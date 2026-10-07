@@ -1,6 +1,6 @@
 # dev
 
-developer tools: JWTs, UUIDs, URLs, semver, file permissions, IP addresses and subnets, raw bytes, colors
+developer tools: JWTs, UUIDs, URLs, semver, file permissions, IP addresses and subnets, raw bytes, colors, check digits and lookups
 
 > Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
@@ -12,6 +12,7 @@ developer tools: JWTs, UUIDs, URLs, semver, file permissions, IP addresses and s
 | [net](dev/net.md) | IP addresses, CIDR blocks, subnets |
 | [binary](dev/binary.md) | hex dumps and entropy of strings and byte lists |
 | [colors](dev/colors.md) | colors as "#rrggbb": RGB/HSL, mixing, lightening, WCAG contrast |
+| [codes](dev/codes.md) | check digits for cards, ISBNs and IBANs; HTTP status, port and MIME type lookups |
 
 ## Functions
 

@@ -16,13 +16,20 @@ pub const MODULE: Module = Module {
         ("stats", &[
             ("standard deviation", "[2, 4, 4, 4, 5, 5, 7, 9].stdev"),
             ("percentile", "(1..=100).percentile(90)"),
+            ("summary", "[3, 1, 4, 1, 5, 9, 2, 6].describe"),
+            ("trend line", "fit([1, 2, 3, 4], [2.1, 3.9, 6.2, 7.8])"),
+            ("running total", "[$5, $12, $3].cumsum"),
+            ("halfway between dates", r#"lerp(date("2026-01-01"), date("2026-12-31"), 1/2)"#),
+            ("°C to a 0-255 byte", "remap(25, 0, 40, 0, 255).round"),
         ]),
     ],
     fns: FNS,
     #[rustfmt::skip]
     groups: &[
         ("aggregate", &["sum", "product", "avg", "min", "max"]),
-        ("spread", &["median", "mode", "percentile", "variance", "stdev"]),
+        ("spread", &["median", "mode", "percentile", "variance", "stdev", "describe"]),
+        ("relations", &["corr", "fit"]),
+        ("transform", &["zscore", "normalize", "cumsum", "deltas", "lerp", "remap"]),
     ],
     call,
     ..Module::EMPTY
@@ -40,6 +47,15 @@ const FNS: &[Doc] = &[
     doc("stdev", "stdev(xs: list)", "sample standard deviation (n - 1); works with units", &["[2, 4, 4, 4, 5, 5, 7, 9].stdev", "[1 m, 2 m, 3 m].stdev"], &["variance", "avg"]),
     doc("min", "min(xs: list) / min(a: any, b: any, ...)", "smallest value", &["min(3, 9, 4)", "[2 km, 1 mi].min"], &["max", "sort"]),
     doc("max", "max(xs: list) / max(a: any, b: any, ...)", "largest value", &["max(3, 9, 4)", r#"["b", "a"].max"#], &["min", "sort"]),
+    doc("describe", "describe(xs: list)", "n, mean, stdev, min, quartiles and max in one map; units welcome", &["[3, 1, 4, 1, 5, 9, 2, 6].describe"], &["avg", "percentile"]),
+    doc("corr", "corr(xs: list, ys: list)", "Pearson correlation, from -1 to 1", &["corr([1, 2, 3, 4], [2, 4, 5, 9])"], &["fit"]),
+    doc("fit", "fit(xs: list, ys: list)", "least-squares line: {slope, intercept, r2}", &["fit([1, 2, 3], [2, 4, 6])", "fit([1, 2, 3, 4], [2.1, 3.9, 6.2, 7.8])"], &["corr"]),
+    doc("zscore", "zscore(xs: list)", "how many standard deviations each item is from the mean", &["[2, 4, 4, 4, 5, 5, 7, 9].zscore"], &["normalize", "stdev"]),
+    doc("normalize", "normalize(xs: list)", "rescale so the min is 0 and the max is 1", &["[10, 15, 20].normalize"], &["zscore", "remap"]),
+    doc("cumsum", "cumsum(xs: list)", "running totals", &["[1, 2, 3, 4].cumsum", "[1 km, 500 m].cumsum"], &["deltas", "sum"]),
+    doc("deltas", "deltas(xs: list)", "the difference between each item and the one before", &["[1, 4, 9, 16].deltas", "[1, 4, 9, 16].deltas.deltas"], &["cumsum", "windows"]),
+    doc("lerp", "lerp(a: any, b: any, t: num)", "a + (b - a) * t: the point a fraction t of the way from a to b; numbers, units or dates", &["lerp(10, 20, 0.25)", "lerp(0 C, 100 C, 0.37)"], &["remap"]),
+    doc("remap", "remap(x: any, lo: any, hi: any, to_lo: any, to_hi: any)", "x moved from the range lo..hi to the range to_lo..to_hi, proportionally", &["remap(5, 0, 10, 100, 200)", "remap(72 F, 32 F, 212 F, 0, 100)"], &["lerp", "normalize"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -87,6 +103,75 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         }
         ("min" | "max", [List(l)]) => extreme(name, &l.borrow())?,
         ("min" | "max", vs) if vs.len() >= 2 => extreme(name, vs)?,
+        ("describe", [List(l)]) => {
+            let (mut xs, u) = floats(&l.borrow())?;
+            let q = |x: f64| u.clone().map_or(Float(x), |u| Value::qty(x, u));
+            let mean = xs.iter().sum::<f64>() / xs.len() as f64;
+            let sd = if xs.len() > 1 { q(variance(&xs).sqrt()) } else { Nil };
+            let mut p = |n| q(percentile(&mut xs, n));
+            let rows = [
+                ("n", Value::int(l.borrow().len() as i64)),
+                ("mean", q(mean)),
+                ("stdev", sd),
+                ("min", p(0.0)),
+                ("p25", p(25.0)),
+                ("median", p(50.0)),
+                ("p75", p(75.0)),
+                ("max", p(100.0)),
+            ];
+            Value::map(rows.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
+        }
+        ("corr" | "fit", [List(a), List(b)]) => {
+            let (xs, ys) = (plain(&a.borrow())?, plain(&b.borrow())?);
+            if xs.len() != ys.len() || xs.len() < 2 {
+                return Err(format!("needs two lists of the same length, at least 2, got {} and {}", xs.len(), ys.len()).into());
+            }
+            let n = xs.len() as f64;
+            let (mx, my) = (xs.iter().sum::<f64>() / n, ys.iter().sum::<f64>() / n);
+            let sxy: f64 = xs.iter().zip(&ys).map(|(x, y)| (x - mx) * (y - my)).sum();
+            let sxx: f64 = xs.iter().map(|x| (x - mx).powi(2)).sum();
+            let syy: f64 = ys.iter().map(|y| (y - my).powi(2)).sum();
+            if sxx == 0.0 {
+                return Err("every x is the same".into());
+            }
+            let r = sxy / (sxx * syy).sqrt();
+            if name == "corr" {
+                Float(r)
+            } else {
+                let slope = sxy / sxx;
+                let rows = [("slope", Float(slope)), ("intercept", Float(my - slope * mx)), ("r2", Float(if syy == 0.0 { 1.0 } else { r * r }))];
+                Value::map(rows.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
+            }
+        }
+        ("zscore" | "normalize", [List(l)]) => {
+            let xs = plain(&l.borrow())?;
+            let (lo, hi) = xs.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), x| (lo.min(*x), hi.max(*x)));
+            let (shift, scale) = match name {
+                "normalize" => (lo, hi - lo),
+                _ if xs.len() < 2 => (0.0, 0.0),
+                _ => (xs.iter().sum::<f64>() / xs.len() as f64, variance(&xs).sqrt()),
+            };
+            if scale == 0.0 || !scale.is_finite() {
+                return Err("needs at least two different values".into());
+            }
+            Value::list(xs.iter().map(|x| Float((x - shift) / scale)).collect())
+        }
+        ("cumsum", [List(l)]) => {
+            let mut out: Vec<Value> = vec![];
+            for v in l.borrow().iter() {
+                out.push(match out.last() {
+                    None => v.clone(),
+                    Some(acc) => op(BinOp::Add, acc, v)?,
+                });
+            }
+            Value::list(out)
+        }
+        ("deltas", [List(l)]) => Value::list(l.borrow().windows(2).map(|w| op(BinOp::Sub, &w[1], &w[0])).collect::<Result<_, _>>()?),
+        ("lerp", [a, b, t]) => op(BinOp::Add, a, &op(BinOp::Mul, &op(BinOp::Sub, b, a)?, t)?)?,
+        ("remap", [x, lo, hi, to_lo, to_hi]) => {
+            let t = op(BinOp::Div, &op(BinOp::Sub, x, lo)?, &op(BinOp::Sub, hi, lo)?)?;
+            op(BinOp::Add, to_lo, &op(BinOp::Mul, &op(BinOp::Sub, to_hi, to_lo)?, &t)?)?
+        }
         _ => return Err(Fail::BadArgs),
     })
 }
@@ -114,6 +199,11 @@ fn floats(l: &[Value]) -> Result<(Vec<f64>, Option<Unit>), String> {
         _ => None,
     });
     Ok((xs.collect::<Option<_>>().ok_or("expected a list of numbers, or of quantities of one kind")?, unit))
+}
+
+/// Plain numbers only, for stats whose result would need units the list doesn't share.
+fn plain(l: &[Value]) -> Result<Vec<f64>, String> {
+    l.iter().map(num).collect::<Option<_>>().ok_or_else(|| "expected a list of numbers".into())
 }
 
 /// Linear interpolation between the closest ranks, like numpy's default.
@@ -159,7 +249,25 @@ mod tests {
         assert_eq!(show("[[2, 4, 4, 4, 5, 5, 7, 9].variance, [1, 2, 3, 4].stdev.round(4)]"), "[4.57143, 1.291]");
         assert_eq!(show("[[1 m, 2 m, 3 m].stdev, [1 m, 200 cm, 3 m].variance]"), "[1 m, 1 m^2]");
         assert_eq!(show("[[2, 3, 4].product, [].product, [2 m, 3 m].product, (1..=25).product]"), "[24, 1, 6 m^2, 15511210043330985984000000]");
-        for bad in ["[].median", "[1].stdev", "[1 m, 2].median", "[1, 2].percentile(101)", "[].mode"] {
+        assert_eq!(show("[1, 2, 3, 4, 5].describe"), "{n: 5, mean: 3, stdev: 1.58114, min: 1, p25: 2, median: 3, p75: 4, max: 5}");
+        assert_eq!(show("[1 m, 3 m].describe.mean"), "2 m");
+        assert_eq!(show("[corr([1, 2, 3], [2, 4, 6]), corr([1, 2, 3], [3, 2, 1])]"), "[1, -1]");
+        assert_eq!(show("fit([1, 2, 3], [3, 5, 7])"), "{slope: 2, intercept: 1, r2: 1}");
+        assert_eq!(show("[[1, 2, 3].zscore, [10, 15, 20].normalize]"), "[[-1, 0, 1], [0, 0.5, 1]]");
+        assert_eq!(show("[[1, 2, 3].cumsum, [1 km, 500 m].cumsum, [1, 4, 9].deltas, [].cumsum]"), "[[1, 3, 6], [1 km, 1.5 km], [3, 5], []]");
+        assert_eq!(show("[lerp(10, 20, 1/4), lerp(0 m, 1 km, 0.5), remap(5, 0, 10, 100, 200)]"), "[12.5, 500 m, 150]");
+        assert_eq!(show(r#"lerp(date("2026-01-01"), date("2026-01-03"), 1/2)"#), "2026-01-02");
+        for bad in [
+            "[].median",
+            "corr([1], [2])",
+            "corr([1, 1], [2, 3])",
+            "[5, 5].normalize",
+            "[].describe",
+            "[1].stdev",
+            "[1 m, 2].median",
+            "[1, 2].percentile(101)",
+            "[].mode",
+        ] {
             assert!(try_eval(bad).is_err(), "{bad}");
         }
     }

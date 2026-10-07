@@ -30,6 +30,7 @@ pub const MODULE: Module = Module {
     ],
     fns: FNS,
     call,
+    targets: &[("words", "spell")],
     ..Module::EMPTY
 };
 
@@ -39,6 +40,8 @@ const FNS: &[Doc] = &[
     doc("sci", "sci(x: num|quantity, digits?: int)", "string in scientific notation", &["123456.sci", "123456.sci(2)"], &["fixed"]),
     doc("percent", "percent(x: num|quantity, digits?: int)", "string as a percentage", &["0.256.percent", "(1/3).percent(1)"], &["fixed"]),
     doc("commas", "commas(x: num|quantity, digits?: int)", "string with thousands separators", &["1234567.commas", "1234.5.commas(2)"], &["fixed"]),
+    doc("spell", "spell(n: int)", "an integer in English words; same as `n to words`", &["spell(42)", "1999 to words", "-1000001 to words"], &["ordinal", "roman"]),
+    doc("ordinal", "ordinal(n: int)", "1st, 2nd, 3rd, 4th, ..., 11th, 12th, 13th, 21st", &["ordinal(3)", "(1..=4).map(ordinal)", "ordinal(112)"], &["spell"]),
     doc("human_bytes", "human_bytes(n: num|quantity)", "a byte count (or data quantity) in binary units (KiB = 1024 B), one decimal", &["123456789.human_bytes", "1023.human_bytes", "3 MB.human_bytes"], &["fixed"]),
 ];
 
@@ -63,8 +66,76 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             v => Value::str(human_bytes(num(&v).unwrap_or(f64::NAN))),
         },
         ("human_bytes", [v]) if num(v).is_some() => Value::str(human_bytes(num(v).unwrap())),
+        ("spell", [Int(n, _)]) => Value::str(spell(*n)),
+        ("ordinal", [Int(n, _)]) => {
+            let suffix = match (n.unsigned_abs() % 10, n.unsigned_abs() % 100) {
+                (_, 11..=13) => "th",
+                (1, _) => "st",
+                (2, _) => "nd",
+                (3, _) => "rd",
+                _ => "th",
+            };
+            Value::str(format!("{n}{suffix}"))
+        }
         _ => return Err(Fail::BadArgs),
     })
+}
+
+const ONES: [&str; 20] = [
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen",
+];
+const TENS: [&str; 10] = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+const SCALES: [&str; 7] = ["", "thousand", "million", "billion", "trillion", "quadrillion", "quintillion"];
+
+/// `-1234` → "minus one thousand two hundred thirty-four" (American style: no "and").
+fn spell(n: i64) -> String {
+    let below_1000 = |n: u64| {
+        let (h, r) = (n / 100, n % 100);
+        let mut w = vec![];
+        if h > 0 {
+            w.push(format!("{} hundred", ONES[h as usize]));
+        }
+        match r {
+            0 => {}
+            1..20 => w.push(ONES[r as usize].into()),
+            _ if r % 10 == 0 => w.push(TENS[r as usize / 10].into()),
+            _ => w.push(format!("{}-{}", TENS[r as usize / 10], ONES[r as usize % 10])),
+        }
+        w.join(" ")
+    };
+    if n == 0 {
+        return "zero".into();
+    }
+    let mut m = n.unsigned_abs();
+    let mut groups = vec![];
+    for scale in SCALES {
+        let g = m % 1000;
+        if g > 0 {
+            groups.push(if scale.is_empty() { below_1000(g) } else { format!("{} {scale}", below_1000(g)) });
+        }
+        m /= 1000;
+    }
+    groups.reverse();
+    format!("{}{}", if n < 0 { "minus " } else { "" }, groups.join(" "))
 }
 
 fn human_bytes(mut n: f64) -> String {
@@ -278,6 +349,13 @@ mod tests {
 
     #[test]
     fn formatting() {
+        assert_eq!(show("[0.spell, 13.spell, 40.spell, 999 to words]"), r#"["zero", "thirteen", "forty", "nine hundred ninety-nine"]"#);
+        assert_eq!(show("-1000001 to words"), "minus one million one");
+        assert!(show("9223372036854775807.spell").starts_with("nine quintillion two hundred twenty-three quadrillion"));
+        assert_eq!(
+            show("[1, 2, 3, 4, 11, 12, 13, 21, 22, 111, 123, -1].map(ordinal).join(\" \")"),
+            "1st 2nd 3rd 4th 11th 12th 13th 21st 22nd 111th 123rd -1st"
+        );
         assert_eq!(show(r#"["{255:#x}", "{255:#06x}", "{255:#X}", "{5:#b}", format("%#o", 8)]"#), r#"["0xff", "0x00ff", "0XFF", "0b101", "0o10"]"#);
         assert_eq!(show("[pi.fixed(2), (5 km to mi).fixed(1), 2.fixed(0)]"), r#"["3.14", "3.1 mi", "2"]"#);
         assert_eq!(show("[123456.sci, 123456.sci(2), 0.256.percent, (1/3).percent(1)]"), r#"["1.23456e5", "1.23e5", "25.6%", "33.3%"]"#);

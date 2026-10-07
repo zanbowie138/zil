@@ -1,6 +1,6 @@
 # fun
 
-fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; lorem ipsum placeholder text below
+fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; placeholder text, mangled text, dice and zodiac, ASCII toys below
 
 > Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
@@ -18,6 +18,9 @@ fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; lorem ipsu
 | module | about |
 |---|---|
 | [placeholder](fun/placeholder.md) | lorem ipsum placeholder text, random team and person names |
+| [mangle](fun/mangle.md) | mock case, l33t, uwu, Pig Latin, zalgo, upside-down text, NATO spelling, banners and emoji |
+| [games](fun/games.md) | dice notation, the birthday paradox, odds in plain words, Western and Chinese zodiac |
+| [toys](fun/toys.md) | ASCII Mandelbrot set, Conway's Game of Life, random mazes |
 
 ## Functions
 
@@ -36,7 +39,7 @@ fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; lorem ipsu
 
 ```zil
 fortune()
-# → "Someone will thank you for a comment you wrote long ago."
+# → "Good things come to those who rebase."
 ```
 
 See also: [eight_ball](fun.md#eight_ball)
@@ -58,9 +61,9 @@ See also: [yes_or_no](fun.md#yes_or_no), [fortune](fun.md#fortune)
 
 ```zil
 coin()
-# → "tails"
+# → "heads"
 coin(3)
-# → ["tails", "tails", "tails"]
+# → ["tails", "heads", "heads"]
 ```
 
 See also: [rand](math/random.md#rand)
@@ -82,7 +85,7 @@ See also: [eight_ball](fun.md#eight_ball)
 
 ```zil
 excuse()
-# → "The tests were flaky."
+# → "Cosmic rays flipped a bit."
 ```
 
 See also: [fortune](fun.md#fortune)
@@ -108,10 +111,10 @@ eight_ball("will it compile?")
 # → "Yes."
 # best of five
 coin(5)
-# → ["tails", "heads", "heads", "heads", "heads"]
+# → ["heads", "heads", "heads", "heads", "tails"]
 # standup
 excuse()
-# → "It works on my machine."
+# → "The tests were flaky."
 # should I ship it?
 yes_or_no()
 # → "no"

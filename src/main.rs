@@ -306,10 +306,10 @@ fn repl(interp: &mut Interp) {
     }
 }
 
-const USAGE: &str = "usage: zil              start the REPL
-       zil -e <code>    evaluate code and print the result
-       zil <file.zil>   run a script
-       zil --docs <dir> write the mdBook reference into dir";
+const USAGE: &str = "usage: zil                        start the REPL
+       zil -e <code> [args...]   evaluate code and print the result
+       zil <file.zil> [args...]  run a script; args() lists the extra arguments
+       zil --docs <dir>          write the mdBook reference into dir";
 
 /// Interpreter thread stack: deep enough for `interp::MAX_DEPTH` nested calls in a debug build.
 /// Only reserved, not committed, so the size costs nothing until used.
@@ -327,17 +327,21 @@ fn real_main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.as_slice() {
         [] => repl(&mut interp),
-        [flag, code] if flag == "-e" => match run_or_exit(&mut interp, "<-e>", code) {
-            Value::Nil => {}
-            Value::Table(t) => println!("{}", modules::data::tables::grid(&t, color_on())),
-            v => println!("{v}"),
-        },
+        [flag, code, rest @ ..] if flag == "-e" => {
+            interp.args = rest.to_vec();
+            match run_or_exit(&mut interp, "<-e>", code) {
+                Value::Nil => {}
+                Value::Table(t) => println!("{}", modules::data::tables::grid(&t, color_on())),
+                v => println!("{v}"),
+            }
+        }
         [flag, dir] if flag == "--docs" => docs::write(dir.as_ref()).unwrap_or_else(|e| {
             eprintln!("zil: {dir}: {e}");
             exit(1)
         }),
         [flag] if flag == "-h" || flag == "--help" => println!("{USAGE}"),
-        [path] => {
+        [path, rest @ ..] if !path.starts_with('-') => {
+            interp.args = rest.to_vec();
             let src = std::fs::read_to_string(path).unwrap_or_else(|e| {
                 eprintln!("zil: {path}: {e}");
                 exit(1)

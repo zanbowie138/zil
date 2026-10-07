@@ -116,6 +116,8 @@ pub struct Interp {
     globals: Env,
     /// Stdin, read on first use of `input`.
     pub input: Option<Rc<str>>,
+    /// Command-line arguments after the script or `-e` code, for `args()`.
+    pub args: Vec<String>,
     /// Nested user fn calls, capped at `MAX_DEPTH` so runaway recursion errors instead of overflowing.
     depth: usize,
 }
@@ -140,7 +142,7 @@ impl Interp {
                 }
             }
         }
-        Interp { globals, input: None, depth: 0 }
+        Interp { globals, input: None, args: vec![], depth: 0 }
     }
 
     /// Shared handle to the global scope, so the REPL completer can peek at variables.

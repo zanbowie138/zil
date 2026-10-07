@@ -1,6 +1,6 @@
 # text
 
-case, splitting, search and regex; encodings, hashes and ciphers below
+case, splitting, search and regex; layout, comparison, encodings, hashes and ciphers below
 
 > Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
@@ -29,6 +29,8 @@ r"\d+"
 
 | module | about |
 |---|---|
+| [layout](text/layout.md) | pad, center, wrap, truncate, dedent; snake_case, camelCase, kebab-case, Title Case, slugs; words |
+| [compare](text/compare.md) | edit distance, similarity, the closest of a list, line-by-line diffs |
 | [encoding](text/encoding.md) | base64, base32, base58, URL and hex encodings, code points, UTF-8 bytes |
 | [hash](text/hash.md) | SHA-1/256/512, MD5, HMAC and CRC-32 of strings |
 | [ciphers](text/ciphers.md) | Caesar, ROT13, Atbash, Vigenère, Morse, Braille (for fun, not secrecy) |
