@@ -30,10 +30,10 @@ Try `zil examples/demo.zil`, or `help` inside the REPL.
 
 ## Docs
 
-The full reference lives in [`docs/book`](docs/book/src/index.md) and is generated from the builtins themselves:
+The full reference is at [zanbowie138.github.io/zil](https://zanbowie138.github.io/zil/), generated from the builtins themselves on each push. To build it locally:
 
 ```sh
-cargo run -- --docs docs/book/src
+cargo run -- --docs docs/book/src && mdbook serve docs/book
 ```
 
 ## Data

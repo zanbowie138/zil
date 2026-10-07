@@ -1,20 +1,20 @@
 //! `zil --docs <dir>`: the mdBook reference, rendered from the same module tree as `help`, one page per module.
-//! Example results are evaluated live; a test keeps the committed pages in sync, ignoring results.
+//! Example results are evaluated live, so the pages are build output: CI regenerates them on deploy.
 
 use crate::help::{HIGHLIGHTS, eval};
 use crate::modules::{ALL, Doc, Module, Section, modules, units};
 use std::fmt::Write;
 use std::path::Path;
 
-/// Prefix of the line holding an example's result, so stale checks can drop it.
+/// Prefix of the line holding an example's result.
 const RESULT: &str = "# → ";
-/// Prefix of the "generated on" note, also dropped by stale checks.
+/// Prefix of the "generated on" note.
 const NOTE: &str = "> Example results generated on ";
 
 /// Writes every page into `dir` (an mdBook `src`).
 pub fn write(dir: &Path) -> std::io::Result<()> {
     std::fs::create_dir_all(dir)?;
-    for (name, page) in pages(true) {
+    for (name, page) in pages() {
         let file = dir.join(name);
         std::fs::create_dir_all(file.parent().unwrap())?;
         std::fs::write(file, page)?;
@@ -22,20 +22,20 @@ pub fn write(dir: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-/// (file name, markdown) for every page; `live: false` leaves out results so pages are deterministic.
-fn pages(live: bool) -> Vec<(String, String)> {
-    let date = if live { jiff::Zoned::now().date().to_string() } else { String::new() };
+/// (file name, markdown) for every page.
+fn pages() -> Vec<(String, String)> {
+    let date = jiff::Zoned::now().date();
     let note = format!("{NOTE}{date}.\n> Ones using `now`, `today` or randomness will differ when you run them.\n");
     let mut summary = String::from("# Summary\n\n[Overview](index.md)\n\n- [Syntax](syntax.md)\n");
     let mut index = format!("# zil\n\nAn expression calculator and scripting language with units, dates, exact fractions and big ints.\n\n{note}");
-    sections(&mut index, HIGHLIGHTS, live);
+    sections(&mut index, HIGHLIGHTS);
     index.push_str("\n## Modules\n\n| module | about |\n|---|---|\n");
     let mut out = vec![("syntax.md".into(), "{{#include ../../syntax.md}}\n".into())];
     for (path, m) in ALL.iter() {
         let depth = path.matches('.').count();
         writeln!(summary, "{}- [{}]({})", "  ".repeat(depth), m.name, file(path)).unwrap();
         writeln!(index, "| [{path}]({}) | {} |", file(path), m.about).unwrap();
-        out.push((file(path), page(path, m, &note, live)));
+        out.push((file(path), page(path, m, &note)));
     }
     out.push(("SUMMARY.md".into(), summary));
     out.push(("index.md".into(), index));
@@ -47,9 +47,9 @@ fn file(path: &str) -> String {
     format!("{}.md", path.replace('.', "/"))
 }
 
-fn page(path: &str, m: &Module, note: &str, live: bool) -> String {
+fn page(path: &str, m: &Module, note: &str) -> String {
     let mut s = format!("# {path}\n\n{}\n\n{note}", m.about);
-    sections(&mut s, m.guide, live);
+    sections(&mut s, m.guide);
     let kinds = units::kinds(m.units);
     if !kinds.is_empty() {
         s.push_str("\n## Units\n\n| kind | names |\n|---|---|\n");
@@ -72,22 +72,22 @@ fn page(path: &str, m: &Module, note: &str, live: bool) -> String {
             writeln!(s, "| [`{}`](#{}) | {} |", f.sig.replace('|', "\\|"), f.name, f.desc.replace('|', "\\|")).unwrap();
         }
         for f in m.fns {
-            function(&mut s, f, &root, live);
+            function(&mut s, f, &root);
         }
     }
     if !m.examples.is_empty() {
         s.push_str("\n## More examples\n");
-        sections(&mut s, m.examples, live);
+        sections(&mut s, m.examples);
     }
     s
 }
 
-fn function(s: &mut String, f: &Doc, root: &str, live: bool) {
+fn function(s: &mut String, f: &Doc, root: &str) {
     writeln!(s, "\n### {}\n\n`{}`: {}", f.name, f.sig, f.desc).unwrap();
     if !f.examples.is_empty() || !f.shown.is_empty() {
         s.push_str("\n```zil\n");
         for ex in f.examples {
-            example(s, ex, live);
+            example(s, ex);
         }
         for ex in f.shown {
             writeln!(s, "{ex}").unwrap();
@@ -102,44 +102,23 @@ fn function(s: &mut String, f: &Doc, root: &str, live: bool) {
 }
 
 /// Each section as a heading and a code block of `# label`, example, result.
-fn sections(s: &mut String, guide: &[Section], live: bool) {
+fn sections(s: &mut String, guide: &[Section]) {
     for (heading, rows) in guide {
         writeln!(s, "\n### {heading}\n\n```zil").unwrap();
         for (label, ex) in *rows {
             writeln!(s, "# {label}").unwrap();
             if !ex.is_empty() {
-                example(s, ex, live);
+                example(s, ex);
             }
         }
         s.push_str("```\n");
     }
 }
 
-fn example(s: &mut String, ex: &str, live: bool) {
+fn example(s: &mut String, ex: &str) {
     writeln!(s, "{ex}").unwrap();
-    let v = if live { eval(ex) } else { return };
+    let v = eval(ex);
     if v != ex {
         writeln!(s, "{RESULT}{}", v.replace('\n', &format!("\n{RESULT}"))).unwrap();
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn book_is_current() {
-        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/book/src");
-        let strip = |page: &str| -> String {
-            let lines = page.lines().filter(|l| !l.starts_with(RESULT));
-            lines.map(|l| if l.starts_with(NOTE) { NOTE } else { l }).collect::<Vec<_>>().join(
-                "
-",
-            )
-        };
-        for (name, page) in pages(false) {
-            let disk = std::fs::read_to_string(dir.join(&name)).unwrap_or_default();
-            assert!(strip(&disk) == strip(&page), "docs/book/src/{name} is stale: run `cargo run -- --docs docs/book/src`");
-        }
     }
 }
