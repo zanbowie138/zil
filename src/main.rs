@@ -257,6 +257,9 @@ fn repl(interp: &mut Interp) {
         if src.trim().is_empty() {
             continue;
         }
+        if matches!(src.trim(), "exit" | "quit") {
+            break;
+        }
         let _ = rl.add_history_entry(src.trim_end());
         if let Some(call) = help_shorthand(&src) {
             src = call;

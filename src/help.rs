@@ -138,6 +138,7 @@ fn overview() {
         (r#"help("km")"#, r#"a unit, or a kind of unit like help("length")"#),
         (r#"help("sorting")"#, "search function names and descriptions"),
         ("help upper", "REPL shorthand for help(upper)"),
+        ("exit", "leave the REPL (or quit, Ctrl+D)"),
     ];
     let w = rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0);
     for (ex, what) in rows {
