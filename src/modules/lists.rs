@@ -17,8 +17,8 @@ pub const MODULE: Module = Module {
         ("lists", &[
             ("stepped range", "(1..=10).step(3)"),
             ("primes under 100", "(1..100).filter(is_prime).len"),
-            ("pipe into a function", r#"(1..=10).map(\x -> x ** 2) |> sum"#),
-            ("fold", r#"[1, 2, 3].reduce(10, \acc, x -> acc + x)"#),
+            ("pipe into a function", r#"(1..=10).map(|x| x ** 2) |> sum"#),
+            ("fold", r#"[1, 2, 3].reduce(10, |acc, x| acc + x)"#),
             ("standard deviation", "[2, 4, 4, 4, 5, 5, 7, 9].stdev"),
             ("percentile", "(1..=100).percentile(90)"),
             ("unique, order kept", "[3, 1, 3, 2, 1].unique"),
@@ -51,9 +51,9 @@ pub const MODULE: Module = Module {
 const FNS: &[Doc] = &[
     doc("range", "range(n) / range(a, b)", "integers in [0, n) or [a, b); same as a..b", &["range(4)", "range(2, 5)"], &["map"]),
     doc("push", "push(list, v)", "append v in place and return the list", &["[1, 2].push(3)"], &[]),
-    doc("map", "map(list, f)", "apply f to every item", &[r"[1, 2, 3].map(\x -> x * 10)"], &["filter", "reduce"]),
-    doc("filter", "filter(list, f)", "keep items where f is truthy", &[r"(1..10).filter(\x -> x % 3 == 0)"], &["map", "reduce"]),
-    doc("reduce", "reduce(list, init, f)", "fold with f(acc, item)", &[r"[1, 2, 3].reduce(10, \acc, x -> acc + x)"], &["sum", "map"]),
+    doc("map", "map(list, f)", "apply f to every item", &[r"[1, 2, 3].map(|x| x * 10)"], &["filter", "reduce"]),
+    doc("filter", "filter(list, f)", "keep items where f is truthy", &[r"(1..10).filter(|x| x % 3 == 0)"], &["map", "reduce"]),
+    doc("reduce", "reduce(list, init, f)", "fold with f(acc, item)", &[r"[1, 2, 3].reduce(10, |acc, x| acc + x)"], &["sum", "map"]),
     doc("sum", "sum(list)", "add up a list; works with units", &["[1, 2, 3].sum", "[1 m, 50 cm].sum"], &["avg", "reduce"]),
     doc("avg", "avg(list)", "mean of a list", &["[1, 2, 4].avg", "[2 h, 30 min].avg"], &["sum", "median"]),
     doc("product", "product(list)", "multiply a list together", &["[2, 3, 4].product", "[2 m, 3 m].product"], &["sum", "factorial"]),
@@ -64,7 +64,7 @@ const FNS: &[Doc] = &[
     doc("stdev", "stdev(list)", "sample standard deviation (n - 1); works with units", &["[2, 4, 4, 4, 5, 5, 7, 9].stdev", "[1 m, 2 m, 3 m].stdev"], &["variance", "avg"]),
     doc("min", "min(list) / min(a, b, ...)", "smallest value", &["min(3, 9, 4)", "[2 km, 1 mi].min"], &["max", "sort"]),
     doc("max", "max(list) / max(a, b, ...)", "largest value", &["max(3, 9, 4)", r#"["b", "a"].max"#], &["min", "sort"]),
-    doc("sort", "sort(list, key?)", "sorted copy, optionally by key function", &["[3, 1, 2].sort", r#"["ccc", "a", "bb"].sort(\w -> w.len)"#], &["reverse", "unique"]),
+    doc("sort", "sort(list, key?)", "sorted copy, optionally by key function", &["[3, 1, 2].sort", r#"["ccc", "a", "bb"].sort(|w| w.len)"#], &["reverse", "unique"]),
     doc("unique", "unique(list)", "drop duplicates, keeping first occurrences", &["[1, 2, 1, 3].unique"], &["sort", "count"]),
     doc("first", "first(list)", "first item, or nil", &["[7, 8].first"], &["last"]),
     doc("last", "last(list)", "last item, or nil", &["[7, 8].last"], &["first"]),
@@ -271,9 +271,9 @@ mod tests {
 
     #[test]
     fn lists() {
-        assert_eq!(show("range(5).reduce(0, \\acc, x -> acc + x)"), "10");
+        assert_eq!(show("range(5).reduce(0, |acc, x| acc + x)"), "10");
         assert_eq!(show("[3, 1, 2].sort"), "[1, 2, 3]");
-        assert_eq!(show(r#"["bb", "a", "ccc"].sort(\s -> s.len)"#), r#"["a", "bb", "ccc"]"#);
+        assert_eq!(show(r#"["bb", "a", "ccc"].sort(|s| s.len)"#), r#"["a", "bb", "ccc"]"#);
         assert_eq!(show("[1, 2, 2, 3].unique"), "[1, 2, 3]");
         assert_eq!(show("[1, 2, 3, 4].avg"), "2.5");
         assert_eq!(show("[1 m, 50 cm].sum"), "1.5 m");

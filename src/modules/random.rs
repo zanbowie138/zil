@@ -11,7 +11,7 @@ pub const MODULE: Module = Module { name: "random", about: "numbers, picks, shuf
 const EXAMPLES: &[Section] = &[
     ("random", &[
         ("roll a die", "rand(1, 6)"),
-        ("roll three", r#"(1..=3).map(\_ -> rand(1, 6))"#),
+        ("roll three", r#"(1..=3).map(|_| rand(1, 6))"#),
         ("float in a range", "rand(1.0, 2.0)"),
         ("pick one", r#"["rock", "paper", "scissors"].choice"#),
         ("shuffle", "(1..=5).shuffle"),

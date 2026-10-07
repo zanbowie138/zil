@@ -219,11 +219,11 @@ upper("hi")
 `x.f(a)` and `x |> f(a)` both mean `f(x, a)`, so you can chain calls:
 
 ```zil
-"the quick brown fox".split.map(\w -> w.capitalize).join(" ")
+"the quick brown fox".split.map(|w| w.capitalize).join(" ")
 
 input
   |> lines
-  |> filter(\l -> l.contains("ERROR"))
+  |> filter(|l| l.contains("ERROR"))
   |> len
 ```
 
@@ -250,10 +250,10 @@ u.city = "Oslo"
 | Function                  | Notes                                       |
 |---------------------------|---------------------------------------------|
 | `len` `first` `last` `step(n)` |                                             |
-| `map(f)` `filter(f)`      | `[1, 2].map(\x -> x * 10)` → `[10, 20]`     |
-| `reduce(init, f)`         | `xs.reduce(0, \acc, x -> acc + x)`          |
+| `map(f)` `filter(f)`      | `[1, 2].map(\|x\| x * 10)` → `[10, 20]`  |
+| `reduce(init, f)`         | `xs.reduce(0, \|acc, x\| acc + x)`       |
 | `sum` `avg` `min` `max`   | work with units: `[1 m, 50 cm].sum` → `1.5 m` |
-| `sort` `sort(f)`          | `words.sort(\w -> w.len)` sorts by key      |
+| `sort` `sort(f)`          | `words.sort(\|w\| w.len)` sorts by key   |
 | `unique` `reverse` `shuffle` |                                          |
 | `contains(v)` `find(v)` `count(v)` |                                    |
 | `keys` `values`           | for maps                                    |
@@ -365,8 +365,8 @@ for x in 1..100 {
   if x > 9 { break }                    # leave the loop
 }
 
-double = \x -> x * 2                    # short lambda
-area = \w, h -> w * h
+double = |x| x * 2                      # short lambda
+area = |w, h| w * h
 clamp = fn(x, lo, hi) {                 # block function
   if x < lo { return lo }
   min(x, hi)

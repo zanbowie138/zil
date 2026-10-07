@@ -637,10 +637,11 @@ x & 0x0ff0"
     fn variables_and_closures() {
         assert_eq!(show("x = 1\nx = x + 1\nx"), "2");
         let src = "
-make = fn(n) { \\x -> x + n }
+make = fn(n) { |x| x + n }
 add2 = make(2)
 add2(40)";
         assert_eq!(show(src), "42");
+        assert_eq!(show("f = || 7\nf() + (|a, b| a * b)(2, 3)"), "13");
         let src = "
 total = 0
 for x in 1..5 { total = total + x }
@@ -665,7 +666,7 @@ fib(10)";
         assert_eq!(show("n = 0\nwhile true { n += 1\n if n >= 3 { break } }\nn"), "3");
         assert_eq!(show("f = fn() { for x in [1, 2] { return x } }\nf()"), "1");
         assert!(try_eval("break").is_err());
-        assert!(try_eval("for x in [1] { [1].map(\\y -> continue) }").is_err());
+        assert!(try_eval("for x in [1] { [1].map(|y| continue) }").is_err());
     }
 
     #[test]
@@ -680,7 +681,7 @@ fib(10)";
     fn pipe_placeholder() {
         assert_eq!(show("3.14159 |> round(_, 2)"), "3.14");
         assert_eq!(show("5 |> _ * 2 |> [_, _]"), "[10, 10]");
-        assert_eq!(show("[1, 2] |> map(_, \\x -> x |> _ + 1)"), "[2, 3]");
+        assert_eq!(show("[1, 2] |> map(_, |x| x |> _ + 1)"), "[2, 3]");
         assert_eq!(show("\"x\" |> upper"), "X");
     }
 

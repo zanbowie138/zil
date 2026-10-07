@@ -59,7 +59,7 @@ const HIGHLIGHTS: &[Section] = &[(
         ("bits", "0xf0 to bits"),
         ("percentages", "80 + 15%"),
         ("numbers out of text", r#""a1b22c333".nums.sum"#),
-        (r"syntax: x.f(y) is f(x, y)   \x -> x * 2 is a lambda   xs |> sum pipes   # comments", ""),
+        (r"syntax: x.f(y) is f(x, y)   |x| x * 2 is a lambda   xs |> sum pipes   # comments", ""),
     ],
 )];
 

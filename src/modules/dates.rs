@@ -26,7 +26,7 @@ pub const MODULE: Module = Module {
             ("countdown", r#"(date("2027-01-01") - now).parts"#),
             ("relative time", "(now - 3 h).relative"),
             ("first of next month", "(today + 1 mo).with({day: 1})"),
-            ("months with a Friday the 13th", r#"(1..=12).filter(\m -> date(2026, m, 13).weekday == "Friday")"#),
+            ("months with a Friday the 13th", r#"(1..=12).filter(|m| date(2026, m, 13).weekday == "Friday")"#),
             ("from a Unix timestamp", "date(1798178400)"),
             ("ISO week number", "today.iso_week"),
         ]),

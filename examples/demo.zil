@@ -12,7 +12,7 @@ print("mask: {mask}, low byte: {0xab to dec}")
 
 # Strings
 title = "the quick brown fox"
-print(title.split.map(\w -> w.capitalize).join(" "))
+print(title.split.map(|w| w.capitalize).join(" "))
 print("digits in 'a1b22c333': {"a1b22c333".find_all(r"\d+")}")
 print("slug: {title.replace(r"\s+", "-")}")
 print("sha256: {"hello".sha256[..12]}...")

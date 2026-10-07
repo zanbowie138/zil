@@ -87,10 +87,6 @@ pub enum Tok {
     DotDot,
     #[token("..=")]
     DotDotEq,
-    #[token("\\")]
-    Backslash,
-    #[token("->")]
-    Arrow,
     #[token("|>")]
     Pipe,
     #[token("=")]

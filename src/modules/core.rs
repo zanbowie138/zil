@@ -24,7 +24,7 @@ pub const MODULE: Module = Module {
     ],
     #[rustfmt::skip]
     guide: &[
-        ("types", &[("nil", "nil"), ("bool", "true"), ("int", "0xff"), ("float", "1.5e3"), ("frac", "7/2 to frac"), ("fn", r"\x -> x * 2")]),
+        ("types", &[("nil", "nil"), ("bool", "true"), ("int", "0xff"), ("float", "1.5e3"), ("frac", "7/2 to frac"), ("fn", r"|x| x * 2")]),
         ("names", &[("input  (stdin as a string)", "")]),
         ("conversions", &[
             ("to str int float frac bool list", r#""42" to int"#),

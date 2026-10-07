@@ -18,7 +18,7 @@ pub const MODULE: Module = Module {
             ("regex captures", r#""2026-10-06".match(r"(\d+)-(\d+)-(\d+)")"#),
             ("regex replace with $1", r#""CamelCaseName".replace(r"(\B[A-Z])", " $1")"#),
             ("grep lines", r#""ok\nERROR disk full\nok".grep(r"ERROR")"#),
-            ("initials", r#""Ada Lovelace".split.map(\w -> w[0]).join"#),
+            ("initials", r#""Ada Lovelace".split.map(|w| w[0]).join"#),
             ("hashes", r#""hello".md5"#),
             ("base64", r#""hi" to base64"#),
             ("URL encoding", r#""a b&c".encode("url")"#),

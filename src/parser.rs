@@ -194,7 +194,7 @@ impl Parser {
                     let value = self.mk(arith(op, lhs.clone(), rhs), start);
                     ExprKind::Assign(Box::new(lhs), Box::new(value))
                 }
-                // `x |> f(_, 2)` => `(\_ -> f(_, 2))(x)`
+                // `x |> f(_, 2)` => `(|_| f(_, 2))(x)`
                 Tok::Pipe if hole => {
                     let span = rhs.span.clone();
                     let f = Expr { kind: ExprKind::Fn(Rc::new(FnDef { params: vec!["_".into()], body: rhs })), span };
@@ -286,9 +286,12 @@ impl Parser {
             Tok::Minus => ExprKind::Unary(UnOp::Neg, Box::new(self.expr(PREFIX_BP)?)),
             Tok::Bang => ExprKind::Unary(UnOp::Not, Box::new(self.expr(PREFIX_BP)?)),
             Tok::Tilde => ExprKind::Unary(UnOp::BitNot, Box::new(self.expr(PREFIX_BP)?)),
-            Tok::Backslash => {
-                let params = self.params(Tok::Arrow)?;
-                self.expect(Tok::Arrow, "`->`")?;
+            // `|x, y| body`, or `|| body` with no params.
+            t @ (Tok::Bar | Tok::Or) => {
+                let params = if t == Tok::Or { Vec::new() } else { self.params(Tok::Bar)? };
+                if t == Tok::Bar {
+                    self.expect(Tok::Bar, "`|`")?;
+                }
                 let body = self.expr(0)?;
                 ExprKind::Fn(Rc::new(FnDef { params, body }))
             }
@@ -621,7 +624,8 @@ fn starts_operand(t: &Tok) -> bool {
             | Minus
             | Bang
             | Tilde
-            | Backslash
+            | Bar
+            | Or
             | Fn
             | If
             | True

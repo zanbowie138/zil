@@ -17,7 +17,7 @@ pub const MODULE: Module = Module {
     #[rustfmt::skip]
     examples: &[
         ("numbers", &[
-            ("exact fractions", r#"(1..=6).map(\x -> 1/x).sum to frac"#),
+            ("exact fractions", r#"(1..=6).map(|x| 1/x).sum to frac"#),
             ("decimals are exact", "0.1 + 0.2 == 0.3"),
             ("1/3 * 3 is exactly 1", "1/3 * 3 == 1"),
             ("decimal to fraction", "0.75 to frac"),
