@@ -1,8 +1,7 @@
 use crate::Error;
-use crate::ast::{BinOp, Expr, ExprKind, FnDef, Radix, Target, UnOp, UnitSpec};
-use crate::builtins::hex;
+use crate::ast::{BinOp, Expr, ExprKind, FnDef, Radix, Target, UnOp};
 use crate::lexer::Span;
-use crate::units::{self, Unit};
+use crate::modules::{self, MODULES, Module, units::{self, Unit}};
 use indexmap::IndexMap;
 use jiff::{Zoned, tz::TimeZone};
 use regex::Regex;
@@ -26,7 +25,7 @@ pub enum Value {
     List(Rc<RefCell<Vec<Value>>>),
     Map(Rc<RefCell<IndexMap<String, Value>>>),
     Fn(Rc<Closure>),
-    Builtin(&'static str),
+    Builtin(&'static Module, &'static str),
 }
 
 // ponytail: closures hold their defining Env, so recursive fns form Rc cycles and leak; add a GC/arena if long-running scripts care.
@@ -83,7 +82,7 @@ impl Value {
             Value::Date(_) => "date",
             Value::List(_) => "list",
             Value::Map(_) => "map",
-            Value::Fn(_) | Value::Builtin(_) => "fn",
+            Value::Fn(_) | Value::Builtin(..) => "fn",
         }
     }
 
@@ -124,7 +123,7 @@ impl Value {
                 write!(f, "}}")
             }
             Value::Fn(_) => write!(f, "<fn>"),
-            Value::Builtin(name) => write!(f, "<builtin {name}>"),
+            Value::Builtin(_, name) => write!(f, "<builtin {name}>"),
         }
     }
 }
@@ -156,7 +155,7 @@ impl PartialEq for Value {
             (List(a), List(b)) => *a.borrow() == *b.borrow(),
             (Map(a), Map(b)) => *a.borrow() == *b.borrow(),
             (Fn(a), Fn(b)) => Rc::ptr_eq(a, b),
-            (Builtin(a), Builtin(b)) => a == b,
+            (Builtin(_, a), Builtin(_, b)) => a == b,
             _ => false,
         }
     }
@@ -196,7 +195,7 @@ fn digits(mut m: u64, base: u32) -> String {
 }
 
 /// Whether `n` is representable in `w` bits, signed or unsigned.
-fn fits(n: i64, w: u32) -> bool {
+pub fn fits(n: i64, w: u32) -> bool {
     let n = n as i128;
     -(1i128 << (w - 1)) <= n && n < (1i128 << w)
 }
@@ -232,18 +231,8 @@ pub fn compare(a: &Value, b: &Value) -> Option<Ordering> {
     match (a, b) {
         (Value::Int(a, _), Value::Int(b, _)) => Some(a.cmp(b)),
         (Value::Str(a), Value::Str(b)) => Some(a.cmp(b)),
-        (Value::Date(a), Value::Date(b)) => Some(a.timestamp().cmp(&b.timestamp())),
-        (Value::Qty(x, u), Value::Qty(y, w)) if u.dim() == w.dim() => u.to_si(*x).partial_cmp(&w.to_si(*y)),
-        _ => num(a)?.partial_cmp(&num(b)?),
+        _ => modules::compare(a, b).or_else(|| num(a)?.partial_cmp(&num(b)?)),
     }
-}
-
-pub fn unit_of(spec: &UnitSpec) -> Result<Unit, String> {
-    let mut u = Unit::default();
-    for (name, p) in spec {
-        u = u.mul(&units::unit(name)?.pow(*p), 1);
-    }
-    Ok(u)
 }
 
 pub type Env = Rc<RefCell<Scope>>;
@@ -295,7 +284,8 @@ type EResult = Result<Value, Ctl>;
 
 pub struct Interp {
     globals: Env,
-    input: Option<Rc<str>>,
+    /// Stdin, read on first use of `input`.
+    pub input: Option<Rc<str>>,
 }
 
 impl Interp {
@@ -303,11 +293,14 @@ impl Interp {
         let globals: Env = Default::default();
         {
             let mut g = globals.borrow_mut();
-            for name in crate::builtins::NAMES {
-                g.vars.insert(name.to_string(), Value::Builtin(name));
+            for m in MODULES {
+                for f in m.fns {
+                    g.vars.insert(f.0.to_string(), Value::Builtin(m, f.0));
+                }
+                for (name, x) in m.consts {
+                    g.vars.insert(name.to_string(), Value::Float(*x));
+                }
             }
-            g.vars.insert("pi".into(), Value::Float(std::f64::consts::PI));
-            g.vars.insert("e".into(), Value::Float(std::f64::consts::E));
         }
         Interp { globals, input: None }
     }
@@ -346,29 +339,8 @@ impl Interp {
                     Err(Ctl::Err(e)) => Err(e),
                 }
             }
-            Value::Builtin(name) => crate::builtins::call(self, name, args, span),
+            Value::Builtin(m, name) => (m.call)(self, name, args, span),
             v => Err(Error::new(format!("{} is not callable", v.type_name()), span.clone())),
-        }
-    }
-
-    /// Special names that aren't variables: `now`, `today`, `input`, then units (`d * km`).
-    fn ident_fallback(&mut self, name: &str) -> Result<Value, String> {
-        match name {
-            "now" => Ok(Value::date(Zoned::now())),
-            "today" | "tomorrow" | "yesterday" => Ok(Value::date(crate::dates::parse(name, &Zoned::now()).unwrap())),
-            "input" => {
-                if self.input.is_none() {
-                    let mut s = String::new();
-                    std::io::Read::read_to_string(&mut std::io::stdin(), &mut s).map_err(|e| e.to_string())?;
-                    self.input = Some(s.into());
-                }
-                Ok(Value::Str(self.input.clone().unwrap()))
-            }
-            _ => match units::unit(name) {
-                Ok(u) => Ok(Value::Qty(1.0, u)),
-                Err(e) if e.starts_with("unknown unit") => Err(format!("undefined variable `{name}`")),
-                Err(e) => Err(e),
-            },
         }
     }
 
@@ -383,7 +355,7 @@ impl Interp {
             ExprKind::Regex(r) => Value::Regex(r.clone()),
             ExprKind::Ident(name) => match lookup(env, name) {
                 Some(v) => v,
-                None => self.ident_fallback(name).map_err(err)?,
+                None => modules::ident(self, name).unwrap_or_else(|| Err(format!("undefined variable `{name}`"))).map_err(err)?,
             },
             ExprKind::List(items) => {
                 let mut v = Vec::with_capacity(items.len());
@@ -402,15 +374,21 @@ impl Interp {
             ExprKind::Qty(n, spec) => {
                 let v = self.eval(n, env)?;
                 let n = num(&v).ok_or_else(|| err(format!("cannot attach a unit to a {}", v.type_name())))?;
-                Value::Qty(n, unit_of(spec).map_err(err)?)
+                Value::Qty(n, units::unit_of(spec).map_err(err)?)
             }
-            ExprKind::To(v, Target::Type(t)) => {
-                let v = self.eval(v, env)?;
-                crate::builtins::call(self, t, vec![v], &e.span)?
+            // `x to hex(8)` is the builtin call `hex(x, 8)`, even if `hex` is shadowed.
+            ExprKind::To(v, Target::Named(name, arg)) => {
+                let (m, f) = modules::target(name).expect("parser only accepts registered targets");
+                let mut args = vec![self.eval(v, env)?];
+                args.extend(arg.map(Value::int));
+                self.call(&Value::Builtin(m, f), args, &e.span)?
             }
             ExprKind::To(v, target) => {
                 let v = self.eval(v, env)?;
-                convert(v, target).map_err(err)?
+                match modules::convert(&v, target) {
+                    Some(r) => r.map_err(err)?,
+                    None => return Err(err(format!("cannot convert {} like that", v.type_name()))),
+                }
             }
             ExprKind::Unary(op, x) => match (op, self.eval(x, env)?) {
                 (UnOp::Not, v) => Value::Bool(!v.truthy()),
@@ -495,7 +473,7 @@ impl Interp {
                     return Ok(v.clone());
                 }
                 match lookup(env, key) {
-                    Some(f @ (Value::Fn(_) | Value::Builtin(_))) => self.call(&f, vec![o], &e.span)?,
+                    Some(f @ (Value::Fn(_) | Value::Builtin(..))) => self.call(&f, vec![o], &e.span)?,
                     _ if matches!(o, Value::Map(_)) => Value::Nil,
                     _ => return Err(err(format!("{} has no field or method `{key}`", o.type_name()))),
                 }
@@ -601,47 +579,13 @@ fn slice_range(from: Option<i64>, to: Option<i64>, len: usize) -> (usize, usize)
     (a, b.max(a))
 }
 
-pub fn range(a: i64, b: i64) -> Result<Value, String> {
-    if b.saturating_sub(a) > 10_000_000 {
-        return Err("range too large".into());
-    }
-    Ok(Value::list((a..b).map(Value::int).collect()))
+pub fn mismatch(a: &Value, b: &Value) -> String {
+    format!("unsupported operands {} and {}", a.type_name(), b.type_name())
 }
-
-pub fn convert(v: Value, target: &Target) -> Result<Value, String> {
-    Ok(match (v, target) {
-        (Value::Qty(x, u), Target::Units(specs)) => {
-            let us = specs.iter().map(unit_of).collect::<Result<Vec<_>, _>>()?;
-            if let Some(t) = us.iter().find(|t| t.dim() != u.dim()) {
-                return Err(format!("cannot convert {u} to {t}"));
-            }
-            Value::str(units::split(u.to_si(x), &us))
-        }
-        (Value::Qty(x, u), Target::Unit(spec)) => {
-            let t = unit_of(spec)?;
-            if u.dim() != t.dim() {
-                return Err(format!("cannot convert {u} to {t}"));
-            }
-            Value::Qty(t.value_from_si(u.to_si(x)), t)
-        }
-        (Value::Int(n, _), Target::Base(r)) if r.width == 0 || fits(n, r.width) => Value::Int(n, *r),
-        (Value::Int(n, _), Target::Base(r)) => return Err(format!("{n} does not fit in {} bits", r.width)),
-        (Value::Float(x), Target::Base(_)) if x.fract() == 0.0 && x.abs() < 9.2e18 => convert(Value::int(x as i64), target)?,
-        (Value::Str(s), Target::Base(Radix { base: 16, width: 0 })) => Value::str(hex(s.as_bytes())),
-        (Value::Date(z), Target::Unix) => Value::int(z.timestamp().as_second()),
-        (Value::Date(z), Target::Tz(name)) if name == "local" => Value::date(z.with_time_zone(TimeZone::system())),
-        (Value::Date(z), Target::Tz(name)) => Value::date(z.in_tz(name).map_err(|e| e.to_string())?),
-        (v @ (Value::Int(..) | Value::Float(_)), Target::Unit(_) | Target::Units(_)) => {
-            return Err(format!("{v} has no unit; attach one like `{v} km`"));
-        }
-        (v, _) => return Err(format!("cannot convert {} like that", v.type_name())),
-    })
-}
-
 
 pub fn binary(op: BinOp, a: &Value, b: &Value) -> Result<Value, String> {
     use Value::*;
-    let mismatch = || format!("unsupported operands {} and {}", a.type_name(), b.type_name());
+    let mismatch = || mismatch(a, b);
     match op {
         BinOp::Eq => return Ok(Bool(a == b)),
         BinOp::Ne => return Ok(Bool(a != b)),
@@ -656,33 +600,10 @@ pub fn binary(op: BinOp, a: &Value, b: &Value) -> Result<Value, String> {
         }
         _ => {}
     }
+    if let Some(r) = modules::binary(op, a, b) {
+        return r;
+    }
     Ok(match (op, a, b) {
-        (BinOp::Range, Int(x, _), Int(y, _)) => range(*x, *y)?,
-        (BinOp::Add, Str(_), _) | (BinOp::Add, _, Str(_)) => Value::str(format!("{a}{b}")),
-        (BinOp::Mul, Str(s), Int(n, _)) | (BinOp::Mul, Int(n, _), Str(s)) => Value::str(s.repeat((*n).max(0) as usize)),
-        (BinOp::Add, List(x), List(y)) => Value::list(x.borrow().iter().chain(y.borrow().iter()).cloned().collect()),
-
-        (BinOp::Add, Date(z), Qty(v, u)) | (BinOp::Add, Qty(v, u), Date(z)) => Value::date(crate::dates::add(z, *v, u)?),
-        (BinOp::Sub, Date(z), Qty(v, u)) => Value::date(crate::dates::add(z, -v, u)?),
-        (BinOp::Sub, Date(x), Date(y)) => Qty(x.duration_since(y).as_secs_f64() / 86400.0, units::unit("d")?),
-
-        (BinOp::Add | BinOp::Sub, Qty(x, u), Qty(y, w)) => {
-            if u.dim() != w.dim() {
-                return Err(format!("cannot add {u} and {w}"));
-            }
-            let y = u.value_from_si(w.to_si(*y));
-            Value::qty(if op == BinOp::Add { x + y } else { x - y }, u.clone())
-        }
-        (BinOp::Mul | BinOp::Div, Qty(..), _) | (BinOp::Mul | BinOp::Div, _, Qty(..)) => {
-            let split = |v: &Value| match v {
-                Qty(x, u) => Some((*x, u.clone())),
-                _ => Some((num(v)?, Unit::default())),
-            };
-            let ((x, u), (y, w)) = (split(a).ok_or_else(mismatch)?, split(b).ok_or_else(mismatch)?);
-            if op == BinOp::Mul { Value::qty(x * y, u.mul(&w, 1)) } else { Value::qty(x / y, u.mul(&w, -1)) }
-        }
-        (BinOp::Pow, Qty(x, u), Int(n, _)) if (-9..=9).contains(n) => Value::qty(x.powi(*n as i32), u.pow(*n as i8)),
-
         (_, Int(x, bx), Int(y, by)) => {
             let base = if *bx != Radix::DEC { *bx } else { *by };
             let (x, y) = (*x, *y);
@@ -800,6 +721,8 @@ x + 1"), "0b1011");
         assert_eq!(show("~0x0f to hex(8)"), "0xf0");
         assert_eq!(show("-5 to hex"), "-0x5");
         assert!(try_eval("256 to hex(8)").is_err());
+        assert!(try_eval("5 to base(99)").is_err());
+        assert!(try_eval("5 to hex(65)").is_err());
         assert_eq!(show(r#""hi" to hex"#), "6869");
     }
 

@@ -1,9 +1,194 @@
-//! Date helpers: parsing (fixed formats and natural language), calendar math, relative text, month grids.
+//! Dates: parsing (fixed formats and natural language), calendar math, relative text, month grids.
 //! Weeks start on Monday (ISO 8601).
 
-use crate::units::{self, Unit};
+use super::units::{self, Unit};
+use super::{Claim, Doc, Module, bad_args};
+use crate::Error;
+use crate::ast::{BinOp, Target};
+use crate::interp::{Interp, Value};
 use jiff::civil::{self, Date, Time, Weekday};
 use jiff::{SignedDuration, Span, Timestamp, Zoned, tz::TimeZone};
+
+pub const MODULE: Module = Module {
+    name: "dates",
+    example: r#"date("2026-12-25").weekday"#,
+    fns: FNS,
+    call,
+    targets: &[("unix", "unix"), ("UTC", "utc"), ("utc", "utc"), ("local", "local")],
+    ident: Some(ident),
+    binary: Some(binary),
+    compare: Some(compare),
+    convert: Some(convert),
+    ..Module::EMPTY
+};
+
+#[rustfmt::skip]
+const FNS: &[Doc] = &[
+    ("date", "date(s) / date(s, fmt) / date(y, m, d, h?, min?, s?) / date(unix)", "parse ISO, US (12/25/2026), written (Dec 25 2026) or natural language dates", &[r#"date("2026-12-25")"#, r#"date("next friday at 5pm")"#, r#"date("3 days ago")"#, r#"date("25.12.2026", "%d.%m.%Y")"#, "date(2026, 12, 25, 18, 30)", "date(0)"], &["format", "with", "start_of"]),
+    ("year", "year(d)", "year of a date", &["now.year"], &["month", "day"]),
+    ("month", "month(d)", "month of a date (1-12)", &["now.month"], &["year", "day"]),
+    ("day", "day(d)", "day of the month", &["now.day"], &["month", "weekday"]),
+    ("hour", "hour(d)", "hour of a date", &["now.hour"], &["minute", "second"]),
+    ("minute", "minute(d)", "minute of a date", &["now.minute"], &["hour", "second"]),
+    ("second", "second(d)", "second of a date", &["now.second"], &["hour", "minute"]),
+    ("weekday", "weekday(d)", "day name", &[r#"date("2026-12-25").weekday"#], &["day", "format"]),
+    ("format", "format(d, fmt)", "format a date with strftime codes", &[r#"now.format("%B %d, %Y")"#, r#"now.format("%H:%M")"#], &["date"]),
+    ("with", "with(d, fields)", "same date with fields replaced: year month day hour minute second", &["today.with({day: 1})", "now.with({hour: 9, minute: 0})"], &["start_of", "date"]),
+    ("weekday_num", "weekday_num(d)", "weekday as a number, Monday = 1 ... Sunday = 7", &["today.weekday_num"], &["weekday"]),
+    ("day_of_year", "day_of_year(d)", "day of the year, 1-366", &[r#"date("2026-12-31").day_of_year"#], &["iso_week"]),
+    ("iso_week", "iso_week(d)", "ISO 8601 week number (weeks start Monday)", &[r#"date("2026-12-31").iso_week"#], &["day_of_year", "quarter"]),
+    ("quarter", "quarter(d)", "quarter of the year, 1-4", &["today.quarter"], &["iso_week"]),
+    ("leap_year", "leap_year(d or year)", "whether the year is a leap year", &["leap_year(2028)", "today.leap_year"], &["days_in_year"]),
+    ("days_in_month", "days_in_month(d)", "number of days in the date's month", &[r#"date("2028-02-10").days_in_month"#], &["days_in_year"]),
+    ("days_in_year", "days_in_year(d)", "365 or 366", &["today.days_in_year"], &["leap_year"]),
+    ("is_weekend", "is_weekend(d)", "Saturday or Sunday", &[r#"date("2026-10-10").is_weekend"#], &["is_weekday", "add_workdays"]),
+    ("is_weekday", "is_weekday(d)", "Monday through Friday", &["today.is_weekday"], &["is_weekend"]),
+    ("is_today", "is_today(d)", "same calendar day as now", &["now.is_today", "tomorrow.is_today"], &["is_past"]),
+    ("is_past", "is_past(d)", "before now", &["yesterday.is_past"], &["is_future", "is_today"]),
+    ("is_future", "is_future(d)", "after now", &["tomorrow.is_future"], &["is_past"]),
+    ("start_of", "start_of(d, period)", "start of the second/minute/hour/day/week/month/quarter/year", &[r#"now.start_of("week")"#, r#"now.start_of("quarter")"#], &["end_of", "with"]),
+    ("end_of", "end_of(d, period)", "last moment of the period", &[r#"now.end_of("month")"#, r#"(today.end_of("year") - now).parts"#], &["start_of"]),
+    ("next", "next(d, weekday)", "the next given weekday strictly after d", &[r#"today.next("friday")"#, r#"now.next("mon")"#], &["prev", "nth_weekday"]),
+    ("prev", "prev(d, weekday)", "the last given weekday strictly before d", &[r#"today.prev("sunday")"#], &["next"]),
+    ("nth_weekday", "nth_weekday(d, n, weekday)", "nth weekday of d's month; negative counts from the end", &[r#"date(2026, 11, 1).nth_weekday(4, "thu")"#, r#"date(2026, 5, 1).nth_weekday(-1, "mon")"#], &["next"]),
+    ("add_workdays", "add_workdays(d, n)", "move n Monday-Friday days (no holidays); negative goes back", &["today.add_workdays(10)"], &["workdays", "is_weekend"]),
+    ("workdays", "workdays(a, b)", "Monday-Friday days from a up to (not including) b", &[r#"workdays(today, date("2026-12-25"))"#], &["add_workdays"]),
+    ("age", "age(d)", "whole years since d", &[r#"date("1990-06-15").age"#], &["diff"]),
+    ("diff", "diff(a, b)", "calendar difference from a to b", &[r#"diff(date("2025-08-03"), date("2026-10-06 04:00"))"#], &["age", "relative", "parts"]),
+    ("relative", "relative(d)", "\"in 3 days\", \"2 hours ago\"", &[r#"date("2026-12-25").relative"#, "(now - 3 h).relative"], &["diff", "parts"]),
+    ("parts", "parts(duration)", "duration in up to three of d, h, min, s; or `to d h min` for chosen units", &[r#"(date("2026-12-25") - date("2026-10-06 14:24")).parts"#, "5000 s.parts"], &["relative", "diff"]),
+    ("calendar", "calendar(d) / calendar(year, month)", "month grid, weeks starting Monday", &["calendar(2026, 12)"], &["date"]),
+    ("unix", "unix(d)", "seconds since 1970-01-01 UTC; same as `d to unix`", &["date(0).unix", "date(86400) to unix"], &["date"]),
+    ("utc", "utc(d)", "the same moment in UTC; same as `d to UTC` (`d to \"Asia/Tokyo\"` for any zone)", &["date(0) to UTC", "date(0).utc.year"], &["local", "date"]),
+    ("local", "local(d)", "the same moment in the system time zone; same as `d to local`", &["(date(0) to UTC).local.year"], &["utc"]),
+];
+
+fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &crate::lexer::Span) -> Result<Value, Error> {
+    let err = |msg: String| Error::new(format!("{name}: {msg}"), span.clone());
+    let bad = || bad_args(name, &args, span);
+    use Value::*;
+    Ok(match (name, args.as_slice()) {
+        ("date", [Str(s)]) => Value::date(parse(s, &Zoned::now()).ok_or_else(|| err(format!("cannot parse date {s:?}")))?),
+        ("date", [Str(s), Str(f)]) => {
+            let z = with_format(s, f, &TimeZone::system());
+            Value::date(z.ok_or_else(|| err(format!("{s:?} does not match {f:?}")))?)
+        }
+        ("date", [Int(y, _), Int(m, _), Int(d, _), rest @ ..]) if rest.len() <= 3 => {
+            let mut t = [0i64; 3];
+            for (slot, v) in t.iter_mut().zip(rest) {
+                let Int(n, _) = v else { return Err(bad()) };
+                *slot = *n;
+            }
+            let small = |n: i64| i8::try_from(n).map_err(|_| err(format!("{n} out of range")));
+            let year = i16::try_from(*y).map_err(|_| err(format!("year {y} out of range")))?;
+            let dt = civil::DateTime::new(year, small(*m)?, small(*d)?, small(t[0])?, small(t[1])?, small(t[2])?, 0);
+            Value::date(dt.and_then(|dt| dt.to_zoned(TimeZone::system())).map_err(|e| err(e.to_string()))?)
+        }
+        ("date", [Int(n, _)]) => {
+            let ts = Timestamp::from_second(*n).map_err(|e| err(e.to_string()))?;
+            Value::date(ts.to_zoned(TimeZone::system()))
+        }
+        ("year", [Date(z)]) => Value::int(z.year() as i64),
+        ("month", [Date(z)]) => Value::int(z.month() as i64),
+        ("day", [Date(z)]) => Value::int(z.day() as i64),
+        ("hour", [Date(z)]) => Value::int(z.hour() as i64),
+        ("minute", [Date(z)]) => Value::int(z.minute() as i64),
+        ("second", [Date(z)]) => Value::int(z.second() as i64),
+        ("weekday", [Date(z)]) => Value::str(z.strftime("%A").to_string()),
+        ("weekday_num", [Date(z)]) => Value::int(z.weekday().to_monday_one_offset() as i64),
+        ("day_of_year", [Date(z)]) => Value::int(z.day_of_year() as i64),
+        ("iso_week", [Date(z)]) => Value::int(z.date().iso_week_date().week() as i64),
+        ("quarter", [Date(z)]) => Value::int((z.month() as i64 - 1) / 3 + 1),
+        ("leap_year", [Date(z)]) => Bool(z.in_leap_year()),
+        ("leap_year", [Int(y, _)]) => Bool(y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)),
+        ("days_in_month", [Date(z)]) => Value::int(z.days_in_month() as i64),
+        ("days_in_year", [Date(z)]) => Value::int(z.days_in_year() as i64),
+        ("is_weekend", [Date(z)]) => Bool(is_weekend(z.date())),
+        ("is_weekday", [Date(z)]) => Bool(!is_weekend(z.date())),
+        ("is_today", [Date(z)]) => Bool(z.date() == Zoned::now().with_time_zone(z.time_zone().clone()).date()),
+        ("is_past", [Date(z)]) => Bool(z.timestamp() < Timestamp::now()),
+        ("is_future", [Date(z)]) => Bool(z.timestamp() > Timestamp::now()),
+        ("with", [Date(z), Map(m)]) => {
+            let mut fields = Vec::new();
+            for (k, v) in m.borrow().iter() {
+                let Int(n, _) = v else { return Err(err(format!("{k} must be an integer"))) };
+                fields.push((k.clone(), *n));
+            }
+            Value::date(with(z, &fields).map_err(err)?)
+        }
+        ("start_of", [Date(z), Str(p)]) => Value::date(start_of(z, p).map_err(err)?),
+        ("end_of", [Date(z), Str(p)]) => Value::date(end_of(z, p).map_err(err)?),
+        ("next" | "prev", [Date(z), Str(wd)]) => {
+            let wd = weekday(wd).ok_or_else(|| err(format!("unknown weekday {wd:?}")))?;
+            let nth = if name == "next" { 1 } else { -1 };
+            Value::date(z.nth_weekday(nth, wd).map_err(|e| err(e.to_string()))?)
+        }
+        ("nth_weekday", [Date(z), Int(n, _), Str(wd)]) => {
+            let wd = weekday(wd).ok_or_else(|| err(format!("unknown weekday {wd:?}")))?;
+            let n = i8::try_from(*n).map_err(|_| err(format!("{n} out of range")))?;
+            Value::date(z.nth_weekday_of_month(n, wd).map_err(|e| err(e.to_string()))?)
+        }
+        ("add_workdays", [Date(z), Int(n, _)]) => Value::date(add_workdays(z, *n).map_err(err)?),
+        ("workdays", [Date(a), Date(b)]) => Value::int(workdays(a, b).map_err(err)?),
+        ("age", [Date(z)]) => Value::int(age(z, &Zoned::now())),
+        ("diff", [Date(a), Date(b)]) => Value::str(diff(a, b).map_err(err)?),
+        ("relative", [Date(z)]) => Value::str(relative(z, &Zoned::now())),
+        // Automatic mixed units for a duration: up to three of d, h, min, s, last one rounded.
+        ("parts", [Qty(x, u)]) if u.dim() == units::unit("s").unwrap().dim() => {
+            let us: Vec<_> = ["d", "h", "min", "s"].iter().map(|n| units::unit(n).unwrap()).collect();
+            let si = u.to_si(*x);
+            let start = us.iter().position(|v| si.abs() >= v.scale()).unwrap_or(3);
+            let us = &us[start..(start + 3).min(4)];
+            let last = us.last().unwrap().scale();
+            Value::str(units::split((si / last).round() * last, us))
+        }
+        ("calendar", [Date(z)]) => Value::str(calendar(z.year() as i64, z.month() as i64).map_err(err)?),
+        ("calendar", [Int(y, _), Int(m, _)]) => Value::str(calendar(*y, *m).map_err(err)?),
+        ("format", [Date(z), Str(f)]) => {
+            Value::str(jiff::fmt::strtime::format(f.as_bytes(), &**z).map_err(|e| err(e.to_string()))?)
+        }
+        ("unix", [Date(z)]) => Value::int(z.timestamp().as_second()),
+        ("utc", [Date(z)]) => Value::date(z.with_time_zone(TimeZone::UTC)),
+        ("local", [Date(z)]) => Value::date(z.with_time_zone(TimeZone::system())),
+        _ => return Err(bad()),
+    })
+}
+
+/// `now`, `today`, `tomorrow`, `yesterday`.
+fn ident(_: &mut Interp, name: &str) -> Claim {
+    match name {
+        "now" => Some(Ok(Value::date(Zoned::now()))),
+        "today" | "tomorrow" | "yesterday" => Some(Ok(Value::date(parse(name, &Zoned::now()).unwrap()))),
+        _ => None,
+    }
+}
+
+/// `date ± duration`, and `date - date` in days.
+fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
+    use Value::*;
+    Some(match (op, a, b) {
+        (BinOp::Add, Date(z), Qty(v, u)) | (BinOp::Add, Qty(v, u), Date(z)) => add(z, *v, u).map(Value::date),
+        (BinOp::Sub, Date(z), Qty(v, u)) => add(z, -v, u).map(Value::date),
+        (BinOp::Sub, Date(x), Date(y)) => units::unit("d").map(|d| Qty(x.duration_since(y).as_secs_f64() / 86400.0, d)),
+        _ => return None,
+    })
+}
+
+fn compare(a: &Value, b: &Value) -> Option<std::cmp::Ordering> {
+    match (a, b) {
+        (Value::Date(a), Value::Date(b)) => Some(a.timestamp().cmp(&b.timestamp())),
+        _ => None,
+    }
+}
+
+/// `d to "Europe/Paris"`.
+fn convert(v: &Value, t: &Target) -> Claim {
+    let (Value::Date(z), Target::Str(name)) = (v, t) else { return None };
+    Some(match name.as_str() {
+        "local" => Ok(Value::date(z.with_time_zone(TimeZone::system()))),
+        _ => z.in_tz(name).map(Value::date).map_err(e),
+    })
+}
 
 type R<T> = Result<T, String>;
 

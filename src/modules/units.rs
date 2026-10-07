@@ -1,8 +1,125 @@
+//! Units: quantities with dimensions, arithmetic and conversion between them, live currency rates.
+
+use super::{Claim, Module};
+use crate::ast::{BinOp, Target, UnitSpec};
+use crate::interp::{Value, mismatch, num};
 use std::cell::RefCell;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::f64::consts::PI;
 use std::fmt;
 use std::rc::Rc;
+
+pub const MODULE: Module = Module {
+    name: "units",
+    example: "5 km to mi",
+    ident: Some(|_, name| match unit(name) {
+        Ok(u) => Some(Ok(Value::Qty(1.0, u))),
+        Err(e) if e.starts_with("unknown unit") => None,
+        Err(e) => Some(Err(e)),
+    }),
+    binary: Some(binary),
+    compare: Some(compare),
+    convert: Some(convert),
+    topic: Some(topic),
+    ..Module::EMPTY
+};
+
+fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
+    use Value::*;
+    Some(Ok(match (op, a, b) {
+        (BinOp::Add | BinOp::Sub, Qty(x, u), Qty(y, w)) => {
+            if u.dim() != w.dim() {
+                return Some(Err(format!("cannot add {u} and {w}")));
+            }
+            let y = u.value_from_si(w.to_si(*y));
+            Value::qty(if op == BinOp::Add { x + y } else { x - y }, u.clone())
+        }
+        (BinOp::Mul | BinOp::Div, Qty(..), _) | (BinOp::Mul | BinOp::Div, _, Qty(..)) => {
+            let split = |v: &Value| match v {
+                Qty(x, u) => Some((*x, u.clone())),
+                _ => Some((num(v)?, Unit::default())),
+            };
+            let (Some((x, u)), Some((y, w))) = (split(a), split(b)) else { return Some(Err(mismatch(a, b))) };
+            if op == BinOp::Mul { Value::qty(x * y, u.mul(&w, 1)) } else { Value::qty(x / y, u.mul(&w, -1)) }
+        }
+        (BinOp::Pow, Qty(x, u), Int(n, _)) if (-9..=9).contains(n) => Value::qty(x.powi(*n as i32), u.pow(*n as i8)),
+        _ => return None,
+    }))
+}
+
+fn compare(a: &Value, b: &Value) -> Option<Ordering> {
+    match (a, b) {
+        (Value::Qty(x, u), Value::Qty(y, w)) if u.dim() == w.dim() => u.to_si(*x).partial_cmp(&w.to_si(*y)),
+        _ => None,
+    }
+}
+
+/// `to km`, and `to ft in` as a mixed-unit string.
+fn convert(v: &Value, t: &Target) -> Claim {
+    let r = match (v, t) {
+        (Value::Qty(x, u), Target::Units(specs)) => specs.iter().map(unit_of).collect::<Result<Vec<_>, _>>().and_then(|us| {
+            match us.iter().find(|t| t.dim() != u.dim()) {
+                Some(t) => Err(format!("cannot convert {u} to {t}")),
+                None => Ok(Value::str(split(u.to_si(*x), &us))),
+            }
+        }),
+        (Value::Qty(x, u), Target::Unit(spec)) => unit_of(spec).and_then(|t| {
+            if u.dim() != t.dim() {
+                return Err(format!("cannot convert {u} to {t}"));
+            }
+            Ok(Value::Qty(t.value_from_si(u.to_si(*x)), t))
+        }),
+        (Value::Int(..) | Value::Float(_), Target::Unit(_) | Target::Units(_)) => Err(format!("{v} has no unit; attach one like `{v} km`")),
+        _ => return None,
+    };
+    Some(r)
+}
+
+pub fn unit_of(spec: &UnitSpec) -> Result<Unit, String> {
+    let mut u = Unit::default();
+    for (name, p) in spec {
+        u = u.mul(&unit(name)?.pow(*p), 1);
+    }
+    Ok(u)
+}
+
+/// `help("units")`, `help("length")`, `help("km")`, `help("currency")`.
+fn topic(topic: &str) -> bool {
+    use crate::help::show;
+    if topic == "units" {
+        for (kind, _) in DIMS {
+            println!("{kind:<12} {}", units_of(kind).join(" "));
+        }
+        println!("{:<12} 3-letter codes (USD EUR GBP ...), live rates fetched on first use", "currency");
+    } else if matches!(topic, "currency" | "money") {
+        println!("currency: 3-letter codes like USD, EUR, GBP, JPY. Rates come from frankfurter.dev,");
+        println!("are fetched on first use (with a prompt) and cached for a day.");
+        println!("  100 USD to EUR");
+    } else if let Some(kind) = DIMS.iter().map(|d| d.0).find(|k| *k == topic) {
+        let units = units_of(kind);
+        println!("{kind} units: {}", units.join(" "));
+        show(vec![format!("1 {} to {}", units[1], units[0]), format!("1 {} to {}", units[0], units[units.len() - 1])]);
+    } else if let Some((names, _, _, dim)) = TABLE.iter().find(|row| row.0.split(' ').any(|n| n == topic)) {
+        let mut names = names.split(' ');
+        let name = names.next().unwrap();
+        let kind = DIMS.iter().find(|d| d.1 == *dim).unwrap().0;
+        let aliases: Vec<_> = names.collect();
+        let aka = if aliases.is_empty() { String::new() } else { format!("  (also {})", aliases.join(", ")) };
+        println!("{name}: {kind}{aka}");
+        let other = units_of(kind).into_iter().find(|u| *u != name).unwrap();
+        show(vec![format!("1 {name} to {other}"), format!("1 {other} to {name}")]);
+        println!("all {kind} units: help(\"{kind}\")");
+    } else {
+        return false;
+    }
+    true
+}
+
+fn units_of(kind: &str) -> Vec<&'static str> {
+    let dim = DIMS.iter().find(|d| d.0 == kind).unwrap().1;
+    TABLE.iter().filter(|row| row.3 == dim).map(|row| row.0.split(' ').next().unwrap()).collect()
+}
 
 /// Exponents of the base dimensions: length, mass, time, temperature, data, money, angle.
 pub type Dim = [i8; 7];

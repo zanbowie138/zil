@@ -1,5 +1,5 @@
 use crate::Error;
-use crate::ast::{BinOp, Expr, ExprKind, FnDef, Radix, Target, UnOp, UnitSpec};
+use crate::ast::{BinOp, Expr, ExprKind, FnDef, Target, UnOp, UnitSpec};
 use crate::lexer::{Span, Tok, lex_at};
 use std::rc::Rc;
 
@@ -23,10 +23,6 @@ struct Parser {
     toks: Vec<(Tok, Span)>,
     pos: usize,
     prev_end: usize,
-}
-
-fn base(base: u32) -> Target {
-    Target::Base(Radix { base, width: 0 })
 }
 
 /// (left, right) binding power of infix operators; higher binds tighter.
@@ -372,49 +368,26 @@ impl Parser {
     }
 
     fn target(&mut self) -> PResult<Target> {
-        let span = self.span();
-        let fixed = match self.peek() {
-            Tok::Ident(s) => match s.as_str() {
-                "hex" => Some(base(16)),
-                "bin" => Some(base(2)),
-                "oct" => Some(base(8)),
-                "dec" => Some(base(10)),
-                "unix" => Some(Target::Unix),
-                "str" | "int" | "float" | "list" | "bool" | "base64" => Some(Target::Type(s.clone())),
-                "UTC" | "utc" => Some(Target::Tz("UTC".into())),
-                "local" => Some(Target::Tz("local".into())),
-                "base" if *self.peek_at(1) == Tok::LParen => {
+        match self.peek().clone() {
+            Tok::Ident(s) if crate::modules::target(&s).is_some() => {
+                self.bump();
+                let mut arg = None;
+                if *self.peek() == Tok::LParen {
                     self.bump();
-                    self.bump();
-                    let n = match self.bump() {
-                        Tok::Int(n) if (2..=36).contains(&n) => n as u32,
-                        _ => return Err(Error::new("base must be 2-36", span.start..self.prev_end)),
+                    let span = self.span();
+                    arg = match self.bump() {
+                        Tok::Int(n) => Some(n),
+                        _ => return Err(Error::new("expected an integer", span)),
                     };
                     self.expect(Tok::RParen, "`)`")?;
-                    return Ok(base(n));
                 }
-                _ => None,
-            },
-            Tok::Str(s) => Some(Target::Tz(s.clone())),
-            _ => None,
-        };
-        match fixed {
-            // `hex(32)`: a bit width, shown as two's complement.
-            Some(Target::Base(mut r)) if *self.peek_at(1) == Tok::LParen => {
-                self.bump();
-                self.bump();
-                r.width = match self.bump() {
-                    Tok::Int(n) if (1..=64).contains(&n) => n as u32,
-                    _ => return Err(Error::new("width must be 1-64 bits", span.start..self.prev_end)),
-                };
-                self.expect(Tok::RParen, "`)`")?;
-                Ok(Target::Base(r))
+                Ok(Target::Named(s, arg))
             }
-            Some(t) => {
+            Tok::Str(s) => {
                 self.bump();
-                Ok(t)
+                Ok(Target::Str(s))
             }
-            None => {
+            _ => {
                 let mut specs = vec![self.unit_spec(false)?];
                 while matches!(self.peek(), Tok::Ident(_) | Tok::In) {
                     specs.push(self.unit_spec(false)?);
@@ -607,7 +580,7 @@ mod tests {
 
     #[test]
     fn rejects_bad_input() {
-        for src in ["1 = 2", r#""{1""#, "r\"(\"", "5 to base(99)"] {
+        for src in ["1 = 2", r#""{1""#, "r\"(\"", "5 to hex(x)"] {
             assert!(lex(src).and_then(super::parse).is_err(), "{src}");
         }
     }

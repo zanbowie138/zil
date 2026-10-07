@@ -46,12 +46,10 @@ pub enum Target {
     Unit(UnitSpec),
     /// Several units, largest first: `to d h min`, `to ft in`.
     Units(Vec<UnitSpec>),
-    Base(Radix),
-    Unix,
-    /// A type name (`str`, `int`, ...): same as calling that builtin; `base64` encodes.
-    Type(String),
-    /// Time zone name; "local" means the system zone.
-    Tz(String),
+    /// A keyword some module registered, with an optional int argument: `hex`, `hex(32)`, `UTC`.
+    Named(String, Option<i64>),
+    /// A string such as a time zone name: `to "Asia/Tokyo"`.
+    Str(String),
 }
 
 /// How an integer displays: `base`, and `width` bits of two's complement (0 = plain signed).
