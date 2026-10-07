@@ -1,0 +1,6 @@
+[book]
+title = "zil reference"
+src = "src"
+
+[build]
+build-dir = "book"

@@ -45,7 +45,7 @@ pub fn help(topic: Option<&str>) -> bool {
 
 /// The `help()` primer: things most languages can't do in one line. More per module in `help("examples")`.
 #[rustfmt::skip]
-const HIGHLIGHTS: &[Section] = &[(
+pub const HIGHLIGHTS: &[Section] = &[(
     "a taste",
     &[
         ("day of the week", r#"date("2026-12-25").weekday"#),
@@ -155,7 +155,7 @@ pub fn show(examples: Vec<String>) {
     }
 }
 
-fn eval(src: &str) -> String {
+pub fn eval(src: &str) -> String {
     match crate::run(&mut Interp::new(), src) {
         Ok(v) => format!("{v:?}"),
         Err(e) => format!("error: {}", e.msg),

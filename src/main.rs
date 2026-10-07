@@ -1,4 +1,5 @@
 mod ast;
+mod docs;
 mod help;
 mod interp;
 mod lexer;
@@ -255,7 +256,8 @@ fn repl(interp: &mut Interp) {
 
 const USAGE: &str = "usage: zil              start the REPL
        zil -e <code>    evaluate code and print the result
-       zil <file.zil>   run a script";
+       zil <file.zil>   run a script
+       zil --docs <dir> write the mdBook reference into dir";
 
 fn main() {
     let mut interp = Interp::new();
@@ -266,6 +268,10 @@ fn main() {
             Value::Nil => {}
             v => println!("{v}"),
         },
+        [flag, dir] if flag == "--docs" => docs::write(dir.as_ref()).unwrap_or_else(|e| {
+            eprintln!("zil: {dir}: {e}");
+            exit(1)
+        }),
         [flag] if flag == "-h" || flag == "--help" => println!("{USAGE}"),
         [path] => {
             let src = std::fs::read_to_string(path).unwrap_or_else(|e| {
