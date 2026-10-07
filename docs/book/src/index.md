@@ -91,8 +91,15 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 | [dev.binary](dev/binary.md) | hex dumps and entropy of strings and byte lists |
 | [dev.colors](dev/colors.md) | colors as "#rrggbb": RGB/HSL, mixing, lightening, WCAG contrast |
 | [dev.codes](dev/codes.md) | check digits for cards, ISBNs and IBANs; HTTP status, port and MIME type lookups |
-| [fun](fun.md) | fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; placeholder text, mangled text, dice and zodiac, ASCII toys below |
+| [art](art.md) | clip art, rainbows and gradients; boxes, cowsay and composition, fractals, QR codes, chess boards, FIGlet banners, images and animation below |
+| [art.frames](art/frames.md) | boxes, cowsay, and art side by side, stacked, overlaid, mirrored, rotated, scaled or inverted |
+| [art.generate](art/generate.md) | L-systems and named fractals in braille, cellular automata like rule 30, the Ulam prime spiral, starfields |
+| [art.renderers](art/renderers.md) | nested data as a tree, heatmaps, progress bars, QR codes, chess boards from FEN, playing cards, dice faces, seven-segment digits |
+| [art.figlet](art/figlet.md) | banners in block letters or FIGlet fonts: standard, small, slant, big, or any .flf file |
+| [art.images](art/images.md) | PNG, JPEG and GIF images as ASCII, truecolor half blocks or dithered braille |
+| [art.motion](art/motion.md) | play a list of frames, or a function of the frame number, as an animation in the terminal |
+| [art.toys](art/toys.md) | ASCII Mandelbrot set, Conway's Game of Life, random mazes |
+| [fun](fun.md) | fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; placeholder text, mangled text, dice and zodiac below |
 | [fun.placeholder](fun/placeholder.md) | lorem ipsum placeholder text, random team and person names |
-| [fun.mangle](fun/mangle.md) | mock case, l33t, uwu, Pig Latin, zalgo, upside-down text, NATO spelling, banners and emoji |
+| [fun.mangle](fun/mangle.md) | mock case, l33t, uwu, Pig Latin, zalgo, upside-down text, NATO spelling and emoji |
 | [fun.games](fun/games.md) | dice notation, the birthday paradox, odds in plain words, Western and Chinese zodiac |
-| [fun.toys](fun/toys.md) | ASCII Mandelbrot set, Conway's Game of Life, random mazes |

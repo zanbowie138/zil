@@ -1,6 +1,6 @@
 # fun.mangle
 
-mock case, l33t, uwu, Pig Latin, zalgo, upside-down text, NATO spelling, banners and emoji
+mock case, l33t, uwu, Pig Latin, zalgo, upside-down text, NATO spelling and emoji
 
 > Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
@@ -16,7 +16,6 @@ mock case, l33t, uwu, Pig Latin, zalgo, upside-down text, NATO spelling, banners
 | [`zalgo(s: str, marks?: int)`](#zalgo) | Z̷a̸l̵g̶o̴ text: pile marks (default 3) onto every character |
 | [`flip(s: str)`](#flip) | turn text upside down |
 | [`nato(s: str)`](#nato) | spell with the NATO phonetic alphabet |
-| [`banner(s: str)`](#banner) | big block letters (A-Z, 0-9, some punctuation) |
 | [`emoji(name: str)`](#emoji) | an emoji by name, or nil |
 | [`emojify(s: str)`](#emojify) | replace :name: codes with emoji; unknown codes stay |
 
@@ -70,9 +69,9 @@ See also: [nato](../fun/mangle.md#nato)
 
 ```zil
 "he comes".zalgo
-# → "h\u{330}\u{333}\u{30a}e\u{337}\u{315}\u{30f} c\u{35f}\u{364}\u{355}o\u{322}\u{352}\u{368}m\u{301}\u{321}\u{33d}e\u{333}\u{30e}\u{303}s\u{337}\u{310}\u{346}"
+# → "h\u{34a}\u{361}\u{306}e\u{31c}\u{32b}\u{326} c\u{34d}\u{354}\u{321}o\u{34c}\u{31b}\u{32c}m\u{345}\u{359}\u{368}e\u{354}\u{329}\u{350}s\u{300}\u{33d}\u{32b}"
 "ok".zalgo(1)
-# → "o\u{357}k\u{361}"
+# → "o\u{325}k\u{34f}"
 ```
 
 See also: [flip](../fun/mangle.md#flip)
@@ -100,17 +99,6 @@ See also: [reverse](../data.md#reverse), [zalgo](../fun/mangle.md#zalgo)
 ```
 
 See also: [morse](../text/ciphers.md#morse)
-
-### banner
-
-`banner(s: str)`: big block letters (A-Z, 0-9, some punctuation)
-
-```zil
-banner("hi!")
-# → "██  ██  ██████    ██\n██  ██    ██      ██\n██████    ██      ██\n██  ██    ██\n██  ██  ██████    ██"
-```
-
-See also: [emoji](../fun/mangle.md#emoji)
 
 ### emoji
 
@@ -150,9 +138,6 @@ See also: [emoji](../fun/mangle.md#emoji)
 # table flip
 "(╯°□°)╯ " + "zil".flip
 # → "(╯°□°)╯ lᴉz"
-# a README header
-banner("zil")
-# → "██████  ██████  ██\n    ██    ██    ██\n  ██      ██    ██\n██        ██    ██\n██████  ██████  ██████"
 # a commit message
 ":rocket: ship it :tada:".emojify
 # → "🚀 ship it 🎉"

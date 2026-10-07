@@ -13,6 +13,7 @@ ariadne = "0.6.0"
 base64 = "0.23.1"
 fastrand = "2.5.0"
 getrandom = "0.2"
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "gif"] }
 indexmap = "2.14.2"
 jiff = "0.2.38"
 logos = "0.16.1"
@@ -21,6 +22,7 @@ num-bigint = "0.4"
 num-integer = "0.1.47"
 num-rational = "0.4.2"
 num-traits = "0.2.19"
+qrcode = { version = "0.14.1", default-features = false }
 regex = "1.13.1"
 rustyline = "18.0.1"
 serde_json = { version = "1.0.151", features = ["preserve_order"] }

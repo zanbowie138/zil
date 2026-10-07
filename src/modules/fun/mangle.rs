@@ -1,4 +1,4 @@
-//! Text, mangled: SpOnGeBoB case, l33t, uwu, Pig Latin, zalgo, upside down, NATO spelling, big letters, emoji.
+//! Text, mangled: SpOnGeBoB case, l33t, uwu, Pig Latin, zalgo, upside down, NATO spelling, emoji.
 
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -7,14 +7,13 @@ use crate::value::Value;
 
 pub const MODULE: Module = Module {
     name: "mangle",
-    about: "mock case, l33t, uwu, Pig Latin, zalgo, upside-down text, NATO spelling, banners and emoji",
+    about: "mock case, l33t, uwu, Pig Latin, zalgo, upside-down text, NATO spelling and emoji",
     #[rustfmt::skip]
     examples: &[
         ("mangle", &[
             ("reply to a bad take", r#""tabs are better than spaces".mock"#),
             ("spell it over the phone", r#""zil 2".nato"#),
             ("table flip", r#""(╯°□°)╯ " + "zil".flip"#),
-            ("a README header", r#"banner("zil")"#),
             ("a commit message", r#"":rocket: ship it :tada:".emojify"#),
         ]),
     ],
@@ -32,7 +31,6 @@ const FNS: &[Doc] = &[
     doc("zalgo", "zalgo(s: str, marks?: int)", "Z̷a̸l̵g̶o̴ text: pile marks (default 3) onto every character", &[r#""he comes".zalgo"#, r#""ok".zalgo(1)"#], &["flip"]),
     doc("flip", "flip(s: str)", "turn text upside down", &[r#""hello world".flip"#], &["reverse", "zalgo"]),
     doc("nato", "nato(s: str)", "spell with the NATO phonetic alphabet", &[r#""SOS".nato"#, r#""b2b".nato"#], &["morse"]),
-    doc("banner", "banner(s: str)", "big block letters (A-Z, 0-9, some punctuation)", &[r#"banner("hi!")"#], &["emoji"]),
     doc("emoji", "emoji(name: str)", "an emoji by name, or nil", &[r#"emoji("taco")"#, r#"emoji("fire")"#], &["emojify"]),
     doc("emojify", "emojify(s: str)", "replace :name: codes with emoji; unknown codes stay", &[r#"":fire: deploy on friday :skull:".emojify"#], &["emoji"]),
 ];
@@ -126,19 +124,6 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
                 .collect();
             Value::str(words.join(" "))
         }
-        ("banner", [Str(s)]) => {
-            let mut rows = vec![String::new(); 5];
-            for c in s.to_uppercase().chars() {
-                let glyph = FONT.iter().find(|g| g.0 == c).ok_or_else(|| Fail::Arg(0, format!("banner has no letter for {c:?}")))?.1;
-                for (r, row) in rows.iter_mut().enumerate() {
-                    for bit in (0..3).rev() {
-                        row.push_str(if glyph[r] >> bit & 1 == 1 { "██" } else { "  " });
-                    }
-                    row.push_str("  ");
-                }
-            }
-            Value::str(rows.iter().map(|r| r.trim_end()).collect::<Vec<_>>().join("\n"))
-        }
         ("emoji", [Str(n)]) => emoji(n).map_or(Nil, Value::str),
         ("emojify", [Str(s)]) => {
             let re = regex::Regex::new(r":([a-z0-9_+-]+):").unwrap();
@@ -187,27 +172,6 @@ const FLIP: &[(char, char)] = &[
     ('.', '˙'), (',', '\''), ('?', '¿'), ('!', '¡'), ('(', ')'), ('[', ']'), ('{', '}'), ('<', '>'), ('_', '‾'), ('&', '⅋'),
 ];
 
-/// 3×5 pixel glyphs, one row per entry, high bit on the left.
-#[rustfmt::skip]
-const FONT: &[(char, [u8; 5])] = &[
-    ('A', [0b010, 0b101, 0b111, 0b101, 0b101]), ('B', [0b110, 0b101, 0b110, 0b101, 0b110]), ('C', [0b011, 0b100, 0b100, 0b100, 0b011]),
-    ('D', [0b110, 0b101, 0b101, 0b101, 0b110]), ('E', [0b111, 0b100, 0b110, 0b100, 0b111]), ('F', [0b111, 0b100, 0b110, 0b100, 0b100]),
-    ('G', [0b011, 0b100, 0b101, 0b101, 0b011]), ('H', [0b101, 0b101, 0b111, 0b101, 0b101]), ('I', [0b111, 0b010, 0b010, 0b010, 0b111]),
-    ('J', [0b001, 0b001, 0b001, 0b101, 0b010]), ('K', [0b101, 0b101, 0b110, 0b101, 0b101]), ('L', [0b100, 0b100, 0b100, 0b100, 0b111]),
-    ('M', [0b101, 0b111, 0b111, 0b101, 0b101]), ('N', [0b110, 0b101, 0b101, 0b101, 0b101]), ('O', [0b010, 0b101, 0b101, 0b101, 0b010]),
-    ('P', [0b110, 0b101, 0b110, 0b100, 0b100]), ('Q', [0b010, 0b101, 0b101, 0b110, 0b011]), ('R', [0b110, 0b101, 0b110, 0b101, 0b101]),
-    ('S', [0b011, 0b100, 0b010, 0b001, 0b110]), ('T', [0b111, 0b010, 0b010, 0b010, 0b010]), ('U', [0b101, 0b101, 0b101, 0b101, 0b111]),
-    ('V', [0b101, 0b101, 0b101, 0b101, 0b010]), ('W', [0b101, 0b101, 0b111, 0b111, 0b101]), ('X', [0b101, 0b101, 0b010, 0b101, 0b101]),
-    ('Y', [0b101, 0b101, 0b010, 0b010, 0b010]), ('Z', [0b111, 0b001, 0b010, 0b100, 0b111]),
-    ('0', [0b111, 0b101, 0b101, 0b101, 0b111]), ('1', [0b010, 0b110, 0b010, 0b010, 0b111]), ('2', [0b110, 0b001, 0b010, 0b100, 0b111]),
-    ('3', [0b110, 0b001, 0b010, 0b001, 0b110]), ('4', [0b101, 0b101, 0b111, 0b001, 0b001]), ('5', [0b111, 0b100, 0b110, 0b001, 0b110]),
-    ('6', [0b011, 0b100, 0b110, 0b101, 0b010]), ('7', [0b111, 0b001, 0b010, 0b010, 0b010]), ('8', [0b010, 0b101, 0b010, 0b101, 0b010]),
-    ('9', [0b010, 0b101, 0b011, 0b001, 0b110]),
-    (' ', [0, 0, 0, 0, 0]), ('!', [0b010, 0b010, 0b010, 0b000, 0b010]), ('?', [0b110, 0b001, 0b010, 0b000, 0b010]),
-    ('.', [0, 0, 0, 0, 0b010]), (',', [0, 0, 0, 0b010, 0b100]), ('-', [0, 0, 0b111, 0, 0]), (':', [0, 0b010, 0, 0b010, 0]),
-    ('\'', [0b010, 0b010, 0, 0, 0]), ('+', [0, 0b010, 0b111, 0b010, 0]), ('/', [0b001, 0b001, 0b010, 0b100, 0b100]),
-];
-
 #[rustfmt::skip]
 const EMOJI: &[(&str, &str)] = &[
     ("smile", "😄"), ("grin", "😁"), ("joy laughing", "😂"), ("rofl", "🤣"), ("wink", "😉"), ("blush", "😊"), ("heart_eyes", "😍"), ("kiss", "😘"),
@@ -232,7 +196,7 @@ const EMOJI: &[(&str, &str)] = &[
 
 #[cfg(test)]
 mod tests {
-    use crate::interp::tests::{show, try_eval};
+    use crate::interp::tests::show;
 
     #[test]
     fn mangle() {
@@ -243,9 +207,7 @@ mod tests {
         assert_eq!(show(r#"["ab".zalgo(2).len, "a b".zalgo(1).len, "x".zalgo(0)]"#), r#"[6, 5, "x"]"#);
         assert_eq!(show(r#"["hello!".flip, "hello!".flip.flip]"#), r#"["¡ollǝɥ", "hello!"]"#);
         assert_eq!(show(r#""Hi 5".nato"#), "Hotel India / Five");
-        assert_eq!(show(r#"banner("i")"#), "██████\n  ██\n  ██\n  ██\n██████");
         assert_eq!(show(r#"[emoji("Taco"), emoji("rust"), emoji("nope")]"#), r#"["🌮", "🦀", nil]"#);
         assert_eq!(show(r#"":fire: :nope: ok".emojify"#), "🔥 :nope: ok");
-        assert!(try_eval(r#"banner("~")"#).is_err());
     }
 }

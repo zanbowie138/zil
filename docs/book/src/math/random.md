@@ -24,9 +24,9 @@ numbers, picks, shuffles, UUIDs; passwords, passphrases, ULIDs and nano IDs from
 
 ```zil
 rand()
-# → 0.498433
+# → 0.877266
 rand(1, 6)
-# → 1
+# → 2
 ```
 
 See also: [choice](../math/random.md#choice), [shuffle](../math/random.md#shuffle)
@@ -48,7 +48,7 @@ See also: [rand](../math/random.md#rand), [shuffle](../math/random.md#shuffle)
 
 ```zil
 (1..6).shuffle
-# → [4, 5, 3, 1, 2]
+# → [5, 3, 2, 1, 4]
 ```
 
 See also: [choice](../math/random.md#choice)
@@ -59,7 +59,7 @@ See also: [choice](../math/random.md#choice)
 
 ```zil
 uuid()
-# → "0ae20a1c-6ac2-4fbe-9fc8-a349aef046af"
+# → "333f9856-24fb-4151-8472-763d123d0027"
 ```
 
 See also: [rand](../math/random.md#rand), [ulid](../math/random.md#ulid)
@@ -70,9 +70,9 @@ See also: [rand](../math/random.md#rand), [ulid](../math/random.md#ulid)
 
 ```zil
 password()
-# → "!z+V7y%cx*D+=J4_2bw@"
+# → "YxVhfsx9-nA+ASy2?yt+"
 password(12)
-# → "4YNUtyUf7doF"
+# → "?4+x-T=ff%3t"
 ```
 
 See also: [passphrase](../math/random.md#passphrase)
@@ -83,9 +83,9 @@ See also: [passphrase](../math/random.md#passphrase)
 
 ```zil
 passphrase()
-# → "sedan-gusto-greed-chunk-trail-arena"
+# → "eagle-rogue-focal-brush-coast-gorge"
 passphrase(4)
-# → "gummy-hazel-hurry-shell"
+# → "float-habit-parka-angle"
 ```
 
 See also: [password](../math/random.md#password)
@@ -96,7 +96,7 @@ See also: [password](../math/random.md#password)
 
 ```zil
 ulid()
-# → "01M4BTASTN8A027KCVEBV22E64"
+# → "01M4BZ4DGGKT5NTQ8AVKZ53B25"
 ```
 
 See also: [uuid](../math/random.md#uuid), [nanoid](../math/random.md#nanoid)
@@ -107,9 +107,9 @@ See also: [uuid](../math/random.md#uuid), [nanoid](../math/random.md#nanoid)
 
 ```zil
 nanoid()
-# → "sRFxdGozVMSAuMnO3j2a8"
+# → "nKFbUjcoZaCNu7ja6SUth"
 nanoid(8)
-# → "ePakqboG"
+# → "9xKQoOhh"
 ```
 
 See also: [uuid](../math/random.md#uuid), [ulid](../math/random.md#ulid)
@@ -121,29 +121,29 @@ See also: [uuid](../math/random.md#uuid), [ulid](../math/random.md#ulid)
 ```zil
 # roll a die
 rand(1, 6)
-# → 2
+# → 5
 # roll three
 (1..=3).map(|_| rand(1, 6))
-# → [6, 5, 6]
+# → [1, 5, 5]
 # float in a range
 rand(1.0, 2.0)
-# → 1.8354
+# → 1.89367
 # pick one
 ["rock", "paper", "scissors"].choice
-# → "scissors"
+# → "paper"
 # shuffle
 (1..=5).shuffle
-# → [4, 3, 1, 2, 5]
+# → [2, 1, 4, 5, 3]
 # UUID
 uuid()
-# → "e57e7bfe-99af-4f19-a404-f0da240a9e49"
+# → "f5f47c0d-ad09-4a43-82c6-53eb361615e3"
 # a strong password
 password()
-# → "$j+B7x4MtP5e@9?Hqqu2"
+# → "C-dogNNBQ_Dvvafpks7#"
 # one you can type
 passphrase()
-# → "brain-lotus-adobe-smile-yacht-angel"
+# → "cupid-fleet-pinch-venom-steam-actor"
 # sortable IDs
 ulid()
-# → "01M4BTASTR9496ETC2YE98T63F"
+# → "01M4BZ4DGMSHRA82CB76YZQCTB"
 ```

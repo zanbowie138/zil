@@ -1,6 +1,6 @@
 # fun
 
-fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; placeholder text, mangled text, dice and zodiac, ASCII toys below
+fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; placeholder text, mangled text, dice and zodiac below
 
 > Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
@@ -18,9 +18,8 @@ fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; placeholde
 | module | about |
 |---|---|
 | [placeholder](fun/placeholder.md) | lorem ipsum placeholder text, random team and person names |
-| [mangle](fun/mangle.md) | mock case, l33t, uwu, Pig Latin, zalgo, upside-down text, NATO spelling, banners and emoji |
+| [mangle](fun/mangle.md) | mock case, l33t, uwu, Pig Latin, zalgo, upside-down text, NATO spelling and emoji |
 | [games](fun/games.md) | dice notation, the birthday paradox, odds in plain words, Western and Chinese zodiac |
-| [toys](fun/toys.md) | ASCII Mandelbrot set, Conway's Game of Life, random mazes |
 
 ## Functions
 
@@ -39,7 +38,7 @@ fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; placeholde
 
 ```zil
 fortune()
-# → "The cache is lying to you."
+# → "A wise developer once said: it works on my machine."
 ```
 
 See also: [eight_ball](fun.md#eight_ball)
@@ -63,7 +62,7 @@ See also: [yes_or_no](fun.md#yes_or_no), [fortune](fun.md#fortune)
 coin()
 # → "tails"
 coin(3)
-# → ["heads", "tails", "tails"]
+# → ["heads", "tails", "heads"]
 ```
 
 See also: [rand](math/random.md#rand)
@@ -74,7 +73,7 @@ See also: [rand](math/random.md#rand)
 
 ```zil
 yes_or_no()
-# → "no"
+# → "yes"
 ```
 
 See also: [eight_ball](fun.md#eight_ball)
@@ -85,7 +84,7 @@ See also: [eight_ball](fun.md#eight_ball)
 
 ```zil
 excuse()
-# → "The compiler is being weird today."
+# → "Cosmic rays flipped a bit."
 ```
 
 See also: [fortune](fun.md#fortune)
@@ -111,10 +110,10 @@ eight_ball("will it compile?")
 # → "Yes."
 # best of five
 coin(5)
-# → ["heads", "heads", "tails", "tails", "tails"]
+# → ["heads", "tails", "tails", "heads", "tails"]
 # standup
 excuse()
-# → "It was DNS."
+# → "The tests were flaky."
 # should I ship it?
 yes_or_no()
 # → "yes"

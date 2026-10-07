@@ -42,7 +42,7 @@ const FNS: &[Doc] = &[
     doc("swatch", "swatch(c: str|list)", "a colored block plus the hex, for truecolor terminals", &[r#"swatch("tomato")"#, r#"["red", "gold", "teal"].map(swatch).join(" ")"#], &["color"]),
 ];
 
-type Rgb = [f64; 3];
+pub type Rgb = [f64; 3];
 
 /// Also handles the color form of `invert`, which `data.maps` owns and forwards here.
 pub fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -89,7 +89,7 @@ pub fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Cal
     })
 }
 
-fn parse(v: &Value) -> Option<Rgb> {
+pub fn parse(v: &Value) -> Option<Rgb> {
     match v {
         Value::List(l) => match l.borrow()[..] {
             [ref r, ref g, ref b] => {
@@ -120,7 +120,7 @@ fn hex(c: Rgb) -> Value {
     Value::str(format!("#{r:02x}{g:02x}{b:02x}"))
 }
 
-fn mix(a: Rgb, b: Rgb, t: f64) -> Rgb {
+pub fn mix(a: Rgb, b: Rgb, t: f64) -> Rgb {
     [0, 1, 2].map(|i| a[i] + (b[i] - a[i]) * t)
 }
 
@@ -144,7 +144,7 @@ fn to_hsl(c: Rgb) -> [f64; 3] {
     [h * 60.0, s, l]
 }
 
-fn from_hsl(h: f64, s: f64, l: f64) -> Rgb {
+pub fn from_hsl(h: f64, s: f64, l: f64) -> Rgb {
     let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
     let h = h.rem_euclid(360.0) / 60.0;
     let x = c * (1.0 - (h % 2.0 - 1.0).abs());

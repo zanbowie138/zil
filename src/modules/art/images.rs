@@ -1,0 +1,124 @@
+//! Pictures as text: PNG, JPEG and GIF files drawn with an ASCII ramp, colored half blocks or dithered braille.
+
+use super::{Dots, RESET, fg};
+use crate::interp::Interp;
+use crate::lexer::Span;
+use crate::modules::{Call, Doc, Fail, Module, doc};
+use crate::value::Value;
+use image::imageops::FilterType;
+
+pub const MODULE: Module = Module {
+    name: "images",
+    about: "PNG, JPEG and GIF images as ASCII, truecolor half blocks or dithered braille",
+    #[rustfmt::skip]
+    guide: &[("modes", &[
+        ("\"blocks\" (default): two pixels per character in full color, for truecolor terminals", ""),
+        ("\"ascii\": brightness as \" .:-=+*#%@\", pastes anywhere", ""),
+        ("\"braille\": Floyd–Steinberg dithered dots, the sharpest in black and white", ""),
+    ])],
+    fns: FNS,
+    call,
+    ..Module::EMPTY
+};
+
+#[rustfmt::skip]
+const FNS: &[Doc] = &[
+    doc("img", "img(path: str, width?: int, mode?: str)", "draw an image file width characters wide (default: the terminal's, or 80); mode is \"blocks\" (default), \"ascii\" or \"braille\"", &[], &["negative", "boxed"])
+        .shown(&[r#"img("cat.png")"#, r#"img("logo.jpg", 40, "ascii")"#, r#"img("photo.png", 60, "braille").negative"#]),
+];
+
+fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
+    use Value::*;
+    Ok(match (name, args) {
+        ("img", [Str(path), rest @ ..]) if rest.len() <= 2 => {
+            let width = match rest.first() {
+                None => terminal_size::terminal_size().map_or(80, |(w, _)| w.0 as usize),
+                Some(Int(w, _)) if (1..=1000).contains(w) => *w as usize,
+                Some(_) => return Err(Fail::Arg(1, "width must be an int from 1 to 1000".into())),
+            };
+            let mode = match rest.get(1) {
+                None => "blocks",
+                Some(Str(m)) if ["blocks", "ascii", "braille"].contains(&&**m) => m,
+                Some(_) => return Err(Fail::Arg(2, "mode is \"blocks\", \"ascii\" or \"braille\"".into())),
+            };
+            let pic = image::open(&**path).map_err(|e| Fail::Arg(0, format!("can't open {path}: {e}")))?;
+            Value::str(draw(&pic, width, mode))
+        }
+        _ => return Err(Fail::BadArgs),
+    })
+}
+
+/// Pixels resized to `w`×`h`, transparency composited onto black.
+fn pixels(pic: &image::DynamicImage, w: usize, h: usize) -> Vec<Vec<[f64; 3]>> {
+    let small = pic.resize_exact(w.max(1) as u32, h.max(1) as u32, FilterType::Triangle).to_rgba8();
+    small.rows().map(|row| row.map(|p| [0, 1, 2].map(|i| p[i] as f64 * p[3] as f64 / 255.0)).collect()).collect()
+}
+
+fn brightness([r, g, b]: [f64; 3]) -> f64 {
+    (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0
+}
+
+fn draw(pic: &image::DynamicImage, width: usize, mode: &str) -> String {
+    // ponytail: a character is taken as twice as tall as wide; real fonts vary a little.
+    let aspect = pic.height() as f64 / pic.width().max(1) as f64;
+    let rows_for = |cols: usize, px_per_row: f64| ((cols as f64 * aspect * px_per_row / 2.0).round() as usize).max(1);
+    match mode {
+        "ascii" => {
+            const RAMP: &[u8] = b" .:-=+*#%@";
+            let px = pixels(pic, width, rows_for(width, 1.0));
+            let lines =
+                px.iter().map(|row| row.iter().map(|p| RAMP[(brightness(*p) * 9.0).round() as usize] as char).collect::<String>().trim_end().to_string());
+            lines.collect::<Vec<_>>().join("\n")
+        }
+        "braille" => {
+            let (w, h) = (width * 2, rows_for(width, 2.0) * 4);
+            let mut lum: Vec<Vec<f64>> = pixels(pic, w, h).iter().map(|row| row.iter().map(|p| brightness(*p)).collect()).collect();
+            let mut dots = Dots::new(w, h);
+            for y in 0..h {
+                for x in 0..w {
+                    let on = lum[y][x] > 0.5;
+                    if on {
+                        dots.set(x as i64, y as i64);
+                    }
+                    let err = lum[y][x] - if on { 1.0 } else { 0.0 };
+                    for (dx, dy, k) in [(1, 0, 7.0), (-1, 1, 3.0), (0, 1, 5.0), (1, 1, 1.0)] {
+                        let (nx, ny) = (x as i64 + dx, y + dy);
+                        if (0..w as i64).contains(&nx) && ny < h {
+                            lum[ny][nx as usize] += err * k / 16.0;
+                        }
+                    }
+                }
+            }
+            dots.render()
+        }
+        _ => {
+            let px = pixels(pic, width, rows_for(width, 2.0) * 2);
+            let bg = |[r, g, b]: [f64; 3]| format!("\x1b[48;2;{};{};{}m", r.round() as u8, g.round() as u8, b.round() as u8);
+            let lines = px.chunks(2).map(|pair| {
+                let cells = (0..width).map(|x| format!("{}{}▀", fg(pair[0][x]), pair.get(1).map_or(String::new(), |b| bg(b[x]))));
+                cells.collect::<String>() + RESET
+            });
+            lines.collect::<Vec<_>>().join("\n")
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::draw;
+    use crate::interp::tests::try_eval;
+
+    #[test]
+    fn images() {
+        // Left half black, right half white, 8×4 pixels.
+        let pic = image::DynamicImage::ImageRgb8(image::RgbImage::from_fn(8, 4, |x, _| if x < 4 { image::Rgb([0, 0, 0]) } else { image::Rgb([255; 3]) }));
+        assert_eq!(draw(&pic, 8, "ascii"), "    @@@@\n    @@@@");
+        assert_eq!(draw(&pic, 4, "braille"), "  ⣿⣿\n  ⣿⣿");
+        let blocks = draw(&pic, 8, "blocks");
+        assert_eq!(blocks.lines().count(), 4);
+        assert!(blocks.starts_with("\x1b[38;2;0;0;0m\x1b[48;2;0;0;0m▀"));
+        assert!(blocks.contains("\x1b[38;2;255;255;255m\x1b[48;2;255;255;255m▀"));
+        assert!(try_eval(r#"img("no/such.png")"#).is_err());
+        assert!(try_eval(r#"img("x.png", 10, "sixel")"#).is_err());
+    }
+}

@@ -11,6 +11,7 @@
 //! text before units (`"a" + 5 km` concatenates), time before units (`date + 1 d` is calendar math).
 //! `DISPATCH` is separate from the tree so moving a module for docs reasons never changes behavior.
 
+pub mod art;
 pub mod core;
 pub mod data;
 pub mod dev;
@@ -278,8 +279,20 @@ impl Module {
 }
 
 /// Root modules, in `help()` order.
-pub const TREE: &[Module] =
-    &[core::MODULE, fs::MODULE, sys::MODULE, text::MODULE, data::MODULE, math::MODULE, units::MODULE, time::MODULE, geo::MODULE, dev::MODULE, fun::MODULE];
+pub const TREE: &[Module] = &[
+    core::MODULE,
+    fs::MODULE,
+    sys::MODULE,
+    text::MODULE,
+    data::MODULE,
+    math::MODULE,
+    units::MODULE,
+    time::MODULE,
+    geo::MODULE,
+    dev::MODULE,
+    art::MODULE,
+    fun::MODULE,
+];
 
 /// Modules with hooks, in the order hooks are tried.
 pub const DISPATCH: &[&Module] = &[
