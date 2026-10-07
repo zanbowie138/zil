@@ -1,7 +1,6 @@
 //! Lists and maps: ranges, higher-order fns, aggregates, sorting.
 
-use super::{Claim, Doc, Module, bad_args};
-use crate::Error;
+use super::{Call, Claim, Doc, Fail, Module};
 use crate::ast::BinOp;
 use crate::interp::{Interp, Value, binary as op, compare};
 use crate::lexer::Span;
@@ -49,12 +48,11 @@ const FNS: &[Doc] = &[
     ("values", "values(map)", "list of map values", &["{a: 1, b: 2}.values"], &["keys"]),
 ];
 
-fn call(it: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Result<Value, Error> {
-    let err = |msg: String| Error::new(format!("{name}: {msg}"), span.clone());
+fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Call {
     use Value::*;
-    Ok(match (name, args.as_slice()) {
-        ("range", [Int(n, _)]) => range(0, *n).map_err(err)?,
-        ("range", [Int(a, _), Int(b, _)]) => range(*a, *b).map_err(err)?,
+    Ok(match (name, args) {
+        ("range", [Int(n, _)]) => range(0, *n)?,
+        ("range", [Int(a, _), Int(b, _)]) => range(*a, *b)?,
         ("push", [List(l), v]) => {
             l.borrow_mut().push(v.clone());
             List(l.clone())
@@ -85,26 +83,26 @@ fn call(it: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> R
             }
             acc
         }
-        ("sum", [List(l)]) => sum(&l.borrow()).map_err(err)?,
+        ("sum", [List(l)]) => sum(&l.borrow())?,
         ("avg", [List(l)]) => {
             let l = l.borrow();
             if l.is_empty() {
-                return Err(err("empty list".into()));
+                return Err("empty list".into());
             }
-            op(BinOp::Div, &sum(&l).map_err(err)?, &Float(l.len() as f64)).map_err(err)?
+            op(BinOp::Div, &sum(&l)?, &Float(l.len() as f64))?
         }
-        ("min" | "max", [List(l)]) => extreme(name, &l.borrow()).map_err(err)?,
-        ("min" | "max", vs) if vs.len() >= 2 => extreme(name, vs).map_err(err)?,
+        ("min" | "max", [List(l)]) => extreme(name, &l.borrow())?,
+        ("min" | "max", vs) if vs.len() >= 2 => extreme(name, vs)?,
         ("sort", [List(l)]) => {
             let mut keyed: Vec<_> = l.borrow().iter().map(|v| (v.clone(), v.clone())).collect();
-            sort_keyed(&mut keyed).map_err(err)?
+            sort_keyed(&mut keyed)?
         }
         ("sort", [List(l), f]) => {
             let mut keyed = Vec::new();
             for v in l.borrow().clone() {
                 keyed.push((it.call(f, vec![v.clone()], span)?, v));
             }
-            sort_keyed(&mut keyed).map_err(err)?
+            sort_keyed(&mut keyed)?
         }
         ("unique", [List(l)]) => {
             let mut out: Vec<Value> = Vec::new();
@@ -119,7 +117,7 @@ fn call(it: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> R
         ("last", [List(l)]) => l.borrow().last().cloned().unwrap_or(Nil),
         ("keys", [Map(m)]) => Value::list(m.borrow().keys().map(|k| Value::str(k.as_str())).collect()),
         ("values", [Map(m)]) => Value::list(m.borrow().values().cloned().collect()),
-        _ => return Err(bad_args(name, &args, span)),
+        _ => return Err(Fail::BadArgs),
     })
 }
 

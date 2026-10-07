@@ -2,8 +2,7 @@
 //! Weeks start on Monday (ISO 8601).
 
 use super::units::{self, Unit};
-use super::{Claim, Doc, Module, bad_args};
-use crate::Error;
+use super::{Call, Claim, Doc, Fail, Module};
 use crate::ast::{BinOp, Target};
 use crate::interp::{Interp, Value};
 use jiff::civil::{self, Date, Time, Weekday};
@@ -88,29 +87,29 @@ const FNS: &[Doc] = &[
     ("local", "local(d)", "the same moment in the system time zone; same as `d to local`", &["(date(0) to UTC).local.year"], &["utc"]),
 ];
 
-fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &crate::lexer::Span) -> Result<Value, Error> {
-    let err = |msg: String| Error::new(format!("{name}: {msg}"), span.clone());
-    let bad = || bad_args(name, &args, span);
+fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &crate::lexer::Span) -> Call {
     use Value::*;
-    Ok(match (name, args.as_slice()) {
-        ("date", [Str(s)]) => Value::date(parse(s, &Zoned::now()).ok_or_else(|| err(format!("cannot parse date {s:?}")))?),
+    Ok(match (name, args) {
+        ("date", [Str(s)]) => Value::date(parse(s, &Zoned::now()).ok_or_else(|| format!("cannot parse date {s:?}"))?),
         ("date", [Str(s), Str(f)]) => {
             let z = with_format(s, f, &TimeZone::system());
-            Value::date(z.ok_or_else(|| err(format!("{s:?} does not match {f:?}")))?)
+            Value::date(z.ok_or_else(|| format!("{s:?} does not match {f:?}"))?)
         }
         ("date", [Int(y, _), Int(m, _), Int(d, _), rest @ ..]) if rest.len() <= 3 => {
             let mut t = [0i64; 3];
             for (slot, v) in t.iter_mut().zip(rest) {
-                let Int(n, _) = v else { return Err(bad()) };
+                let Int(n, _) = v else {
+                    return Err(Fail::BadArgs);
+                };
                 *slot = *n;
             }
-            let small = |n: i64| i8::try_from(n).map_err(|_| err(format!("{n} out of range")));
-            let year = i16::try_from(*y).map_err(|_| err(format!("year {y} out of range")))?;
+            let small = |n: i64| i8::try_from(n).map_err(|_| format!("{n} out of range"));
+            let year = i16::try_from(*y).map_err(|_| format!("year {y} out of range"))?;
             let dt = civil::DateTime::new(year, small(*m)?, small(*d)?, small(t[0])?, small(t[1])?, small(t[2])?, 0);
-            Value::date(dt.and_then(|dt| dt.to_zoned(TimeZone::system())).map_err(|e| err(e.to_string()))?)
+            Value::date(dt.and_then(|dt| dt.to_zoned(TimeZone::system())).map_err(|e| e.to_string())?)
         }
         ("date", [Int(n, _)]) => {
-            let ts = Timestamp::from_second(*n).map_err(|e| err(e.to_string()))?;
+            let ts = Timestamp::from_second(*n).map_err(|e| e.to_string())?;
             Value::date(ts.to_zoned(TimeZone::system()))
         }
         ("year", [Date(z)]) => Value::int(z.year() as i64),
@@ -137,28 +136,28 @@ fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &crate::lexe
             let mut fields = Vec::new();
             for (k, v) in m.borrow().iter() {
                 let Int(n, _) = v else {
-                    return Err(err(format!("{k} must be an integer")));
+                    return Err(format!("{k} must be an integer").into());
                 };
                 fields.push((k.clone(), *n));
             }
-            Value::date(with(z, &fields).map_err(err)?)
+            Value::date(with(z, &fields)?)
         }
-        ("start_of", [Date(z), Str(p)]) => Value::date(start_of(z, p).map_err(err)?),
-        ("end_of", [Date(z), Str(p)]) => Value::date(end_of(z, p).map_err(err)?),
+        ("start_of", [Date(z), Str(p)]) => Value::date(start_of(z, p)?),
+        ("end_of", [Date(z), Str(p)]) => Value::date(end_of(z, p)?),
         ("next" | "prev", [Date(z), Str(wd)]) => {
-            let wd = weekday(wd).ok_or_else(|| err(format!("unknown weekday {wd:?}")))?;
+            let wd = weekday(wd).ok_or_else(|| format!("unknown weekday {wd:?}"))?;
             let nth = if name == "next" { 1 } else { -1 };
-            Value::date(z.nth_weekday(nth, wd).map_err(|e| err(e.to_string()))?)
+            Value::date(z.nth_weekday(nth, wd).map_err(|e| e.to_string())?)
         }
         ("nth_weekday", [Date(z), Int(n, _), Str(wd)]) => {
-            let wd = weekday(wd).ok_or_else(|| err(format!("unknown weekday {wd:?}")))?;
-            let n = i8::try_from(*n).map_err(|_| err(format!("{n} out of range")))?;
-            Value::date(z.nth_weekday_of_month(n, wd).map_err(|e| err(e.to_string()))?)
+            let wd = weekday(wd).ok_or_else(|| format!("unknown weekday {wd:?}"))?;
+            let n = i8::try_from(*n).map_err(|_| format!("{n} out of range"))?;
+            Value::date(z.nth_weekday_of_month(n, wd).map_err(|e| e.to_string())?)
         }
-        ("add_workdays", [Date(z), Int(n, _)]) => Value::date(add_workdays(z, *n).map_err(err)?),
-        ("workdays", [Date(a), Date(b)]) => Value::int(workdays(a, b).map_err(err)?),
+        ("add_workdays", [Date(z), Int(n, _)]) => Value::date(add_workdays(z, *n)?),
+        ("workdays", [Date(a), Date(b)]) => Value::int(workdays(a, b)?),
         ("age", [Date(z)]) => Value::int(age(z, &Zoned::now())),
-        ("diff", [Date(a), Date(b)]) => Value::str(diff(a, b).map_err(err)?),
+        ("diff", [Date(a), Date(b)]) => Value::str(diff(a, b)?),
         ("relative", [Date(z)]) => Value::str(relative(z, &Zoned::now())),
         // Automatic mixed units for a duration: up to three of d, h, min, s, last one rounded.
         ("parts", [Qty(x, u)]) if u.dim() == units::unit("s").unwrap().dim() => {
@@ -169,13 +168,13 @@ fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &crate::lexe
             let last = us.last().unwrap().scale();
             Value::str(units::split((si / last).round() * last, us))
         }
-        ("calendar", [Date(z)]) => Value::str(calendar(z.year() as i64, z.month() as i64).map_err(err)?),
-        ("calendar", [Int(y, _), Int(m, _)]) => Value::str(calendar(*y, *m).map_err(err)?),
-        ("format", [Date(z), Str(f)]) => Value::str(jiff::fmt::strtime::format(f.as_bytes(), &**z).map_err(|e| err(e.to_string()))?),
+        ("calendar", [Date(z)]) => Value::str(calendar(z.year() as i64, z.month() as i64)?),
+        ("calendar", [Int(y, _), Int(m, _)]) => Value::str(calendar(*y, *m)?),
+        ("format", [Date(z), Str(f)]) => Value::str(jiff::fmt::strtime::format(f.as_bytes(), &**z).map_err(|e| e.to_string())?),
         ("unix", [Date(z)]) => Value::int(z.timestamp().as_second()),
         ("utc", [Date(z)]) => Value::date(z.with_time_zone(TimeZone::UTC)),
         ("local", [Date(z)]) => Value::date(z.with_time_zone(TimeZone::system())),
-        _ => return Err(bad()),
+        _ => return Err(Fail::BadArgs),
     })
 }
 

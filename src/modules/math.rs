@@ -1,7 +1,6 @@
 //! Numbers: digits, rounding, logs, trigonometry (angles as units).
 
-use super::{Doc, Module, bad_args, units};
-use crate::Error;
+use super::{Call, Doc, Fail, Module, units};
 use crate::ast::Radix;
 use crate::interp::{Interp, Value, num};
 use crate::lexer::Span;
@@ -43,11 +42,9 @@ const FNS: &[Doc] = &[
     ("atan", "atan(x)", "arctangent, as an angle", &["atan(1) to deg"], &["tan"]),
 ];
 
-fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Result<Value, Error> {
-    let err = |msg: String| Error::new(format!("{name}: {msg}"), span.clone());
-    let bad = || bad_args(name, &args, span);
+fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
-    Ok(match (name, args.as_slice()) {
+    Ok(match (name, args) {
         ("digits", [Int(n, r)]) => {
             let (mut m, b) = (n.unsigned_abs(), r.base as u64);
             let mut d = vec![Value::int((m % b) as i64)];
@@ -58,18 +55,18 @@ fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Re
             d.reverse();
             Value::list(d)
         }
-        ("from_digits", [List(l)]) => from_digits(&l.borrow(), 10).map_err(err)?,
-        ("from_digits", [List(l), Int(b, _)]) if (2..=36).contains(b) => from_digits(&l.borrow(), *b as u32).map_err(err)?,
+        ("from_digits", [List(l)]) => from_digits(&l.borrow(), 10)?,
+        ("from_digits", [List(l), Int(b, _)]) if (2..=36).contains(b) => from_digits(&l.borrow(), *b as u32)?,
         ("sqrt", [v]) if num(v).is_some() => Float(num(v).unwrap().sqrt()),
-        ("abs" | "round" | "floor" | "ceil", [v]) => round_like(name, v, 0).ok_or_else(bad)?,
-        ("round", [v, Int(n, _)]) => round_like(name, v, *n).ok_or_else(bad)?,
+        ("abs" | "round" | "floor" | "ceil", [v]) => round_like(name, v, 0).ok_or(Fail::BadArgs)?,
+        ("round", [v, Int(n, _)]) => round_like(name, v, *n).ok_or(Fail::BadArgs)?,
         ("ln", [v]) if num(v).is_some() => Float(num(v).unwrap().ln()),
         ("log", [v]) if num(v).is_some() => Float(num(v).unwrap().log10()),
         ("log", [v, b]) if num(v).is_some() && num(b).is_some() => Float(num(v).unwrap().log(num(b).unwrap())),
         ("sin" | "cos" | "tan", [v]) => {
             let rad = match v {
                 Qty(x, u) if u.dim() == units::unit("rad").unwrap().dim() => u.to_si(*x),
-                _ => num(v).ok_or_else(bad)?,
+                _ => num(v).ok_or(Fail::BadArgs)?,
             };
             Float(match name {
                 "sin" => rad.sin(),
@@ -86,7 +83,7 @@ fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Re
             };
             Qty(rad, units::unit("rad").unwrap())
         }
-        _ => return Err(bad()),
+        _ => return Err(Fail::BadArgs),
     })
 }
 

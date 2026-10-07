@@ -1,7 +1,6 @@
 //! Randomness: numbers, picks, shuffles, UUIDs.
 
-use super::{Doc, Module, bad_args, strings::hex};
-use crate::Error;
+use super::{Call, Doc, Fail, Module, strings::hex};
 use crate::interp::{Interp, Value, num};
 use crate::lexer::Span;
 
@@ -15,10 +14,9 @@ const FNS: &[Doc] = &[
     ("uuid", "uuid()", "random v4 UUID", &["uuid()"], &["rand"]),
 ];
 
-fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Result<Value, Error> {
-    let err = |msg: String| Error::new(format!("{name}: {msg}"), span.clone());
+fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
-    Ok(match (name, args.as_slice()) {
+    Ok(match (name, args) {
         ("rand", []) => Float(fastrand::f64()),
         ("rand", [Int(a, _), Int(b, _)]) if a <= b => Value::int(fastrand::i64(*a..=*b)),
         ("rand", [a, b]) if num(a).is_some() && num(b).is_some() => {
@@ -28,7 +26,7 @@ fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Re
         ("choice", [List(l)]) => {
             let l = l.borrow();
             if l.is_empty() {
-                return Err(err("empty list".into()));
+                return Err("empty list".into());
             }
             l[fastrand::usize(..l.len())].clone()
         }
@@ -44,7 +42,7 @@ fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Re
             let h = hex(&b);
             Value::str(format!("{}-{}-{}-{}-{}", &h[..8], &h[8..12], &h[12..16], &h[16..20], &h[20..]))
         }
-        _ => return Err(bad_args(name, &args, span)),
+        _ => return Err(Fail::BadArgs),
     })
 }
 

@@ -341,7 +341,7 @@ impl Interp {
                     Err(Ctl::Err(e)) => Err(e),
                 }
             }
-            Value::Builtin(m, name) => (m.call)(self, name, args, span),
+            Value::Builtin(m, name) => (m.call)(self, name, &args, span).map_err(|f| f.error(name, &args, span)),
             v => Err(Error::new(format!("{} is not callable", v.type_name()), span.clone())),
         }
     }

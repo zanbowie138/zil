@@ -1,7 +1,6 @@
 //! General: printing, type conversions, number bases, parsing, files, help, `input`.
 
-use super::{Claim, Doc, Module, bad_args, strings::hex};
-use crate::Error;
+use super::{Call, Claim, Doc, Fail, Module, strings::hex};
 use crate::ast::{Expr, ExprKind, Radix, UnOp};
 use crate::help::help;
 use crate::interp::{Interp, Value, fits, num};
@@ -60,29 +59,28 @@ const FNS: &[Doc] = &[
     ("help", "help(topic?)", "this help; topic is a function, unit or unit kind", &[], &[]),
 ];
 
-fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Result<Value, Error> {
-    let err = |msg: String| Error::new(format!("{name}: {msg}"), span.clone());
+fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
-    Ok(match (name, args.as_slice()) {
+    Ok(match (name, args) {
         ("print", vs) => {
             let parts: Vec<String> = vs.iter().map(Value::to_string).collect();
             println!("{}", parts.join(" "));
             Nil
         }
-        ("help", []) => help(None).map(|_| Nil).map_err(err)?,
-        ("help", [Str(s)]) => help(Some(s)).map(|_| Nil).map_err(err)?,
-        ("help", [Builtin(_, f)]) => help(Some(f)).map(|_| Nil).map_err(err)?,
-        ("help", [Fn(_)]) => return Err(err("user-defined function; no help available".into())),
+        ("help", []) => help(None).map(|_| Nil)?,
+        ("help", [Str(s)]) => help(Some(s)).map(|_| Nil)?,
+        ("help", [Builtin(_, f)]) => help(Some(f)).map(|_| Nil)?,
+        ("help", [Fn(_)]) => return Err("user-defined function; no help available".into()),
         ("type", [v]) => Value::str(v.type_name()),
         ("str", [Float(n)]) => Value::str(n.to_string()),
         ("str", [v]) => Value::str(v.to_string()),
         ("int", [Int(n, _)]) => Value::int(*n),
         ("int", [Float(n)]) => Value::int(*n as i64),
-        ("int", [Str(s)]) => parse_int(s, None).ok_or_else(|| err(format!("cannot parse {s:?}")))?,
-        ("int", [Str(s), Int(b, _)]) if (2..=36).contains(b) => parse_int(s, Some(*b as u32)).ok_or_else(|| err(format!("cannot parse {s:?} in base {b}")))?,
+        ("int", [Str(s)]) => parse_int(s, None).ok_or_else(|| format!("cannot parse {s:?}"))?,
+        ("int", [Str(s), Int(b, _)]) if (2..=36).contains(b) => parse_int(s, Some(*b as u32)).ok_or_else(|| format!("cannot parse {s:?} in base {b}"))?,
         ("float", [v @ (Int(..) | Float(_))]) => Float(num(v).unwrap()),
         ("float", [Qty(n, _)]) => Float(*n),
-        ("float", [Str(s)]) => Float(s.trim().parse().map_err(|_| err(format!("cannot parse {s:?}")))?),
+        ("float", [Str(s)]) => Float(s.trim().parse().map_err(|_| format!("cannot parse {s:?}"))?),
         ("bool", [v]) => Bool(v.truthy()),
         ("hex" | "bin" | "oct" | "dec" | "base", [v, rest @ ..]) if rest.len() <= 1 => {
             let base = match name {
@@ -92,29 +90,29 @@ fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Re
                 "dec" => 10,
                 _ => match rest {
                     [Int(b, _)] if (2..=36).contains(b) => *b as u32,
-                    _ => return Err(err("expected base(v, 2-36)".into())),
+                    _ => return Err("expected base(v, 2-36)".into()),
                 },
             };
             let width = match (name, rest) {
                 ("base", _) | (_, []) => 0,
                 (_, [Int(w, _)]) if (1..=64).contains(w) => *w as u32,
-                _ => return Err(err("width must be 1-64 bits".into())),
+                _ => return Err("width must be 1-64 bits".into()),
             };
-            to_radix(v, Radix { base, width }).map_err(err)?
+            to_radix(v, Radix { base, width })?
         }
         ("list", [Str(s)]) => Value::list(s.chars().map(|c| Value::str(c.to_string())).collect()),
         ("list", [List(l)]) => Value::list(l.borrow().clone()),
         ("list", [Map(m)]) => Value::list(m.borrow().iter().map(|(k, v)| Value::list(vec![Value::str(k.as_str()), v.clone()])).collect()),
-        ("parse", [Str(s)]) => parse_literal(s).map_err(err)?,
+        ("parse", [Str(s)]) => parse_literal(s)?,
         ("len", [Str(s)]) => Value::int(s.chars().count() as i64),
         ("len", [List(l)]) => Value::int(l.borrow().len() as i64),
         ("len", [Map(m)]) => Value::int(m.borrow().len() as i64),
-        ("read_file", [Str(path)]) => Value::str(std::fs::read_to_string(&**path).map_err(|e| err(e.to_string()))?),
+        ("read_file", [Str(path)]) => Value::str(std::fs::read_to_string(&**path).map_err(|e| e.to_string())?),
         ("write_file", [Str(path), v]) => {
-            std::fs::write(&**path, v.to_string()).map_err(|e| err(e.to_string()))?;
+            std::fs::write(&**path, v.to_string()).map_err(|e| e.to_string())?;
             Nil
         }
-        _ => return Err(bad_args(name, &args, span)),
+        _ => return Err(Fail::BadArgs),
     })
 }
 

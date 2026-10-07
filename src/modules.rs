@@ -27,6 +27,47 @@ pub type Section = (&'static str, &'static [(&'static str, &'static str)]);
 /// A hook's answer: `None` means "not mine, ask the next module".
 pub type Claim = Option<Result<Value, String>>;
 
+/// Why a builtin call failed; `Fail::error` turns it into an `Error` naming the builtin.
+pub enum Fail {
+    Msg(String),
+    /// Already located, e.g. from a callback: passed through untouched.
+    Err(Error),
+    BadArgs,
+}
+
+impl From<String> for Fail {
+    fn from(s: String) -> Fail {
+        Fail::Msg(s)
+    }
+}
+
+impl From<&str> for Fail {
+    fn from(s: &str) -> Fail {
+        Fail::Msg(s.into())
+    }
+}
+
+impl From<Error> for Fail {
+    fn from(e: Error) -> Fail {
+        Fail::Err(e)
+    }
+}
+
+impl Fail {
+    pub fn error(self, name: &str, args: &[Value], span: &Span) -> Error {
+        match self {
+            Fail::Msg(m) => Error::new(format!("{name}: {m}"), span.clone()),
+            Fail::Err(e) => e,
+            Fail::BadArgs => {
+                let types: Vec<_> = args.iter().map(Value::type_name).collect();
+                Error::new(format!("{name}: unsupported arguments ({})", types.join(", ")), span.clone())
+            }
+        }
+    }
+}
+
+pub type Call = Result<Value, Fail>;
+
 pub struct Module {
     /// Help category.
     pub name: &'static str,
@@ -40,7 +81,7 @@ pub struct Module {
     pub fns: &'static [Doc],
     /// Function names by category for the help page; every fn in exactly one. Empty lists them all on one line.
     pub groups: &'static [(&'static str, &'static [&'static str])],
-    pub call: fn(&mut Interp, &'static str, Vec<Value>, &Span) -> Result<Value, Error>,
+    pub call: fn(&mut Interp, &'static str, &[Value], &Span) -> Call,
     pub consts: &'static [(&'static str, f64)],
     /// `to` keywords and the exported fn each calls: `x to UTC` is `utc(x)`, `x to hex(8)` is `hex(x, 8)`.
     pub targets: &'static [(&'static str, &'static str)],
@@ -62,7 +103,7 @@ impl Module {
         guide: &[],
         fns: &[],
         groups: &[],
-        call: |_, name, args, span| Err(bad_args(name, &args, span)),
+        call: |_, _, _, _| Err(Fail::BadArgs),
         consts: &[],
         targets: &[],
         ident: None,
@@ -75,11 +116,6 @@ impl Module {
 
 /// Also the `help()` overview order.
 pub const MODULES: &[Module] = &[strings::MODULE, lists::MODULE, math::MODULE, dates::MODULE, random::MODULE, units::MODULE, core::MODULE];
-
-pub fn bad_args(name: &str, args: &[Value], span: &Span) -> Error {
-    let types: Vec<_> = args.iter().map(Value::type_name).collect();
-    Error::new(format!("{name}: unsupported arguments ({})", types.join(", ")), span.clone())
-}
 
 /// The module and fn a `to` keyword calls.
 pub fn target(keyword: &str) -> Option<(&'static Module, &'static str)> {

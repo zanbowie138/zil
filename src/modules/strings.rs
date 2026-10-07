@@ -1,7 +1,6 @@
 //! Text: case, splitting, search and regex, encodings, hashes, code points.
 
-use super::{Claim, Doc, Module, bad_args};
-use crate::Error;
+use super::{Call, Claim, Doc, Fail, Module};
 use crate::ast::BinOp;
 use crate::interp::{Interp, Value};
 use crate::lexer::Span;
@@ -66,10 +65,9 @@ const FNS: &[Doc] = &[
     ("from_bytes", "from_bytes(list)", "string from a list of UTF-8 bytes", &["[104, 105].from_bytes"], &["bytes", "chr"]),
 ];
 
-fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Result<Value, Error> {
-    let err = |msg: String| Error::new(format!("{name}: {msg}"), span.clone());
+fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
-    Ok(match (name, args.as_slice()) {
+    Ok(match (name, args) {
         ("upper", [Str(s)]) => Value::str(s.to_uppercase()),
         ("lower", [Str(s)]) => Value::str(s.to_lowercase()),
         ("trim", [Str(s)]) => Value::str(s.trim()),
@@ -85,9 +83,7 @@ fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Re
         ("lines", [Str(s)]) => strs(s.lines()),
         ("chars", [Str(s)]) => Value::list(s.chars().map(|c| Value::str(c.to_string())).collect()),
         ("join", [List(l)]) => Value::str(l.borrow().iter().map(Value::to_string).collect::<String>()),
-        ("join", [List(l), Str(sep)]) => {
-            Value::str(l.borrow().iter().map(Value::to_string).collect::<Vec<_>>().join(sep))
-        }
+        ("join", [List(l), Str(sep)]) => Value::str(l.borrow().iter().map(Value::to_string).collect::<Vec<_>>().join(sep)),
         ("replace", [Str(s), Str(from), Str(to)]) => Value::str(s.replace(&**from, to)),
         ("replace", [Str(s), Regex(r), Str(to)]) => Value::str(r.replace_all(s, &**to)),
         ("contains", [Str(s), Str(sub)]) => Bool(s.contains(&**sub)),
@@ -126,26 +122,26 @@ fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Re
             "base64" => base64::engine::general_purpose::STANDARD.encode(s.as_bytes()),
             "url" => url_encode(s),
             "hex" => hex(s.as_bytes()),
-            _ => return Err(err(format!("unknown encoding {fmt:?} (base64, url, hex)"))),
+            _ => return Err(format!("unknown encoding {fmt:?} (base64, url, hex)").into()),
         }),
         ("decode", [Str(s), Str(fmt)]) => {
             let bytes = match &**fmt {
-                "base64" => base64::engine::general_purpose::STANDARD.decode(s.trim()).map_err(|e| err(e.to_string()))?,
-                "url" => url_decode(s).ok_or_else(|| err("invalid percent-encoding".into()))?,
-                "hex" => unhex(s.trim()).ok_or_else(|| err("invalid hex".into()))?,
-                _ => return Err(err(format!("unknown encoding {fmt:?} (base64, url, hex)"))),
+                "base64" => base64::engine::general_purpose::STANDARD.decode(s.trim()).map_err(|e| e.to_string())?,
+                "url" => url_decode(s).ok_or("invalid percent-encoding")?,
+                "hex" => unhex(s.trim()).ok_or("invalid hex")?,
+                _ => return Err(format!("unknown encoding {fmt:?} (base64, url, hex)").into()),
             };
-            Value::str(String::from_utf8(bytes).map_err(|_| err("decoded bytes are not UTF-8".into()))?)
+            Value::str(String::from_utf8(bytes).map_err(|_| "decoded bytes are not UTF-8")?)
         }
         ("sha256", [Str(s)]) => Value::str(hex(&sha2::Sha256::digest(s.as_bytes()))),
         ("md5", [Str(s)]) => Value::str(hex(&md5::Md5::digest(s.as_bytes()))),
         ("ord", [Str(s)]) => match s.chars().collect::<Vec<_>>()[..] {
             [c] => Value::int(c as i64),
-            _ => return Err(err("expected a single character".into())),
+            _ => return Err("expected a single character".into()),
         },
         ("chr", [Int(n, _)]) => {
             let c = u32::try_from(*n).ok().and_then(char::from_u32);
-            Value::str(c.ok_or_else(|| err(format!("{n} is not a valid code point")))?.to_string())
+            Value::str(c.ok_or_else(|| format!("{n} is not a valid code point"))?.to_string())
         }
         // Every number in the text; a `-` glued to a word or number (2026-10-06) is a separator, not a sign.
         ("nums", [Str(s)]) => {
@@ -164,10 +160,10 @@ fn call(_: &mut Interp, name: &'static str, args: Vec<Value>, span: &Span) -> Re
                 _ => None,
             };
             let bytes: Option<Vec<u8>> = l.borrow().iter().map(byte).collect();
-            let bytes = bytes.ok_or_else(|| err("expected a list of integers 0-255".into()))?;
-            Value::str(String::from_utf8(bytes).map_err(|_| err("bytes are not UTF-8".into()))?)
+            let bytes = bytes.ok_or("expected a list of integers 0-255")?;
+            Value::str(String::from_utf8(bytes).map_err(|_| "bytes are not UTF-8")?)
         }
-        _ => return Err(bad_args(name, &args, span)),
+        _ => return Err(Fail::BadArgs),
     })
 }
 
