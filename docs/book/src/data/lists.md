@@ -28,6 +28,13 @@ ranges, map/filter/reduce, building lists
 | [`map(xs: list, f: fn)`](#map) | apply f to every item |
 | [`filter(xs: list, f: fn)`](#filter) | keep items where f is truthy |
 | [`reduce(xs: list, init: any, f: fn)`](#reduce) | fold with f(acc, item) |
+| [`flatten(xs: list)`](#flatten) | unpack nested lists one level |
+| [`zip(a: list, b: list)`](#zip) | pair up items, stopping at the shorter list |
+| [`enumerate(xs: list)`](#enumerate) | [index, item] pairs |
+| [`group_by(xs: list, f: fn)`](#group_by) | map from each key f gives to the items with that key |
+| [`count_by(xs: list, f: fn)`](#count_by) | map from each key f gives to how many items have it |
+| [`chunks(xs: list, n: int)`](#chunks) | split into lists of n items; the last may be shorter |
+| [`windows(xs: list, n: int)`](#windows) | every run of n neighboring items |
 | [`step(xs: list, n: int)`](#step) | every nth item, starting with the first |
 
 ### range
@@ -84,6 +91,89 @@ See also: [map](../data/lists.md#map), [reduce](../data/lists.md#reduce)
 ```
 
 See also: [sum](../math/stats.md#sum), [map](../data/lists.md#map)
+
+### flatten
+
+`flatten(xs: list)`: unpack nested lists one level
+
+```zil
+[[1, 2], [3], 4].flatten
+# → [1, 2, 3, 4]
+```
+
+See also: [chunks](../data/lists.md#chunks)
+
+### zip
+
+`zip(a: list, b: list)`: pair up items, stopping at the shorter list
+
+```zil
+zip([1, 2, 3], ["a", "b"])
+# → [[1, "a"], [2, "b"]]
+```
+
+See also: [enumerate](../data/lists.md#enumerate)
+
+### enumerate
+
+`enumerate(xs: list)`: [index, item] pairs
+
+```zil
+["a", "b"].enumerate
+# → [[0, "a"], [1, "b"]]
+["a", "b"].enumerate.map(|[i, x]| "{i}:{x}")
+# → ["0:a", "1:b"]
+```
+
+See also: [zip](../data/lists.md#zip)
+
+### group_by
+
+`group_by(xs: list, f: fn)`: map from each key f gives to the items with that key
+
+```zil
+["apple", "avocado", "banana"].group_by(|w| w[0])
+# → {a: ["apple", "avocado"], b: ["banana"]}
+(1..=6).group_by(|x| x % 2 == 0)
+# → {false: [1, 3, 5], true: [2, 4, 6]}
+```
+
+See also: [count_by](../data/lists.md#count_by)
+
+### count_by
+
+`count_by(xs: list, f: fn)`: map from each key f gives to how many items have it
+
+```zil
+"mississippi".chars.count_by(|c| c)
+# → {m: 1, i: 4, s: 4, p: 2}
+```
+
+See also: [group_by](../data/lists.md#group_by), [count](../data.md#count)
+
+### chunks
+
+`chunks(xs: list, n: int)`: split into lists of n items; the last may be shorter
+
+```zil
+(1..=7).chunks(3)
+# → [[1, 2, 3], [4, 5, 6], [7]]
+```
+
+See also: [windows](../data/lists.md#windows), [flatten](../data/lists.md#flatten)
+
+### windows
+
+`windows(xs: list, n: int)`: every run of n neighboring items
+
+```zil
+[1, 2, 3, 4].windows(2)
+# → [[1, 2], [2, 3], [3, 4]]
+[1, 4, 9, 16].windows(2).map(|[a, b]| b - a)
+# → [3, 5, 7]
+```
+
+See also: [chunks](../data/lists.md#chunks)
 
 ### step
 

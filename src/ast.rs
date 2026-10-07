@@ -36,6 +36,8 @@ pub enum ExprKind {
     Chain(Box<Expr>, Vec<(BinOp, Expr)>),
     To(Box<Expr>, Target),
     Assign(Box<Expr>, Box<Expr>),
+    /// `[a, [b, _]] = xs`.
+    Unpack(Pat, Box<Expr>),
     Call(Box<Expr>, Vec<Expr>),
     Field(Box<Expr>, String),
     Index(Box<Expr>, Box<Expr>),
@@ -43,11 +45,19 @@ pub enum ExprKind {
     Fn(Rc<FnDef>),
     If(Box<Expr>, Box<Expr>, Option<Box<Expr>>),
     While(Box<Expr>, Box<Expr>),
-    For(String, Box<Expr>, Box<Expr>),
+    For(Pat, Box<Expr>, Box<Expr>),
     Block(Vec<Expr>),
     Return(Option<Box<Expr>>),
     Break,
     Continue,
+}
+
+/// What a value binds to: a name, or `[a, [b, c]]` to unpack a list, where `_` skips an item.
+#[derive(Debug, Clone)]
+pub enum Pat {
+    Name(String),
+    Skip,
+    List(Vec<Pat>, Span),
 }
 
 /// Unit names with powers, e.g. `km/h^2` = [("km", 1), ("h", -2)].
@@ -77,7 +87,7 @@ impl Radix {
 
 #[derive(Debug)]
 pub struct FnDef {
-    pub params: Vec<String>,
+    pub params: Vec<Pat>,
     pub body: Expr,
 }
 

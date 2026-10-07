@@ -30,8 +30,9 @@ pub const MODULE: Module = Module {
     groups: &[
         ("size", &["len"]),
         ("search", &["contains", "find", "count"]),
-        ("order", &["sort", "reverse", "unique"]),
-        ("pick", &["first", "last"]),
+        ("order", &["sort", "sort_desc", "reverse", "unique"]),
+        ("pick", &["first", "last", "take", "drop"]),
+        ("test", &["any", "all"]),
     ],
     call,
     children: &[lists::MODULE, maps::MODULE],
@@ -46,9 +47,14 @@ const FNS: &[Doc] = &[
     doc("count", "count(v: str|list, x: any)", "number of matches in a string or list", &[r#""banana".count("a")"#, "[1, 2, 1].count(1)"], &["find"]),
     doc("reverse", "reverse(v: str|list)", "reverse a string or list", &[r#""abc".reverse"#, "[1, 2, 3].reverse"], &["sort"]),
     doc("sort", "sort(xs: list, key?: fn)", "sorted copy, optionally by key function", &["[3, 1, 2].sort", r#"["ccc", "a", "bb"].sort(|w| w.len)"#], &["reverse", "unique"]),
+    doc("sort_desc", "sort_desc(xs: list, key?: fn)", "like sort, largest first", &["[3, 1, 2].sort_desc", r#"["bb", "a", "ccc"].sort_desc(|w| w.len)"#], &["sort"]),
     doc("unique", "unique(xs: list)", "drop duplicates, keeping first occurrences", &["[1, 2, 1, 3].unique"], &["sort", "count"]),
     doc("first", "first(xs: list)", "first item, or nil", &["[7, 8].first"], &["last"]),
     doc("last", "last(xs: list)", "last item, or nil", &["[7, 8].last"], &["first"]),
+    doc("take", "take(v: str|list, n: int)", "the first n items or characters", &["[1, 2, 3].take(2)", r#""hello".take(3)"#], &["drop", "first"]),
+    doc("drop", "drop(v: str|list, n: int)", "everything after the first n items or characters", &["[1, 2, 3].drop(2)", r#""hello".drop(3)"#], &["take", "last"]),
+    doc("any", "any(xs: list, f?: fn)", "true if f (or the item itself) is truthy for some item", &["[0, 5, 12].any(|x| x > 10)", "[nil, false].any"], &["all", "filter"]),
+    doc("all", "all(xs: list, f?: fn)", "true if f (or the item itself) is truthy for every item", &["[2, 4, 6].all(|x| x % 2 == 0)", "[].all"], &["any", "filter"]),
 ];
 
 fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Call {
@@ -69,16 +75,16 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Cal
         ("count", [List(l), v]) => Value::int(l.borrow().iter().filter(|x| *x == v).count() as i64),
         ("reverse", [Str(s)]) => Value::str(s.chars().rev().collect::<String>()),
         ("reverse", [List(l)]) => Value::list(l.borrow().iter().rev().cloned().collect()),
-        ("sort", [List(l)]) => {
+        ("sort" | "sort_desc", [List(l)]) => {
             let mut keyed: Vec<_> = l.borrow().iter().map(|v| (v.clone(), v.clone())).collect();
-            sort_keyed(&mut keyed)?
+            sort_keyed(&mut keyed, name == "sort_desc")?
         }
-        ("sort", [List(l), f]) => {
+        ("sort" | "sort_desc", [List(l), f]) => {
             let mut keyed = Vec::new();
             for v in l.borrow().clone() {
                 keyed.push((it.call(f, vec![v.clone()], span)?, v));
             }
-            sort_keyed(&mut keyed)?
+            sort_keyed(&mut keyed, name == "sort_desc")?
         }
         ("unique", [List(l)]) => {
             let mut out: Vec<Value> = Vec::new();
@@ -91,6 +97,24 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Cal
         }
         ("first", [List(l)]) => l.borrow().first().cloned().unwrap_or(Nil),
         ("last", [List(l)]) => l.borrow().last().cloned().unwrap_or(Nil),
+        ("take" | "drop", [_, Int(n, _)]) if *n < 0 => return Err(Fail::Arg(1, format!("count must be at least 0, got {n}"))),
+        ("take", [List(l), Int(n, _)]) => Value::list(l.borrow().iter().take(*n as usize).cloned().collect()),
+        ("drop", [List(l), Int(n, _)]) => Value::list(l.borrow().iter().skip(*n as usize).cloned().collect()),
+        ("take", [Str(s), Int(n, _)]) => Value::str(s.chars().take(*n as usize).collect::<String>()),
+        ("drop", [Str(s), Int(n, _)]) => Value::str(s.chars().skip(*n as usize).collect::<String>()),
+        ("any" | "all", [List(l), f @ ..]) if f.len() <= 1 => {
+            let want = name == "any";
+            for v in l.borrow().clone() {
+                let t = match f {
+                    [f] => it.call(f, vec![v], span)?.truthy(),
+                    _ => v.truthy(),
+                };
+                if t == want {
+                    return Ok(Bool(want));
+                }
+            }
+            Bool(!want)
+        }
         _ => return Err(Fail::BadArgs),
     })
 }
@@ -99,14 +123,15 @@ fn char_index(s: &str, byte: usize) -> Value {
     Value::int(s[..byte].chars().count() as i64)
 }
 
-/// Stable sort of (key, value) pairs by key; errors on incomparable keys.
-fn sort_keyed(keyed: &mut [(Value, Value)]) -> Result<Value, String> {
+/// Stable sort of (key, value) pairs by key, largest first if `desc`; errors on incomparable keys.
+fn sort_keyed(keyed: &mut [(Value, Value)], desc: bool) -> Result<Value, String> {
     let mut bad = None;
     keyed.sort_by(|(a, _), (b, _)| {
-        compare(a, b).unwrap_or_else(|| {
+        let ord = compare(a, b).unwrap_or_else(|| {
             bad = Some(format!("cannot compare {} and {}", crate::modules::short(a), crate::modules::short(b)));
             Ordering::Equal
-        })
+        });
+        if desc { ord.reverse() } else { ord }
     });
     match bad {
         Some(e) => Err(e),
@@ -124,6 +149,9 @@ mod tests {
         assert_eq!(show(r#"["bb", "a", "ccc"].sort(|s| s.len)"#), r#"["a", "bb", "ccc"]"#);
         assert_eq!(show("[1, 2, 2, 3].unique"), "[1, 2, 3]");
         assert_eq!(show(r#"["héllo".len, "banana".count("a"), "hello".find("l"), [5, 6].find(7)]"#), "[5, 3, 2, nil]");
+        assert_eq!(show(r#"[[3, 1, 2].sort_desc, [[1, "a"], [2, "b"], [1, "c"]].sort_desc(|p| p[0])]"#), r#"[[3, 2, 1], [[2, "b"], [1, "a"], [1, "c"]]]"#);
+        assert_eq!(show(r#"[[1, 2, 3].take(5), [1, 2, 3].drop(1), "hello".take(2), "hello".drop(9)]"#), r#"[[1, 2, 3], [2, 3], "he", ""]"#);
+        assert_eq!(show("[[1, nil].any, [1, nil].all, [].any, [].all, [1, 2].all(|x| x > 0)]"), "[true, false, false, true, true]");
         assert_eq!(show(r#"["abc".reverse, [1, 2].reverse, {k: 1}.contains("k")]"#), r#"["cba", [2, 1], true]"#);
     }
 }

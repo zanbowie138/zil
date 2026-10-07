@@ -1,5 +1,5 @@
 use crate::Error;
-use crate::ast::{BinOp, Expr, ExprKind, FnDef, Target, UnOp, UnitSpec};
+use crate::ast::{BinOp, Expr, ExprKind, FnDef, Pat, Target, UnOp, UnitSpec};
 use crate::lexer::{Span, Tok, lex, lex_at};
 use std::rc::Rc;
 
@@ -223,8 +223,10 @@ impl Parser<'_> {
             let rhs = self.expr(rbp)?;
             let hole = outer_holes.is_some_and(|outer| std::mem::replace(&mut self.holes, outer) > 0);
             let kind = match t {
+                Tok::Assign if let ExprKind::List(_) = lhs.kind => ExprKind::Unpack(to_pat(&lhs)?, Box::new(rhs)),
                 Tok::Assign | Tok::OpAssign(_) if !matches!(lhs.kind, ExprKind::Ident(_) | ExprKind::Field(..) | ExprKind::Index(..)) => {
-                    return Err(Error::new("cannot assign to this", lhs.span).help("assign to a name, field or index: `x = 1`, `m.k = 1`, `xs[0] = 1`"));
+                    return Err(Error::new("cannot assign to this", lhs.span)
+                        .help("assign to a name, field, index or list of names: `x = 1`, `m.k = 1`, `xs[0] = 1`, `[a, b] = xs`"));
                 }
                 Tok::Assign => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
                 // ponytail: `xs[f()] += 1` evaluates `xs` and `f()` twice; desugar to a temp if side effects there ever matter.
@@ -235,7 +237,7 @@ impl Parser<'_> {
                 // `x |> f(_, 2)` => `(|_| f(_, 2))(x)`
                 Tok::Pipe if hole => {
                     let span = rhs.span.clone();
-                    let f = Expr { kind: ExprKind::Fn(Rc::new(FnDef { params: vec!["_".into()], body: rhs })), span };
+                    let f = Expr { kind: ExprKind::Fn(Rc::new(FnDef { params: vec![Pat::Name("_".into())], body: rhs })), span };
                     ExprKind::Call(Box::new(f), vec![lhs])
                 }
                 // `x |> f(a)` => `f(x, a)`; `x |> f` => `f(x)`
@@ -372,10 +374,10 @@ impl Parser<'_> {
                 ExprKind::While(Box::new(cond), Box::new(self.block()?))
             }
             Tok::For => {
-                let name = self.ident()?;
+                let pat = self.pattern()?;
                 self.expect(Tok::In, "`in`")?;
                 let iter = self.expr(0)?;
-                ExprKind::For(name, Box::new(iter), Box::new(self.block()?))
+                ExprKind::For(pat, Box::new(iter), Box::new(self.block()?))
             }
             Tok::Break => ExprKind::Break,
             Tok::Continue => ExprKind::Continue,
@@ -415,16 +417,38 @@ impl Parser<'_> {
         }
     }
 
-    fn params(&mut self, close: Tok) -> PResult<Vec<String>> {
+    fn params(&mut self, close: Tok) -> PResult<Vec<Pat>> {
         let mut params = Vec::new();
         while *self.peek() != close {
-            params.push(self.ident()?);
+            params.push(self.pattern()?);
             if *self.peek() != Tok::Comma {
                 break;
             }
             self.bump();
         }
         Ok(params)
+    }
+
+    /// A name, or `[a, [b, _]]`.
+    fn pattern(&mut self) -> PResult<Pat> {
+        if *self.peek() != Tok::LBracket {
+            return Ok(Pat::Name(self.ident()?));
+        }
+        let open = self.span();
+        self.bump();
+        let mut items = Vec::new();
+        while *self.peek() != Tok::RBracket {
+            items.push(match self.pattern()? {
+                Pat::Name(n) if n == "_" => Pat::Skip,
+                p => p,
+            });
+            if *self.peek() != Tok::Comma {
+                break;
+            }
+            self.bump();
+        }
+        self.close(Tok::RBracket, &open)?;
+        Ok(Pat::List(items, open.start..self.prev_end))
     }
 
     /// After `[`: `x[i]`, `x[a..b]`, `x[a..]`, `x[..b]`.
@@ -662,6 +686,16 @@ impl Parser<'_> {
         }
         self.close(Tok::RBrace, &open)?;
         Ok(self.mk(ExprKind::Block(stmts), start))
+    }
+}
+
+/// The left side of `[a, [b, _]] = xs` as a pattern.
+fn to_pat(e: &Expr) -> PResult<Pat> {
+    match &e.kind {
+        ExprKind::Ident(n) if n == "_" => Ok(Pat::Skip),
+        ExprKind::Ident(n) => Ok(Pat::Name(n.clone())),
+        ExprKind::List(items) => Ok(Pat::List(items.iter().map(to_pat).collect::<PResult<_>>()?, e.span.clone())),
+        _ => Err(Error::new("cannot assign to this", e.span.clone()).help("a list pattern holds names, `_` or more lists: `[a, [b, _]] = xs`")),
     }
 }
 

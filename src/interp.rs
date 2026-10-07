@@ -1,5 +1,5 @@
 use crate::Error;
-use crate::ast::{BinOp, Expr, ExprKind, FnDef, Radix, Target, UnOp};
+use crate::ast::{BinOp, Expr, ExprKind, FnDef, Pat, Radix, Target, UnOp};
 use crate::lexer::Span;
 use crate::modules::{self, units};
 use crate::value::{Value, compare, exact, num, ratio};
@@ -49,6 +49,37 @@ fn assign(env: &Env, name: &str, v: Value) -> Result<(), Value> {
         Some(p) => assign(p, name, v),
         None => Err(v),
     }
+}
+
+/// Binds `v` to `pat`: `define` makes new names in `env` (params, loop variables), else names follow `=`.
+fn bind(pat: &Pat, v: Value, env: &Env, define: bool) -> Result<(), Error> {
+    match pat {
+        Pat::Skip => {}
+        Pat::Name(name) if define => {
+            env.borrow_mut().vars.insert(name.clone(), v);
+        }
+        Pat::Name(name) => {
+            if let Err(v) = assign(env, name, v) {
+                env.borrow_mut().vars.insert(name.clone(), v);
+            }
+        }
+        Pat::List(pats, span) => {
+            let Value::List(l) = &v else {
+                return Err(
+                    Error::new(format!("expected a list to unpack, got {}", v.type_name()), span.clone()).note(format!("the value is {}", modules::short(&v)))
+                );
+            };
+            let items = l.borrow().clone();
+            if items.len() != pats.len() {
+                return Err(Error::new(format!("expected {} items to unpack, got {}", pats.len(), items.len()), span.clone())
+                    .note(format!("the value is {}", modules::short(&v))));
+            }
+            for (p, it) in pats.iter().zip(items) {
+                bind(p, it, env, define)?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Non-local exits threaded through `?`.
@@ -148,7 +179,7 @@ impl Interp {
                 }
                 let env = child(&c.env);
                 for (p, a) in c.def.params.iter().zip(args) {
-                    env.borrow_mut().vars.insert(p.clone(), a);
+                    bind(p, a, &env, true)?;
                 }
                 self.depth += 1;
                 let r = self.eval(&c.def.body, &env).or_else(Ctl::finish);
@@ -397,6 +428,11 @@ impl Interp {
                 }
                 v
             }
+            ExprKind::Unpack(pat, v) => {
+                let v = self.eval(v, env)?;
+                bind(pat, v.clone(), env, false)?;
+                v
+            }
             ExprKind::Call(callee, args) => self.call_expr(e, callee, args, env)?,
             ExprKind::Field(obj, key) => self.field(e, obj, key, env)?.0,
             ExprKind::Index(obj, idx) => match (self.eval(obj, env)?, self.eval(idx, env)?) {
@@ -460,7 +496,7 @@ impl Interp {
                 }
                 Value::Nil
             }
-            ExprKind::For(name, iter, body) => {
+            ExprKind::For(pat, iter, body) => {
                 let items: Vec<Value> = match self.eval(iter, env)? {
                     Value::List(l) => l.borrow().clone(),
                     Value::Map(m) => m.borrow().keys().map(|k| Value::str(k.as_str())).collect(),
@@ -474,7 +510,7 @@ impl Interp {
                 };
                 for it in items {
                     let scope = child(env);
-                    scope.borrow_mut().vars.insert(name.clone(), it);
+                    bind(pat, it, &scope, true)?;
                     match self.eval(body, &scope) {
                         Ok(_) | Err(Ctl::Continue(_)) => {}
                         Err(Ctl::Break(_)) => break,
@@ -892,6 +928,19 @@ fib(10)";
         assert!(try_eval("5 km in kg").is_err());
         assert_eq!(show("[0 < 5 < 10, 0 < 15 < 10, 1 <= 1 < 2 <= 2]"), "[true, false, true]");
         assert_eq!(show("n = 0\nf = fn() { n += 1\n 5 }\n0 < f() < 10\nn"), "1");
+    }
+
+    #[test]
+    fn destructuring() {
+        assert_eq!(show("[a, [b, _], c] = [1, [2, 3], 4]\n[a, b, c]"), "[1, 2, 4]");
+        assert_eq!(show("a = 1\nb = 2\n[a, b] = [b, a]\n[a, b]"), "[2, 1]");
+        assert_eq!(show("t = 0\nfor [k, v] in {x: 1, y: 2}.list { t += v }\nt"), "3");
+        assert_eq!(show("s = \"\"\nfor [i, x] in [\"a\", \"b\"].enumerate { s += \"{i}{x}\" }\ns"), "0a1b");
+        assert_eq!(show("[[1, 2], [3, 4]].map(|[a, b]| a * b)"), "[2, 12]");
+        assert_eq!(show("f = fn([x, y], z) { x + y + z }\nf([1, 2], 3)"), "6");
+        assert_eq!(try_eval("[a, b] = [1]").unwrap_err().msg, "expected 2 items to unpack, got 1");
+        assert_eq!(try_eval("[a] = 5").unwrap_err().msg, "expected a list to unpack, got int");
+        assert!(try_eval("[a, 1] = [1, 2]").is_err());
     }
 
     #[test]

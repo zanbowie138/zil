@@ -5,6 +5,7 @@ use crate::interp::Interp;
 use crate::lexer::Span;
 use crate::modules::{Call, Claim, Doc, Fail, Module, doc};
 use crate::value::Value;
+use indexmap::IndexMap;
 
 pub const MODULE: Module = Module {
     name: "lists",
@@ -26,7 +27,9 @@ pub const MODULE: Module = Module {
     #[rustfmt::skip]
     groups: &[
         ("build", &["range", "push", "step"]),
-        ("transform", &["map", "filter", "reduce"]),
+        ("transform", &["map", "filter", "reduce", "flatten"]),
+        ("combine", &["zip", "enumerate"]),
+        ("group", &["group_by", "count_by", "chunks", "windows"]),
     ],
     call,
     binary: Some(binary),
@@ -40,6 +43,13 @@ const FNS: &[Doc] = &[
     doc("map", "map(xs: list, f: fn)", "apply f to every item", &[r"[1, 2, 3].map(|x| x * 10)"], &["filter", "reduce"]),
     doc("filter", "filter(xs: list, f: fn)", "keep items where f is truthy", &[r"(1..10).filter(|x| x % 3 == 0)"], &["map", "reduce"]),
     doc("reduce", "reduce(xs: list, init: any, f: fn)", "fold with f(acc, item)", &[r"[1, 2, 3].reduce(10, |acc, x| acc + x)"], &["sum", "map"]),
+    doc("flatten", "flatten(xs: list)", "unpack nested lists one level", &["[[1, 2], [3], 4].flatten"], &["chunks"]),
+    doc("zip", "zip(a: list, b: list)", "pair up items, stopping at the shorter list", &[r#"zip([1, 2, 3], ["a", "b"])"#], &["enumerate"]),
+    doc("enumerate", "enumerate(xs: list)", "[index, item] pairs", &[r#"["a", "b"].enumerate"#, r#"["a", "b"].enumerate.map(|[i, x]| "{i}:{x}")"#], &["zip"]),
+    doc("group_by", "group_by(xs: list, f: fn)", "map from each key f gives to the items with that key", &[r#"["apple", "avocado", "banana"].group_by(|w| w[0])"#, "(1..=6).group_by(|x| x % 2 == 0)"], &["count_by"]),
+    doc("count_by", "count_by(xs: list, f: fn)", "map from each key f gives to how many items have it", &[r#""mississippi".chars.count_by(|c| c)"#], &["group_by", "count"]),
+    doc("chunks", "chunks(xs: list, n: int)", "split into lists of n items; the last may be shorter", &["(1..=7).chunks(3)"], &["windows", "flatten"]),
+    doc("windows", "windows(xs: list, n: int)", "every run of n neighboring items", &["[1, 2, 3, 4].windows(2)", "[1, 4, 9, 16].windows(2).map(|[a, b]| b - a)"], &["chunks"]),
     doc("step", "step(xs: list, n: int)", "every nth item, starting with the first", &["(0..=20).step(5)", "(1..10).step(2)"], &["range"]),
 ];
 
@@ -78,6 +88,28 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Cal
             }
             acc
         }
+        ("flatten", [List(l)]) => Value::list(
+            l.borrow()
+                .iter()
+                .flat_map(|v| match v {
+                    List(inner) => inner.borrow().clone(),
+                    v => vec![v.clone()],
+                })
+                .collect(),
+        ),
+        ("zip", [List(a), List(b)]) => Value::list(a.borrow().iter().zip(b.borrow().iter()).map(|(x, y)| Value::list(vec![x.clone(), y.clone()])).collect()),
+        ("enumerate", [List(l)]) => Value::list(l.borrow().iter().enumerate().map(|(i, v)| Value::list(vec![Value::int(i as i64), v.clone()])).collect()),
+        ("group_by" | "count_by", [List(l), f]) => {
+            let mut groups: IndexMap<String, Vec<Value>> = IndexMap::new();
+            for v in l.borrow().clone() {
+                groups.entry(it.call(f, vec![v.clone()], span)?.to_string()).or_default().push(v);
+            }
+            let count = name == "count_by";
+            Value::map(groups.into_iter().map(|(k, vs)| (k, if count { Value::int(vs.len() as i64) } else { Value::list(vs) })).collect())
+        }
+        ("chunks" | "windows", [List(_), Int(n, _)]) if *n < 1 => return Err(Fail::Arg(1, format!("size must be at least 1, got {n}"))),
+        ("chunks", [List(l), Int(n, _)]) => Value::list(l.borrow().chunks(*n as usize).map(|c| Value::list(c.to_vec())).collect()),
+        ("windows", [List(l), Int(n, _)]) => Value::list(l.borrow().windows(*n as usize).map(|c| Value::list(c.to_vec())).collect()),
         ("step", [List(l), Int(n, _)]) if *n > 0 => Value::list(l.borrow().iter().step_by(*n as usize).cloned().collect()),
         ("step", [List(_), Int(n, _)]) => return Err(Fail::Arg(1, format!("step must be at least 1, got {n}"))),
         _ => return Err(Fail::BadArgs),
@@ -111,5 +143,8 @@ mod tests {
         assert_eq!(show("range(5).reduce(0, |acc, x| acc + x)"), "10");
         assert_eq!(show("(1..10).filter(|x| x % 3 == 0).map(|x| x * 2)"), "[6, 12, 18]");
         assert_eq!(show("[[1] + [2], (0..=6).step(3)]"), "[[1, 2], [0, 3, 6]]");
+        assert_eq!(show("[[[1, 2], [3], 4].flatten, zip([1, 2, 3], [4, 5]), [7, 8].enumerate]"), "[[1, 2, 3, 4], [[1, 4], [2, 5]], [[0, 7], [1, 8]]]");
+        assert_eq!(show(r#"[(1..=5).group_by(|x| x % 2), ["a", "b", "a"].count_by(|c| c)]"#), "[{1: [1, 3, 5], 0: [2, 4]}, {a: 2, b: 1}]");
+        assert_eq!(show("[(1..=5).chunks(2), [1, 2, 3].windows(2), [1].windows(2)]"), "[[[1, 2], [3, 4], [5]], [[1, 2], [2, 3]], []]");
     }
 }

@@ -39,9 +39,14 @@ length, search, sorting and picking across strings, lists and maps; lists and ma
 | [`count(v: str\|list, x: any)`](#count) | number of matches in a string or list |
 | [`reverse(v: str\|list)`](#reverse) | reverse a string or list |
 | [`sort(xs: list, key?: fn)`](#sort) | sorted copy, optionally by key function |
+| [`sort_desc(xs: list, key?: fn)`](#sort_desc) | like sort, largest first |
 | [`unique(xs: list)`](#unique) | drop duplicates, keeping first occurrences |
 | [`first(xs: list)`](#first) | first item, or nil |
 | [`last(xs: list)`](#last) | last item, or nil |
+| [`take(v: str\|list, n: int)`](#take) | the first n items or characters |
+| [`drop(v: str\|list, n: int)`](#drop) | everything after the first n items or characters |
+| [`any(xs: list, f?: fn)`](#any) | true if f (or the item itself) is truthy for some item |
+| [`all(xs: list, f?: fn)`](#all) | true if f (or the item itself) is truthy for every item |
 
 ### len
 
@@ -123,6 +128,19 @@ See also: [sort](data.md#sort)
 
 See also: [reverse](data.md#reverse), [unique](data.md#unique)
 
+### sort_desc
+
+`sort_desc(xs: list, key?: fn)`: like sort, largest first
+
+```zil
+[3, 1, 2].sort_desc
+# → [3, 2, 1]
+["bb", "a", "ccc"].sort_desc(|w| w.len)
+# → ["ccc", "bb", "a"]
+```
+
+See also: [sort](data.md#sort)
+
 ### unique
 
 `unique(xs: list)`: drop duplicates, keeping first occurrences
@@ -155,6 +173,58 @@ See also: [last](data.md#last)
 ```
 
 See also: [first](data.md#first)
+
+### take
+
+`take(v: str|list, n: int)`: the first n items or characters
+
+```zil
+[1, 2, 3].take(2)
+# → [1, 2]
+"hello".take(3)
+# → "hel"
+```
+
+See also: [drop](data.md#drop), [first](data.md#first)
+
+### drop
+
+`drop(v: str|list, n: int)`: everything after the first n items or characters
+
+```zil
+[1, 2, 3].drop(2)
+# → [3]
+"hello".drop(3)
+# → "lo"
+```
+
+See also: [take](data.md#take), [last](data.md#last)
+
+### any
+
+`any(xs: list, f?: fn)`: true if f (or the item itself) is truthy for some item
+
+```zil
+[0, 5, 12].any(|x| x > 10)
+# → true
+[nil, false].any
+# → false
+```
+
+See also: [all](data.md#all), [filter](data/lists.md#filter)
+
+### all
+
+`all(xs: list, f?: fn)`: true if f (or the item itself) is truthy for every item
+
+```zil
+[2, 4, 6].all(|x| x % 2 == 0)
+# → true
+[].all
+# → true
+```
+
+See also: [any](data.md#any), [filter](data/lists.md#filter)
 
 ## More examples
 

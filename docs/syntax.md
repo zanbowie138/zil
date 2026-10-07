@@ -288,6 +288,11 @@ u.city = "Oslo"
 | `sort` `sort(f)`          | `words.sort(\|w\| w.len)` sorts by key   |
 | `unique` `reverse` `shuffle` |                                          |
 | `contains(v)` `find(v)` `count(v)` |                                    |
+| `any(f)` `all(f)`        | `f` is optional: `[1, nil].any` → `true` |
+| `take(n)` `drop(n)`       | also on strings                             |
+| `sort_desc` `flatten` `zip(ys)` `enumerate` |                           |
+| `group_by(f)` `count_by(f)` | map from each key to its items / count   |
+| `chunks(n)` `windows(n)`  | `[1, 2, 3].windows(2)` → `[[1, 2], [2, 3]]` |
 | `keys` `values`           | for maps                                    |
 | `range(n)` `range(a, b)`  | same as `0..n` / `a..b`                     |
 
@@ -391,6 +396,7 @@ size = if n > 100 { "big" } else if n > 0 { "small" } else { "none" }
 for x in 1..4 { print(x) }
 for key in {a: 1, b: 2} { print(key) }  # maps iterate keys
 for ch in "abc" { print(ch) }           # strings iterate characters
+for [i, x] in ["a", "b"].enumerate { print(i, x) }  # unpack each item
 while n > 0 { n -= 1 }
 for x in 1..100 {
   if x % 2 == 0 { continue }            # next iteration
@@ -399,6 +405,9 @@ for x in 1..100 {
 
 double = |x| x * 2                      # short lambda
 area = |w, h| w * h
+dist = |[x, y]| hypot(x, y)            # params can unpack lists
+[a, [b, _]] = [1, [2, 3]]               # so can assignment; _ skips
+[a, b] = [b, a]                         # swap
 clamp = fn(x, lo, hi) {                 # block function
   if x < lo { return lo }
   min(x, hi)

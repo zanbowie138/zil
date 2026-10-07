@@ -105,6 +105,7 @@ const SYNTAX: &[Section] = &[
         ("assignment", "x = 5; x += 2; x"),
         ("if is an expression", r#"if 3 > 2 { "yes" } else { "no" }"#),
         ("for", "t = 0; for i in 1..=4 { t += i }; t"),
+        ("destructuring, _ skips", "[a, [b, _]] = [1, [2, 3]]; a + b"),
         ("while", "n = 3; while n > 0 { n -= 1 }; n"),
         ("functions", "f = fn(x) { return x * 2 }; f(4)"),
         ("comparisons chain", "x = 5; 0 < x <= 10"),
