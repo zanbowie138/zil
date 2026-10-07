@@ -1,4 +1,4 @@
-//! Big letters: the built-in block font, and FIGlet `.flf` fonts with figlet's smushing rules.
+//! Big letters: the built-in block font, and FIGlet `.flf` fonts with figlet's smushing rules; Unicode look-alike styles.
 
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -8,12 +8,13 @@ use std::collections::HashMap;
 
 pub const MODULE: Module = Module {
     name: "figlet",
-    about: "banners in block letters or FIGlet fonts: standard, small, slant, big, or any .flf file",
+    about: "banners in block letters or FIGlet fonts: standard, slant, shadow, script, lean, banner, bubble and more, or any .flf file; 𝐛𝐨𝐥𝐝/𝒮𝒸𝓇𝒾𝓅𝓉/ｗｉｄｅ Unicode styles",
     #[rustfmt::skip]
     examples: &[
         ("banners", &[
             ("a README header", r#"banner("zil", "standard")"#),
             ("every font", r#"fonts().map(|f| banner("Hi", f)).join("\n")"#),
+            ("every style", r#"styles().map(|st| "Zil 2".style(st))"#),
             ("a boxed title", r#"banner("v2", "small").boxed("round")"#),
         ]),
     ],
@@ -26,6 +27,8 @@ pub const MODULE: Module = Module {
 const FNS: &[Doc] = &[
     doc("banner", "banner(s: str, font?: str)", "big letters; font is \"block\" (default, A-Z, 0-9, some punctuation), one of fonts(), or a path to a FIGlet .flf file", &[r#"banner("hi!")"#, r#"banner("zil", "slant")"#], &["fonts", "segments"]),
     doc("fonts", "fonts()", "the built-in banner fonts", &["fonts()"], &["banner"]),
+    doc("style", "style(s: str, style: str)", "restyle letters and digits with Unicode look-alikes; style is one of styles()", &[r#""Hello".style("bold")"#, r#""vaporwave".style("wide")"#], &["styles", "banner", "fonts"]),
+    doc("styles", "styles()", "the styles for style()", &["styles()"], &["style"]),
 ];
 
 const FONTS: &[(&str, &str)] = &[
@@ -33,18 +36,39 @@ const FONTS: &[(&str, &str)] = &[
     ("small", include_str!("fonts/small.flf")),
     ("slant", include_str!("fonts/slant.flf")),
     ("big", include_str!("fonts/big.flf")),
+    ("mini", include_str!("fonts/mini.flf")),
+    ("smslant", include_str!("fonts/smslant.flf")),
+    ("shadow", include_str!("fonts/shadow.flf")),
+    ("smshadow", include_str!("fonts/smshadow.flf")),
+    ("script", include_str!("fonts/script.flf")),
+    ("smscript", include_str!("fonts/smscript.flf")),
+    ("lean", include_str!("fonts/lean.flf")),
+    ("banner", include_str!("fonts/banner.flf")),
+    ("bubble", include_str!("fonts/bubble.flf")),
+    ("digital", include_str!("fonts/digital.flf")),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
     Ok(match (name, args) {
         ("fonts", []) => Value::list(std::iter::once("block").chain(FONTS.iter().map(|f| f.0)).map(Value::str).collect()),
+        ("style", [Str(s), Str(st)]) => {
+            if !STYLES.contains(&&**st) {
+                return Err(Fail::Arg(1, format!("unknown style {st:?}; try {}", STYLES.join(", "))));
+            }
+            Value::str(s.chars().map(|c| restyle(c, st)).collect::<String>())
+        }
+        ("styles", []) => Value::list(STYLES.iter().copied().map(Value::str).collect()),
         ("banner", [Str(s)]) => Value::str(block(s)?),
         ("banner", [Str(s), Str(f)]) if f.as_ref() == "block" => Value::str(block(s)?),
         ("banner", [Str(s), Str(f)]) => {
             let src = match FONTS.iter().find(|x| x.0 == f.as_ref()) {
                 Some(x) => x.1.to_string(),
-                None if f.ends_with(".flf") => std::fs::read_to_string(&**f).map_err(|e| Fail::Arg(1, format!("can't read {f}: {e}")))?,
+                None if f.ends_with(".flf") => {
+                    let bytes = std::fs::read(&**f).map_err(|e| Fail::Arg(1, format!("can't read {f}: {e}")))?;
+                    // Older fonts are Latin-1, whose bytes are exactly the first 256 code points.
+                    String::from_utf8(bytes).unwrap_or_else(|e| e.into_bytes().iter().map(|&b| b as char).collect())
+                }
                 None => return Err(Fail::Arg(1, format!("unknown font {f:?}; fonts() lists them, or pass a .flf path"))),
             };
             let font = Font::parse(&src).map_err(|e| Fail::Arg(1, format!("bad font: {e}")))?;
@@ -263,6 +287,51 @@ const BLOCK: &[(char, [u8; 5])] = &[
     ('\'', [0b010, 0b010, 0, 0, 0]), ('+', [0, 0b010, 0b111, 0b010, 0]), ('/', [0b001, 0b001, 0b010, 0b100, 0b100]),
 ];
 
+const STYLES: &[&str] =
+    &["bold", "italic", "bold_italic", "script", "fraktur", "double", "sans", "sans_bold", "mono", "wide", "circled", "small_caps", "strike", "underline"];
+
+/// One character in a style; anything the style has no look-alike for passes through.
+fn restyle(c: char, style: &str) -> String {
+    let from = |base: u32, start: char| char::from_u32(base + (c as u32 - start as u32)).unwrap();
+    // Mathematical Alphanumeric Symbols: capital A, small a and digit 0 per style; a few letters live in Letterlike Symbols instead.
+    #[rustfmt::skip]
+    let (upper, lower, digit, holes): (u32, u32, Option<u32>, &[(char, char)]) = match style {
+        "bold" => (0x1D400, 0x1D41A, Some(0x1D7CE), &[]),
+        "italic" => (0x1D434, 0x1D44E, None, &[('h', 'ℎ')]),
+        "bold_italic" => (0x1D468, 0x1D482, None, &[]),
+        "script" => (0x1D49C, 0x1D4B6, None, &[('B', 'ℬ'), ('E', 'ℰ'), ('F', 'ℱ'), ('H', 'ℋ'), ('I', 'ℐ'), ('L', 'ℒ'), ('M', 'ℳ'), ('R', 'ℛ'), ('e', 'ℯ'), ('g', 'ℊ'), ('o', 'ℴ')]),
+        "fraktur" => (0x1D504, 0x1D51E, None, &[('C', 'ℭ'), ('H', 'ℌ'), ('I', 'ℑ'), ('R', 'ℜ'), ('Z', 'ℨ')]),
+        "double" => (0x1D538, 0x1D552, Some(0x1D7D8), &[('C', 'ℂ'), ('H', 'ℍ'), ('N', 'ℕ'), ('P', 'ℙ'), ('Q', 'ℚ'), ('R', 'ℝ'), ('Z', 'ℤ')]),
+        "sans" => (0x1D5A0, 0x1D5BA, Some(0x1D7E2), &[]),
+        "sans_bold" => (0x1D5D4, 0x1D5EE, Some(0x1D7EC), &[]),
+        "mono" => (0x1D670, 0x1D68A, Some(0x1D7F6), &[]),
+        "circled" => (0x24B6, 0x24D0, None, &[('0', '⓪')]),
+        "wide" => return match c {
+            '!'..='~' => from(0xFF01, '!').to_string(),
+            _ => c.to_string(),
+        },
+        "small_caps" => return match c {
+            'a'..='z' => "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ".chars().nth(c as usize - 'a' as usize).unwrap().to_string(),
+            _ => c.to_string(),
+        },
+        "strike" | "underline" if c.is_whitespace() => return c.to_string(),
+        "strike" => return format!("{c}\u{336}"),
+        "underline" => return format!("{c}\u{332}"),
+        _ => unreachable!("style checked against STYLES"),
+    };
+    if let Some(&(_, h)) = holes.iter().find(|h| h.0 == c) {
+        return h.to_string();
+    }
+    match (c, digit) {
+        ('A'..='Z', _) => from(upper, 'A'),
+        ('a'..='z', _) => from(lower, 'a'),
+        ('0'..='9', Some(d)) => from(d, '0'),
+        ('1'..='9', None) if style == "circled" => from(0x2460, '1'),
+        _ => c,
+    }
+    .to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use crate::interp::tests::{show, try_eval};
@@ -275,9 +344,16 @@ mod tests {
         assert_eq!(show(r#"banner("Hi", "standard")"#), " _   _ _\n| | | (_)\n| |_| | |\n|  _  | |\n|_| |_|_|");
         assert_eq!(show(r#"banner("zil", "slant")"#), "        _ __\n ____  (_) /\n/_  / / / /\n / /_/ / /\n/___/_/_/");
         assert_eq!(show(r#"banner("a\nb", "small").lines.len"#), "9");
-        for f in ["small", "big"] {
-            assert!(show(&format!(r#"banner("Zil 2!", {f:?})"#)).lines().count() >= 4);
+        assert_eq!(show(r#"banner("Hi", "bubble")"#), "  _   _\n / \\ / \\\n( H | i )\n \\_/ \\_/");
+        for f in ["small", "big", "mini", "smslant", "shadow", "smshadow", "script", "smscript", "lean", "banner", "digital"] {
+            assert!(show(&format!(r#"banner("Zil 2!", {f:?})"#)).lines().count() >= 3);
         }
+        assert_eq!(
+            show(r#"["Hi 0".style("bold"), "Hero".style("script"), "CHAZ".style("double"), "a1 0".style("circled")]"#),
+            r#"["𝐇𝐢 𝟎", "ℋℯ𝓇ℴ", "ℂℍ𝔸ℤ", "ⓐ① ⓪"]"#
+        );
+        assert_eq!(show(r#"["ab 1!".style("wide"), "Hi z".style("small_caps"), "a b".style("strike").len]"#), r#"["ａｂ １！", "Hɪ ᴢ", 5]"#);
+        assert_eq!(show(r#"styles().map(|s| "x".style(s)).len"#), "14");
         assert!(try_eval(r#"banner("x", "comic")"#).is_err());
         assert!(try_eval(r#"banner("x", "nope.flf")"#).is_err());
     }

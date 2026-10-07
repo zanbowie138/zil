@@ -24,9 +24,9 @@ numbers, picks, shuffles, UUIDs; passwords, passphrases, ULIDs and nano IDs from
 
 ```zil
 rand()
-# → 0.877266
+# → 0.835321
 rand(1, 6)
-# → 2
+# → 5
 ```
 
 See also: [choice](../math/random.md#choice), [shuffle](../math/random.md#shuffle)
@@ -37,7 +37,7 @@ See also: [choice](../math/random.md#choice), [shuffle](../math/random.md#shuffl
 
 ```zil
 ["rock", "paper", "scissors"].choice
-# → "rock"
+# → "paper"
 ```
 
 See also: [rand](../math/random.md#rand), [shuffle](../math/random.md#shuffle)
@@ -48,7 +48,7 @@ See also: [rand](../math/random.md#rand), [shuffle](../math/random.md#shuffle)
 
 ```zil
 (1..6).shuffle
-# → [5, 3, 2, 1, 4]
+# → [3, 2, 1, 4, 5]
 ```
 
 See also: [choice](../math/random.md#choice)
@@ -59,7 +59,7 @@ See also: [choice](../math/random.md#choice)
 
 ```zil
 uuid()
-# → "333f9856-24fb-4151-8472-763d123d0027"
+# → "dbba0fea-7399-49b0-a0b4-caab92279baf"
 ```
 
 See also: [rand](../math/random.md#rand), [ulid](../math/random.md#ulid)
@@ -70,9 +70,9 @@ See also: [rand](../math/random.md#rand), [ulid](../math/random.md#ulid)
 
 ```zil
 password()
-# → "YxVhfsx9-nA+ASy2?yt+"
+# → "A!$MNqe=gPQcKwDe%WE3"
 password(12)
-# → "?4+x-T=ff%3t"
+# → "U@FeR6^kB-t9"
 ```
 
 See also: [passphrase](../math/random.md#passphrase)
@@ -83,9 +83,9 @@ See also: [passphrase](../math/random.md#passphrase)
 
 ```zil
 passphrase()
-# → "eagle-rogue-focal-brush-coast-gorge"
+# → "crawl-shark-extra-blunt-wagon-lion"
 passphrase(4)
-# → "float-habit-parka-angle"
+# → "panda-dizzy-salad-table"
 ```
 
 See also: [password](../math/random.md#password)
@@ -96,7 +96,7 @@ See also: [password](../math/random.md#password)
 
 ```zil
 ulid()
-# → "01M4BZ4DGGKT5NTQ8AVKZ53B25"
+# → "01M4C0VRBA132EQE16TA2ZZ55Q"
 ```
 
 See also: [uuid](../math/random.md#uuid), [nanoid](../math/random.md#nanoid)
@@ -107,9 +107,9 @@ See also: [uuid](../math/random.md#uuid), [nanoid](../math/random.md#nanoid)
 
 ```zil
 nanoid()
-# → "nKFbUjcoZaCNu7ja6SUth"
+# → "3Tde693CAWL9mAQaapK19"
 nanoid(8)
-# → "9xKQoOhh"
+# → "k8Ap-n1d"
 ```
 
 See also: [uuid](../math/random.md#uuid), [ulid](../math/random.md#ulid)
@@ -121,29 +121,29 @@ See also: [uuid](../math/random.md#uuid), [ulid](../math/random.md#ulid)
 ```zil
 # roll a die
 rand(1, 6)
-# → 5
+# → 4
 # roll three
 (1..=3).map(|_| rand(1, 6))
-# → [1, 5, 5]
+# → [2, 2, 3]
 # float in a range
 rand(1.0, 2.0)
-# → 1.89367
+# → 1.0059
 # pick one
 ["rock", "paper", "scissors"].choice
-# → "paper"
+# → "rock"
 # shuffle
 (1..=5).shuffle
-# → [2, 1, 4, 5, 3]
+# → [5, 3, 2, 1, 4]
 # UUID
 uuid()
-# → "f5f47c0d-ad09-4a43-82c6-53eb361615e3"
+# → "85502886-dd9c-4af2-a468-128731472ceb"
 # a strong password
 password()
-# → "C-dogNNBQ_Dvvafpks7#"
+# → "xHs5s&JY-XyGAYNgYtHu"
 # one you can type
 passphrase()
-# → "cupid-fleet-pinch-venom-steam-actor"
+# → "rocky-jazzy-pedal-plank-stack-outer"
 # sortable IDs
 ulid()
-# → "01M4BZ4DGMSHRA82CB76YZQCTB"
+# → "01M4C0VRBDFCANA83AN9XBTM26"
 ```

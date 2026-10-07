@@ -95,7 +95,7 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 | [art.frames](art/frames.md) | boxes, cowsay, and art side by side, stacked, overlaid, mirrored, rotated, scaled or inverted |
 | [art.generate](art/generate.md) | L-systems and named fractals in braille, cellular automata like rule 30, the Ulam prime spiral, starfields |
 | [art.renderers](art/renderers.md) | nested data as a tree, heatmaps, progress bars, QR codes, chess boards from FEN, playing cards, dice faces, seven-segment digits |
-| [art.figlet](art/figlet.md) | banners in block letters or FIGlet fonts: standard, small, slant, big, or any .flf file |
+| [art.figlet](art/figlet.md) | banners in block letters or FIGlet fonts: standard, slant, shadow, script, lean, banner, bubble and more, or any .flf file; 𝐛𝐨𝐥𝐝/𝒮𝒸𝓇𝒾𝓅𝓉/ｗｉｄｅ Unicode styles |
 | [art.images](art/images.md) | PNG, JPEG and GIF images as ASCII, truecolor half blocks or dithered braille |
 | [art.motion](art/motion.md) | play a list of frames, or a function of the frame number, as an animation in the terminal |
 | [art.toys](art/toys.md) | ASCII Mandelbrot set, Conway's Game of Life, random mazes |

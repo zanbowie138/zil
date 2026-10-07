@@ -69,7 +69,7 @@ See also: [sunrise](../time/sky.md#sunrise), [sunset](../time/sky.md#sunset)
 
 ```zil
 moon_phase()
-# → "🌘 waning crescent, 14% lit"
+# → "🌘 waning crescent, 13% lit"
 moon_phase(date(2026, 1, 3))
 # → "🌕 full moon, 100% lit"
 ```

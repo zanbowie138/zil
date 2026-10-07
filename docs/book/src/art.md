@@ -12,7 +12,7 @@ clip art, rainbows and gradients; boxes, cowsay and composition, fractals, QR co
 | [frames](art/frames.md) | boxes, cowsay, and art side by side, stacked, overlaid, mirrored, rotated, scaled or inverted |
 | [generate](art/generate.md) | L-systems and named fractals in braille, cellular automata like rule 30, the Ulam prime spiral, starfields |
 | [renderers](art/renderers.md) | nested data as a tree, heatmaps, progress bars, QR codes, chess boards from FEN, playing cards, dice faces, seven-segment digits |
-| [figlet](art/figlet.md) | banners in block letters or FIGlet fonts: standard, small, slant, big, or any .flf file |
+| [figlet](art/figlet.md) | banners in block letters or FIGlet fonts: standard, slant, shadow, script, lean, banner, bubble and more, or any .flf file; 𝐛𝐨𝐥𝐝/𝒮𝒸𝓇𝒾𝓅𝓉/ｗｉｄｅ Unicode styles |
 | [images](art/images.md) | PNG, JPEG and GIF images as ASCII, truecolor half blocks or dithered braille |
 | [motion](art/motion.md) | play a list of frames, or a function of the frame number, as an animation in the terminal |
 | [toys](art/toys.md) | ASCII Mandelbrot set, Conway's Game of Life, random mazes |

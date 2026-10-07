@@ -21,9 +21,9 @@ dice notation, the birthday paradox, odds in plain words, Western and Chinese zo
 
 ```zil
 roll("3d6+2")
-# → {total: 13, rolls: [1, 4, 6]}
+# → {total: 11, rolls: [6, 2, 1]}
 roll("d%").total
-# → 95
+# → 82
 ```
 
 See also: [rand](../math/random.md#rand), [coin](../fun.md#coin)
@@ -89,10 +89,10 @@ See also: [zodiac](../fun/games.md#zodiac)
 ```zil
 # a D&D stat: 4d6, keep the best 3
 roll("4d6kh3")
-# → {total: 17, rolls: [3, 6, 6, 5]}
+# → {total: 10, rolls: [2, 3, 2, 5]}
 # attack with advantage
 roll("2d20kh1+5").total
-# → 21
+# → 10
 # a party of 23
 birthday_paradox(23)
 # → 0.507297
