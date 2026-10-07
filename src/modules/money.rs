@@ -2,7 +2,7 @@
 //! by unit: `$1000` is a sum, `$500/mo` a payment, `7%/yr` a rate, `10 yr` a time, `"monthly"` compounding.
 
 use super::math::commas;
-use super::units::{MONEY, TIME, Unit, convert_value, unit};
+use super::units::{MONEY, NONE, PER_TIME, TIME, Unit, convert_value, unit};
 use super::{Call, Doc, Fail, Module, Section, doc};
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -82,7 +82,6 @@ const FNS: &[Doc] = &[
 
 const YR: f64 = 31556952.0;
 const MO: f64 = YR / 12.0;
-const PER_TIME: [i8; 7] = [0, 0, -1, 0, 0, 0, 0];
 
 /// `$1,234.56`, `$25.00/h`, `5%/yr`; `None` leaves the quantity's usual display.
 pub fn show(x: f64, u: &Unit) -> Option<String> {
@@ -133,7 +132,7 @@ fn currency_of(x: f64, u: &Unit) -> Option<(f64, Unit, Unit)> {
     }
     let cur = Unit(vec![(c.clone(), 1)]);
     let rest = Unit(u.0.iter().filter(|(d, _)| d.dim != MONEY).cloned().collect());
-    if rest.dim() == [0; 7] { Some((x * rest.scale(), cur, Unit::default())) } else { Some((x, cur, rest)) }
+    if rest.dim() == NONE { Some((x * rest.scale(), cur, Unit::default())) } else { Some((x, cur, rest)) }
 }
 
 /// Arguments sorted by unit.

@@ -77,14 +77,30 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
             };
             let u = u.mul(&w, if op == BinOp::Mul { 1 } else { -1 });
             // USD/EUR is a plain number, but only at today's rate.
-            if !u.0.is_empty() && u.dim() == [0; 7] && u.scale().is_nan() {
+            if !u.0.is_empty() && u.dim() == NONE && u.scale().is_nan() {
                 return Some(Err(rate_error()));
             }
-            Value::qty(if op == BinOp::Mul { x * y } else { x / y }, u)
+            let (v, u) = named(if op == BinOp::Mul { x * y } else { x / y }, u);
+            Value::qty(v, u)
         }
         (BinOp::Pow, Qty(x, u), Int(n, _)) if (-9..=9).contains(n) => Value::qty(x.powi(*n as i32), u.pow(*n as i8)),
         _ => return None,
     }))
+}
+
+/// A product of metric units as its named SI unit: `mA*kΩ` is `V`, `kg*m/s^2` is `N`. Anything with
+/// non-metric terms (`W*h`), money, data or angle keeps the units as typed.
+fn named(x: f64, u: Unit) -> (f64, Unit) {
+    // ponytail: "metric" = power-of-ten factor to SI; fine for TABLE, revisit if a unit like 1e3 B joins it.
+    let metric = |d: &UnitDef| d.offset == 0.0 && (d.scale().log10() - d.scale().log10().round()).abs() < 1e-9;
+    let dim = u.dim();
+    if matches!(u.0.as_slice(), [] | [(_, 1)]) || dim[7..] != [0; 3] || !u.0.iter().all(|(d, _)| metric(d)) {
+        return (x, u);
+    }
+    match TABLE.iter().find(|row| row.1 == 1.0 && row.2 == 0.0 && row.3 == dim) {
+        Some(row) => (x * u.scale(), unit(row.0.split(' ').next().unwrap()).unwrap()),
+        None => (x, u),
+    }
 }
 
 fn compare(a: &Value, b: &Value) -> Option<Ordering> {
@@ -129,9 +145,9 @@ fn topic(topic: &str) -> bool {
     if topic == "units" {
         println!("\nunits");
         for (kind, _) in DIMS {
-            println!("  {kind:<12} {}", units_of(kind).join(" "));
+            println!("  {kind:<14} {}", units_of(kind).join(" "));
         }
-        println!("  {:<12} 3-letter codes (USD EUR GBP ...), live rates fetched when converting", "currency");
+        println!("  {:<14} 3-letter codes (USD EUR GBP ...), live rates fetched when converting", "currency");
         println!("help(\"length\") or help(\"km\") for details");
     } else if topic == "currency" {
         println!("currency: 3-letter codes like USD, EUR, GBP, JPY. Rates come from frankfurter.dev,");
@@ -162,39 +178,60 @@ fn units_of(kind: &str) -> Vec<&'static str> {
     TABLE.iter().filter(|row| row.3 == dim).map(|row| row.0.split(' ').next().unwrap()).collect()
 }
 
-/// Exponents of the base dimensions: length, mass, time, temperature, data, money, angle.
-pub type Dim = [i8; 7];
+/// Exponents of the 7 SI bases (m kg s A K mol cd), then the non-SI extras data, money, angle.
+pub type Dim = [i8; 10];
+pub const NONE: Dim = [0; 10];
 
-const fn d(l: i8, m: i8, t: i8) -> Dim {
-    [l, m, t, 0, 0, 0, 0]
+/// Length, mass, time, current.
+const fn d(l: i8, m: i8, t: i8, i: i8) -> Dim {
+    [l, m, t, i, 0, 0, 0, 0, 0, 0]
 }
-const LEN: Dim = d(1, 0, 0);
-const MASS: Dim = d(0, 1, 0);
-pub const TIME: Dim = d(0, 0, 1);
-const TEMP: Dim = [0, 0, 0, 1, 0, 0, 0];
-const DATA: Dim = [0, 0, 0, 0, 1, 0, 0];
-const RATE: Dim = [0, 0, -1, 0, 1, 0, 0];
-pub const MONEY: Dim = [0, 0, 0, 0, 0, 1, 0];
-const ANGLE: Dim = [0, 0, 0, 0, 0, 0, 1];
+const LEN: Dim = d(1, 0, 0, 0);
+const MASS: Dim = d(0, 1, 0, 0);
+pub const TIME: Dim = d(0, 0, 1, 0);
+pub const PER_TIME: Dim = d(0, 0, -1, 0);
+const CURRENT: Dim = d(0, 0, 0, 1);
+const TEMP: Dim = [0, 0, 0, 0, 1, 0, 0, 0, 0, 0];
+const AMOUNT: Dim = [0, 0, 0, 0, 0, 1, 0, 0, 0, 0];
+const MOLAR: Dim = [-3, 0, 0, 0, 0, 1, 0, 0, 0, 0];
+const LIGHT: Dim = [0, 0, 0, 0, 0, 0, 1, 0, 0, 0];
+const LUX: Dim = [-2, 0, 0, 0, 0, 0, 1, 0, 0, 0];
+const DATA: Dim = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0];
+const RATE: Dim = [0, 0, -1, 0, 0, 0, 0, 1, 0, 0];
+pub const MONEY: Dim = [0, 0, 0, 0, 0, 0, 0, 0, 1, 0];
+const ANGLE: Dim = [0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
+const VOLT: Dim = d(2, 1, -3, -1);
+const OHM: Dim = d(2, 1, -3, -2);
+const COULOMB: Dim = d(0, 0, 1, 1);
+const FARAD: Dim = d(-2, -1, 4, 2);
+const SIEMENS: Dim = d(-2, -1, 3, 2);
+const WEBER: Dim = d(2, 1, -2, -1);
+const TESLA: Dim = d(0, 1, -2, -1);
+const HENRY: Dim = d(2, 1, -2, -2);
 
-/// Names of the kinds of unit in TABLE, for `help`.
+/// Names of the kinds of unit in TABLE, for `help`. Each needs at least two units.
 #[rustfmt::skip]
 pub const DIMS: &[(&str, Dim)] = &[
     ("length", LEN), ("mass", MASS), ("time", TIME), ("temperature", TEMP),
-    ("volume", d(3, 0, 0)), ("area", d(2, 0, 0)), ("speed", d(1, 0, -1)),
-    ("data", DATA), ("rate", RATE), ("energy", d(2, 1, -2)), ("power", d(2, 1, -3)),
-    ("pressure", d(-1, 1, -2)), ("force", d(1, 1, -2)), ("angle", ANGLE),
+    ("volume", d(3, 0, 0, 0)), ("area", d(2, 0, 0, 0)), ("speed", d(1, 0, -1, 0)),
+    ("data", DATA), ("rate", RATE), ("energy", d(2, 1, -2, 0)), ("power", d(2, 1, -3, 0)),
+    ("pressure", d(-1, 1, -2, 0)), ("force", d(1, 1, -2, 0)), ("angle", ANGLE),
+    ("current", CURRENT), ("voltage", VOLT), ("resistance", OHM), ("charge", COULOMB),
+    ("capacitance", FARAD), ("conductance", SIEMENS), ("magnetic_flux", WEBER), ("magnetic_field", TESLA),
+    ("inductance", HENRY), ("frequency", PER_TIME), ("amount", AMOUNT), ("concentration", MOLAR),
+    ("light", LIGHT), ("illuminance", LUX),
 ];
 
 /// Space-separated names (first is the display name), factor to SI, offset (temperatures only), dimension.
-/// SI bases: m, kg, s, K, bit, EUR, rad.
+/// SI bases: m, kg, s, A, K, mol, cd; extras: bit, EUR, rad. Within a dimension, the first unit with
+/// factor 1 is the one metric products are renamed to (see `named`), so J beats N*m and lm beats cd.
 #[rustfmt::skip]
 pub const TABLE: &[(&str, f64, f64, Dim)] = &[
     ("m meter meters metre metres", 1.0, 0.0, LEN),
     ("km kilometer kilometers", 1e3, 0.0, LEN),
     ("cm centimeter centimeters", 1e-2, 0.0, LEN),
     ("mm millimeter millimeters", 1e-3, 0.0, LEN),
-    ("um micrometer micrometers micron", 1e-6, 0.0, LEN),
+    ("µm um μm micrometer micrometers micron", 1e-6, 0.0, LEN),
     ("nm nanometer nanometers", 1e-9, 0.0, LEN),
     ("mi mile miles", 1609.344, 0.0, LEN),
     ("yd yard yards", 0.9144, 0.0, LEN),
@@ -207,7 +244,7 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
     ("kg kilogram kilograms", 1.0, 0.0, MASS),
     ("g gram grams", 1e-3, 0.0, MASS),
     ("mg milligram milligrams", 1e-6, 0.0, MASS),
-    ("ug microgram micrograms", 1e-9, 0.0, MASS),
+    ("µg ug μg microgram micrograms", 1e-9, 0.0, MASS),
     ("t tonne tonnes", 1e3, 0.0, MASS),
     ("lb lbs pound pounds", 0.45359237, 0.0, MASS),
     ("oz ounce ounces", 0.028349523125, 0.0, MASS),
@@ -215,7 +252,7 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
 
     ("s sec secs second seconds", 1.0, 0.0, TIME),
     ("ms millisecond milliseconds", 1e-3, 0.0, TIME),
-    ("us microsecond microseconds", 1e-6, 0.0, TIME),
+    ("µs us μs microsecond microseconds", 1e-6, 0.0, TIME),
     ("ns nanosecond nanoseconds", 1e-9, 0.0, TIME),
     ("min mins minute minutes", 60.0, 0.0, TIME),
     ("h hr hrs hour hours", 3600.0, 0.0, TIME),
@@ -233,22 +270,22 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
     ("C celsius degC", 1.0, 273.15, TEMP),
     ("F fahrenheit degF", 5.0 / 9.0, 459.67, TEMP),
 
-    ("L l liter liters litre litres", 1e-3, 0.0, d(3, 0, 0)),
-    ("mL ml milliliter milliliters", 1e-6, 0.0, d(3, 0, 0)),
-    ("gal gallon gallons", 3.785411784e-3, 0.0, d(3, 0, 0)),
-    ("qt quart quarts", 9.46352946e-4, 0.0, d(3, 0, 0)),
-    ("pt pint pints", 4.73176473e-4, 0.0, d(3, 0, 0)),
-    ("cup cups", 2.365882365e-4, 0.0, d(3, 0, 0)),
-    ("floz", 2.95735295625e-5, 0.0, d(3, 0, 0)),
-    ("tbsp", 1.478676478125e-5, 0.0, d(3, 0, 0)),
-    ("tsp", 4.92892159375e-6, 0.0, d(3, 0, 0)),
+    ("L l liter liters litre litres", 1e-3, 0.0, d(3, 0, 0, 0)),
+    ("mL ml milliliter milliliters", 1e-6, 0.0, d(3, 0, 0, 0)),
+    ("gal gallon gallons", 3.785411784e-3, 0.0, d(3, 0, 0, 0)),
+    ("qt quart quarts", 9.46352946e-4, 0.0, d(3, 0, 0, 0)),
+    ("pt pint pints", 4.73176473e-4, 0.0, d(3, 0, 0, 0)),
+    ("cup cups", 2.365882365e-4, 0.0, d(3, 0, 0, 0)),
+    ("floz", 2.95735295625e-5, 0.0, d(3, 0, 0, 0)),
+    ("tbsp", 1.478676478125e-5, 0.0, d(3, 0, 0, 0)),
+    ("tsp", 4.92892159375e-6, 0.0, d(3, 0, 0, 0)),
 
-    ("ha hectare hectares", 1e4, 0.0, d(2, 0, 0)),
-    ("acre acres", 4046.8564224, 0.0, d(2, 0, 0)),
+    ("ha hectare hectares", 1e4, 0.0, d(2, 0, 0, 0)),
+    ("acre acres", 4046.8564224, 0.0, d(2, 0, 0, 0)),
 
-    ("kph kmh", 1.0 / 3.6, 0.0, d(1, 0, -1)),
-    ("mph", 0.44704, 0.0, d(1, 0, -1)),
-    ("kn knot knots", 1852.0 / 3600.0, 0.0, d(1, 0, -1)),
+    ("kph kmh", 1.0 / 3.6, 0.0, d(1, 0, -1, 0)),
+    ("mph", 0.44704, 0.0, d(1, 0, -1, 0)),
+    ("kn knot knots", 1852.0 / 3600.0, 0.0, d(1, 0, -1, 0)),
 
     ("bit bits", 1.0, 0.0, DATA),
     ("B byte bytes", 8.0, 0.0, DATA),
@@ -270,36 +307,88 @@ pub const TABLE: &[(&str, f64, f64, Dim)] = &[
     ("Mbps", 1e6, 0.0, RATE),
     ("Gbps", 1e9, 0.0, RATE),
 
-    ("J joule joules", 1.0, 0.0, d(2, 1, -2)),
-    ("kJ", 1e3, 0.0, d(2, 1, -2)),
-    ("MJ", 1e6, 0.0, d(2, 1, -2)),
-    ("cal calorie calories", 4.184, 0.0, d(2, 1, -2)),
-    ("kcal Cal", 4184.0, 0.0, d(2, 1, -2)),
-    ("Wh", 3600.0, 0.0, d(2, 1, -2)),
-    ("kWh", 3.6e6, 0.0, d(2, 1, -2)),
-    ("eV", 1.602176634e-19, 0.0, d(2, 1, -2)),
-    ("BTU btu", 1055.05585262, 0.0, d(2, 1, -2)),
+    ("J joule joules", 1.0, 0.0, d(2, 1, -2, 0)),
+    ("kJ", 1e3, 0.0, d(2, 1, -2, 0)),
+    ("MJ", 1e6, 0.0, d(2, 1, -2, 0)),
+    ("cal calorie calories", 4.184, 0.0, d(2, 1, -2, 0)),
+    ("kcal Cal", 4184.0, 0.0, d(2, 1, -2, 0)),
+    ("Wh", 3600.0, 0.0, d(2, 1, -2, 0)),
+    ("kWh", 3.6e6, 0.0, d(2, 1, -2, 0)),
+    ("eV", 1.602176634e-19, 0.0, d(2, 1, -2, 0)),
+    ("BTU btu", 1055.05585262, 0.0, d(2, 1, -2, 0)),
 
-    ("W watt watts", 1.0, 0.0, d(2, 1, -3)),
-    ("kW", 1e3, 0.0, d(2, 1, -3)),
-    ("MW", 1e6, 0.0, d(2, 1, -3)),
-    ("hp horsepower", 745.699_871_582_270_2, 0.0, d(2, 1, -3)),
+    ("W watt watts", 1.0, 0.0, d(2, 1, -3, 0)),
+    ("kW", 1e3, 0.0, d(2, 1, -3, 0)),
+    ("MW", 1e6, 0.0, d(2, 1, -3, 0)),
+    ("hp horsepower", 745.699_871_582_270_2, 0.0, d(2, 1, -3, 0)),
 
-    ("Pa pascal", 1.0, 0.0, d(-1, 1, -2)),
-    ("kPa", 1e3, 0.0, d(-1, 1, -2)),
-    ("MPa", 1e6, 0.0, d(-1, 1, -2)),
-    ("bar", 1e5, 0.0, d(-1, 1, -2)),
-    ("atm", 101325.0, 0.0, d(-1, 1, -2)),
-    ("psi", 6894.757293168, 0.0, d(-1, 1, -2)),
-    ("mmHg", 133.322387415, 0.0, d(-1, 1, -2)),
+    ("Pa pascal", 1.0, 0.0, d(-1, 1, -2, 0)),
+    ("kPa", 1e3, 0.0, d(-1, 1, -2, 0)),
+    ("MPa", 1e6, 0.0, d(-1, 1, -2, 0)),
+    ("bar", 1e5, 0.0, d(-1, 1, -2, 0)),
+    ("atm", 101325.0, 0.0, d(-1, 1, -2, 0)),
+    ("psi", 6894.757293168, 0.0, d(-1, 1, -2, 0)),
+    ("mmHg", 133.322387415, 0.0, d(-1, 1, -2, 0)),
 
-    ("N newton newtons", 1.0, 0.0, d(1, 1, -2)),
-    ("kN", 1e3, 0.0, d(1, 1, -2)),
-    ("lbf", 4.4482216152605, 0.0, d(1, 1, -2)),
+    ("N newton newtons", 1.0, 0.0, d(1, 1, -2, 0)),
+    ("kN", 1e3, 0.0, d(1, 1, -2, 0)),
+    ("lbf", 4.4482216152605, 0.0, d(1, 1, -2, 0)),
 
     ("rad radian radians", 1.0, 0.0, ANGLE),
     ("deg degree degrees", PI / 180.0, 0.0, ANGLE),
     ("turn turns", 2.0 * PI, 0.0, ANGLE),
+
+    ("A amp amps ampere amperes", 1.0, 0.0, CURRENT),
+    ("mA milliamp milliamps", 1e-3, 0.0, CURRENT),
+    ("µA uA μA", 1e-6, 0.0, CURRENT),
+    ("kA", 1e3, 0.0, CURRENT),
+    ("V volt volts", 1.0, 0.0, VOLT),
+    ("mV", 1e-3, 0.0, VOLT),
+    ("µV uV μV", 1e-6, 0.0, VOLT),
+    ("kV", 1e3, 0.0, VOLT),
+    ("Ω ohm ohms", 1.0, 0.0, OHM),
+    ("mΩ mohm", 1e-3, 0.0, OHM),
+    ("kΩ kohm", 1e3, 0.0, OHM),
+    ("MΩ Mohm", 1e6, 0.0, OHM),
+    // C and F stay Celsius and Fahrenheit.
+    ("coulomb coulombs", 1.0, 0.0, COULOMB),
+    ("mAh", 3.6, 0.0, COULOMB),
+    ("Ah", 3600.0, 0.0, COULOMB),
+    ("farad farads", 1.0, 0.0, FARAD),
+    ("mF", 1e-3, 0.0, FARAD),
+    ("µF uF μF", 1e-6, 0.0, FARAD),
+    ("nF", 1e-9, 0.0, FARAD),
+    ("pF", 1e-12, 0.0, FARAD),
+    ("S siemens", 1.0, 0.0, SIEMENS),
+    ("mS", 1e-3, 0.0, SIEMENS),
+    ("Wb weber webers", 1.0, 0.0, WEBER),
+    ("mWb", 1e-3, 0.0, WEBER),
+    ("T tesla teslas", 1.0, 0.0, TESLA),
+    ("mT", 1e-3, 0.0, TESLA),
+    ("µT uT μT", 1e-6, 0.0, TESLA),
+    ("H henry henries", 1.0, 0.0, HENRY),
+    ("mH", 1e-3, 0.0, HENRY),
+    ("µH uH μH", 1e-6, 0.0, HENRY),
+
+    ("Hz hertz", 1.0, 0.0, PER_TIME),
+    ("kHz", 1e3, 0.0, PER_TIME),
+    ("MHz", 1e6, 0.0, PER_TIME),
+    ("GHz", 1e9, 0.0, PER_TIME),
+    ("rpm", 1.0 / 60.0, 0.0, PER_TIME),
+
+    ("mol mole moles", 1.0, 0.0, AMOUNT),
+    ("mmol", 1e-3, 0.0, AMOUNT),
+    ("µmol umol μmol", 1e-6, 0.0, AMOUNT),
+    ("kmol", 1e3, 0.0, AMOUNT),
+    ("M molar", 1e3, 0.0, MOLAR),
+    ("mM millimolar", 1.0, 0.0, MOLAR),
+    ("µM uM μM micromolar", 1e-3, 0.0, MOLAR),
+
+    // Steradians are dimensionless in SI, so lumens and candelas share a dimension.
+    ("lm lumen lumens", 1.0, 0.0, LIGHT),
+    ("cd candela candelas", 1.0, 0.0, LIGHT),
+    ("lx lux", 1.0, 0.0, LUX),
+    ("fc footcandle footcandles", 10.763910416709722, 0.0, LUX),
 ];
 
 #[derive(Debug)]
@@ -327,7 +416,7 @@ impl UnitDef {
 
 impl Unit {
     pub fn dim(&self) -> Dim {
-        let mut dim = [0; 7];
+        let mut dim = NONE;
         for (u, p) in &self.0 {
             for (acc, x) in dim.iter_mut().zip(u.dim) {
                 *acc += x * p;
@@ -499,7 +588,7 @@ pub fn lookup(name: &str) -> Result<Rc<UnitDef>, String> {
 pub fn known_dim(spec: &UnitSpec) -> Option<Dim> {
     REGISTRY.with(|r| {
         let r = r.borrow();
-        let mut dim = [0; 7];
+        let mut dim = NONE;
         for (name, p) in spec {
             for (acc, x) in dim.iter_mut().zip(r.get(name)?.dim) {
                 *acc += x * p;
@@ -612,6 +701,20 @@ mod tests {
         assert_eq!(show("d = 5\nd * km to mi"), "3.10686 mi");
         assert_eq!(show("m = 3\n5 m to ft"), "16.4042 ft");
         assert_eq!(show("1 m > 50 cm"), "true");
+        assert_eq!(show("2 A * 5 ohm"), "10 V");
+        assert_eq!(show("2 mA * 5 kohm"), "10 V");
+        assert_eq!(show("12 V / 4 Ω"), "3 A");
+        assert_eq!(show("9.81 m/s^2 * 70 kg"), "686.7 N");
+        assert_eq!(show("2 N * 3 m"), "6 J");
+        assert_eq!(show("1 / 2 s"), "0.5 Hz");
+        assert_eq!(show("2 A * 3 s"), "6 coulomb");
+        assert_eq!(show("60 W * 8 h"), "480 W*h");
+        assert_eq!(show("25 USD/h * 40 h"), "$1,000.00");
+        assert_eq!(show("2 kV * 3"), "6 kV");
+        assert_eq!(show("2 N * 3 m to N*m"), "6 N*m");
+        assert_eq!(show("1 uF to nF"), "1000 nF");
+        assert_eq!(show("2000 mAh to coulomb"), "7200 coulomb");
+        assert_eq!(show("3000 rpm to Hz"), "50 Hz");
         assert!(try_eval("5 km + 1 kg").is_err());
         assert!(try_eval("5 km to kg").is_err());
     }

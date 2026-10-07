@@ -60,7 +60,7 @@ impl Value {
     pub fn qty(v: f64, u: Unit) -> Value {
         if u.0.is_empty() {
             Value::Float(v)
-        } else if u.dim() == [0; 7] {
+        } else if u.dim() == crate::modules::units::NONE {
             Value::Float(v * u.scale())
         } else {
             Value::Qty(v, u)

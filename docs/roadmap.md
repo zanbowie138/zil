@@ -65,7 +65,7 @@ The `units` and `dates` modules, plus everything that uses `ureq`. This is the h
 - `to auto`: `0.0042 A` → `4.2 mA`, `1536000 B` → `1.46 MiB`.
 
 ### Missing unit categories
-- Electrical (`A V ohm C F`), frequency (`Hz`…`GHz`), density, flow rate, torque, illuminance (`lx`), radiation (`Gy Sv`), typography (`pt px em`), cooking (`stick`, `pinch`).
+- Density, flow rate, torque, radiation (`Gy Sv`), typography (`pt px em`), cooking (`stick`, `pinch`).
 - Fuel economy (`mpg` ↔ `L/100km`) needs inverse conversion.
 
 ### Historical currency rates
