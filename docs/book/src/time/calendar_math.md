@@ -125,7 +125,7 @@ See also: [end_of](../time/calendar_math.md#end_of), [with](../time.md#with)
 now.end_of("month")
 # → 2026-10-31 23:59:59 -05:00
 (today.end_of("year") - now).parts
-# → "85 d 15 h 33 min"
+# → "85 d 15 h 11 min"
 ```
 
 See also: [start_of](../time/calendar_math.md#start_of)
@@ -138,7 +138,7 @@ See also: [start_of](../time/calendar_math.md#start_of)
 today.next("friday")
 # → 2026-10-09
 now.next("mon")
-# → 2026-10-12 09:26:37 -05:00
+# → 2026-10-12 09:49:13 -05:00
 ```
 
 See also: [prev](../time/calendar_math.md#prev), [nth_weekday](../time/calendar_math.md#nth_weekday)

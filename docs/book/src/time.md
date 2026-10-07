@@ -83,7 +83,7 @@ date("2026-12-25")
 date("next friday at 5pm")
 # → 2026-10-09 17:00:00 -05:00
 date("3 days ago")
-# → 2026-10-04 09:26:37 -05:00
+# → 2026-10-04 09:49:13 -05:00
 date("25.12.2026", "%d.%m.%Y")
 # → 2026-12-25
 date(2026, 12, 25, 18, 30)
@@ -144,7 +144,7 @@ See also: [minute](time.md#minute), [second](time.md#second)
 
 ```zil
 now.minute
-# → 26
+# → 49
 ```
 
 See also: [hour](time.md#hour), [second](time.md#second)
@@ -155,7 +155,7 @@ See also: [hour](time.md#hour), [second](time.md#second)
 
 ```zil
 now.second
-# → 37
+# → 13
 ```
 
 See also: [hour](time.md#hour), [minute](time.md#minute)
@@ -179,7 +179,7 @@ See also: [day](time.md#day), [format](time.md#format)
 now.format("%B %d, %Y")
 # → "October 07, 2026"
 now.format("%H:%M")
-# → "09:26"
+# → "09:49"
 format("%5.2f%%", 12.345)
 # → "12.35%"
 ```
@@ -194,7 +194,7 @@ See also: [date](time.md#date), [fixed](math/formatting.md#fixed)
 today.with({day: 1})
 # → 2026-10-01
 now.with({hour: 9, minute: 0})
-# → 2026-10-07 09:00:37 -05:00
+# → 2026-10-07 09:00:13 -05:00
 ```
 
 See also: [start_of](time/calendar_math.md#start_of), [date](time.md#date)
@@ -333,7 +333,7 @@ date("next friday")
 # → 2026-10-09
 # countdown
 (date("2027-01-01") - now).parts
-# → "85 d 15 h 33 min"
+# → "85 d 15 h 11 min"
 # relative time
 (now - 3 h).relative
 # → "3 hours ago"

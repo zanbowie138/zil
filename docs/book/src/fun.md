@@ -17,7 +17,7 @@ fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; lorem ipsu
 
 | module | about |
 |---|---|
-| [placeholder](fun/placeholder.md) | lorem ipsum placeholder text |
+| [placeholder](fun/placeholder.md) | lorem ipsum placeholder text, random team and person names |
 
 ## Functions
 
@@ -36,7 +36,7 @@ fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; lorem ipsu
 
 ```zil
 fortune()
-# → "The bug you seek is in the code you trust."
+# → "Today is a good day to read the error message."
 ```
 
 See also: [eight_ball](fun.md#eight_ball)
@@ -58,9 +58,9 @@ See also: [yes_or_no](fun.md#yes_or_no), [fortune](fun.md#fortune)
 
 ```zil
 coin()
-# → "heads"
+# → "tails"
 coin(3)
-# → ["tails", "heads", "tails"]
+# → ["heads", "tails", "heads"]
 ```
 
 See also: [rand](math/random.md#rand)
@@ -82,7 +82,7 @@ See also: [eight_ball](fun.md#eight_ball)
 
 ```zil
 excuse()
-# → "That's a known issue upstream."
+# → "It's a race condition. Probably."
 ```
 
 See also: [fortune](fun.md#fortune)
@@ -108,13 +108,13 @@ eight_ball("will it compile?")
 # → "Yes."
 # best of five
 coin(5)
-# → ["heads", "tails", "tails", "heads", "tails"]
+# → ["heads", "tails", "tails", "tails", "tails"]
 # standup
 excuse()
 # → "The compiler is being weird today."
 # should I ship it?
 yes_or_no()
-# → "no"
+# → "yes"
 ```
 
 ### roman

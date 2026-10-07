@@ -77,4 +77,4 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 | [dev.binary](dev/binary.md) | hex dumps and entropy of strings and byte lists |
 | [dev.colors](dev/colors.md) | colors as "#rrggbb": RGB/HSL, mixing, lightening, WCAG contrast |
 | [fun](fun.md) | fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; lorem ipsum placeholder text below |
-| [fun.placeholder](fun/placeholder.md) | lorem ipsum placeholder text |
+| [fun.placeholder](fun/placeholder.md) | lorem ipsum placeholder text, random team and person names |
