@@ -127,7 +127,7 @@ impl rustyline::completion::Completer for Names {
         } else if word.is_empty() {
             vec![]
         } else {
-            self.0.iter().cloned().chain(interp::names(&self.1)).collect()
+            self.0.iter().cloned().chain(interp::names(&self.1)).chain(modules::units::user_units()).collect()
         };
         hits.retain(|n| n.starts_with(word));
         hits.sort();

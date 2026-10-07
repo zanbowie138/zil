@@ -46,6 +46,14 @@ numbers with units, combined and converted; currencies use live rates
 # → 31.0686 mph
 ```
 
+### your own units
+
+```zil
+# unit sprint = 2 wk        then  3 sprint to d → 42 d
+# unit pizza                a new base unit, for counting
+# unit slice = pizza / 8    then  3 slice to pizza → 0.375 pizza
+```
+
 ## Units
 
 | kind | names |
@@ -83,8 +91,30 @@ numbers with units, combined and converted; currencies use live rates
 
 | module | about |
 |---|---|
+| [constants](units/constants.md) | physical constants (CODATA 2018) as quantities; `h` is still hours, so Planck's constant is `h_planck` |
 | [money](units/money.md) | currencies shown as money, pay, interest, loans, splitting bills |
 | [goofy](units/goofy.md) | bananas for scale, smoots, fortnights; every item also works as item_for_scale |
+
+## Functions
+
+| function | description |
+|---|---|
+| [`simplify(q: quantity)`](#simplify) | the quantity in the prefixed unit of the same family that reads best, like `1.2 m` or `3.6 kW`; also `to best` |
+
+### simplify
+
+`simplify(q: quantity)`: the quantity in the prefixed unit of the same family that reads best, like `1.2 m` or `3.6 kW`; also `to best`
+
+```zil
+0.0012 km to best
+# → 1.2 m
+3600 J/s to best
+# → 3.6 kW
+1 kg*m^2/s^2 to best
+# → 1 J
+1.5e9 B.simplify
+# → 1.5 GB
+```
 
 ## More examples
 

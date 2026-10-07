@@ -233,6 +233,8 @@ pub struct Module {
     pub groups: &'static [(&'static str, &'static [&'static str])],
     pub call: fn(&mut Interp, &'static str, &[Value], &Span) -> Call,
     pub consts: &'static [(&'static str, f64)],
+    /// Constants with units: name, value, unit terms like `m s^-1`.
+    pub quantities: &'static [(&'static str, f64, &'static str)],
     /// `to` keywords and the exported fn each calls: `x to UTC` is `utc(x)`, `x to hex(8)` is `hex(x, 8)`.
     pub targets: &'static [(&'static str, &'static str)],
     /// Names that aren't variables, tried after scope lookup fails (`now`, units).
@@ -259,6 +261,7 @@ impl Module {
         groups: &[],
         call: |_, _, _, _| Err(Fail::BadArgs),
         consts: &[],
+        quantities: &[],
         targets: &[],
         ident: None,
         binary: None,
@@ -369,6 +372,11 @@ mod tests {
                 for s in f.see {
                     assert!(fns.iter().any(|g| g.name == *s), "{}: see also {s} missing", f.name);
                 }
+            }
+            for (name, _, terms) in m.quantities {
+                assert!(units::terms(terms).is_ok(), "{name}: bad unit terms `{terms}`");
+                let taken = fns.iter().any(|f| f.name == *name) || units::lookup(name).is_ok() || modules().any(|o| o.consts.iter().any(|c| c.0 == *name));
+                assert!(!taken, "constant {name} collides with a fn, unit or constant");
             }
             for (kw, f) in m.targets {
                 assert!(m.fns.iter().any(|d| d.name == *f), "{}: target {kw} calls {f}, which it doesn't export", m.name);

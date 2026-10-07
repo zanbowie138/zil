@@ -133,6 +133,9 @@ impl Interp {
                 for (name, x) in m.consts {
                     g.vars.insert(name.to_string(), Value::Float(*x));
                 }
+                for (name, x, terms) in m.quantities {
+                    g.vars.insert(name.to_string(), Value::Qty(*x, units::terms(terms).expect("checked by modules::tests::registry")));
+                }
             }
         }
         Interp { globals, input: None, depth: 0 }
@@ -295,6 +298,17 @@ impl Interp {
             _ => None,
         };
         Ok(self.call_at(&f, argv, &e.span, &spans, name)?)
+    }
+
+    /// `unit pizza`, `unit slice = pizza / 8`; out of `eval` to keep its frame small.
+    #[inline(never)]
+    fn unit_def(&mut self, name: &str, value: Option<&Expr>, env: &Env, span: &Span) -> EResult {
+        let v = match value {
+            Some(x) => Some(self.eval(x, env)?),
+            None => None,
+        };
+        units::define(name, v.as_ref()).map_err(|m| Ctl::Err(Error::new(format!("unit: {m}"), span.clone())))?;
+        Ok(Value::Nil)
     }
 
     fn eval(&mut self, e: &Expr, env: &Env) -> EResult {
@@ -535,6 +549,7 @@ impl Interp {
                 };
                 return Err(Ctl::Return(v));
             }
+            ExprKind::UnitDef(name, value) => self.unit_def(name, value.as_deref(), env, &e.span)?,
             ExprKind::Break => return Err(Ctl::Break(e.span.clone())),
             ExprKind::Continue => return Err(Ctl::Continue(e.span.clone())),
         })

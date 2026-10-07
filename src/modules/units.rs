@@ -1,11 +1,14 @@
 //! Units: quantities with dimensions, arithmetic and conversion between them, live currency rates.
 
+pub mod constants;
 pub mod goofy;
 pub mod money;
 
 use crate::ast::{BinOp, Target, UnitSpec};
+use crate::interp::Interp;
 use crate::interp::mismatch;
-use crate::modules::{Claim, Module};
+use crate::lexer::Span;
+use crate::modules::{Call, Claim, Doc, Fail, Module, doc};
 use crate::value::{Value, num};
 use std::cell::{Cell, RefCell};
 use std::cmp::Ordering;
@@ -44,7 +47,16 @@ pub const MODULE: Module = Module {
             ("qty < qty", "1 mi > 1 km"),
         ]),
         ("conversions", &[("to unit", "5 km to mi"), ("in unit", "5 km in mi"), ("to unit unit", "1.8 m to ft in"), ("to compound", "100 km / 2 h to mph")]),
+        // Shown, not run: `unit` would define them in the session running help.
+        ("your own units", &[
+            ("unit sprint = 2 wk        then  3 sprint to d → 42 d", ""),
+            ("unit pizza                a new base unit, for counting", ""),
+            ("unit slice = pizza / 8    then  3 slice to pizza → 0.375 pizza", ""),
+        ]),
     ],
+    fns: FNS,
+    call,
+    targets: &[("best", "simplify")],
     ident: Some(|_, name| match unit(name) {
         Ok(u) => Some(Ok(Value::Qty(1.0, u))),
         Err(e) if e.starts_with("unknown unit") => None,
@@ -55,9 +67,46 @@ pub const MODULE: Module = Module {
     convert: Some(convert),
     topic: Some(topic),
     units: TABLE,
-    children: &[money::MODULE, goofy::MODULE],
+    children: &[constants::MODULE, money::MODULE, goofy::MODULE],
     ..Module::EMPTY
 };
+
+#[rustfmt::skip]
+const FNS: &[Doc] = &[
+    doc("simplify", "simplify(q: quantity)", "the quantity in the prefixed unit of the same family that reads best, like `1.2 m` or `3.6 kW`; also `to best`",
+        &["0.0012 km to best", "3600 J/s to best", "1 kg*m^2/s^2 to best", "1.5e9 B.simplify"], &[]),
+];
+
+fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
+    match (name, args) {
+        ("simplify", [Value::Qty(x, u)]) => Ok(simplify(*x, u)),
+        _ => Err(Fail::BadArgs),
+    }
+}
+
+/// `x u` in the table unit whose scale is a power of ten times `u`'s (so bytes stay bytes, feet stay feet)
+/// and gives the biggest value of at least 1. Temperatures, money and units with no such family stay as they are.
+fn simplify(x: f64, u: &Unit) -> Value {
+    let dim = u.dim();
+    if u.offset() != 0.0 || dim[8] != 0 || x == 0.0 {
+        return Value::Qty(x, u.clone());
+    }
+    let si = u.to_si(x).abs();
+    let family = |row: &&Row| {
+        let r = (row.1 / u.scale()).log10();
+        row.3 == dim && row.2 == 0.0 && (r - r.round()).abs() < 1e-9
+    };
+    let rows: Vec<&Row> = TABLE.iter().filter(family).collect();
+    let best = rows.iter().filter(|r| r.1 <= si * (1.0 + 1e-12)).max_by(|a, b| a.1.total_cmp(&b.1)).or_else(|| rows.iter().min_by(|a, b| a.1.total_cmp(&b.1)));
+    match best {
+        // Already in a unit of that size (`5 cd` stays candelas, not lumens).
+        Some(row) if (row.1 / u.scale() - 1.0).abs() > 1e-12 || u.0.len() > 1 => {
+            let t = unit(row.0.split(' ').next().unwrap()).expect("table unit");
+            Value::Qty(u.to_si(x) / t.scale(), t)
+        }
+        _ => Value::Qty(x, u.clone()),
+    }
+}
 
 fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
     use Value::*;
@@ -99,7 +148,7 @@ fn named(x: f64, u: Unit) -> (f64, Unit) {
     // ponytail: "metric" = power-of-ten factor to SI; fine for TABLE, revisit if a unit like 1e3 B joins it.
     let metric = |d: &UnitDef| d.offset == 0.0 && (d.scale().log10() - d.scale().log10().round()).abs() < 1e-9;
     let dim = u.dim();
-    if matches!(u.0.as_slice(), [] | [(_, 1)]) || dim[7..] != [0; 3] || !u.0.iter().all(|(d, _)| metric(d)) {
+    if matches!(u.0.as_slice(), [] | [(_, 1)]) || dim[7..].iter().any(|x| *x != 0) || !u.0.iter().all(|(d, _)| metric(d)) {
         return (x, u);
     }
     match TABLE.iter().find(|row| row.1 == 1.0 && row.2 == 0.0 && row.3 == dim) {
@@ -204,6 +253,11 @@ fn topic(topic: &str) -> bool {
         let other = units_of(kind).into_iter().find(|u| *u != name).unwrap();
         show(vec![format!("1 {name} to {other}"), format!("1 {other} to {name}")]);
         out!("all {kind} units: help(\"{kind}\")");
+    } else if let Some((_, desc)) = USER.with(|u| u.borrow().iter().find(|(n, _)| n == topic).cloned()) {
+        match desc.as_str() {
+            "" => out!("{topic}: a base unit you defined with `unit {topic}`"),
+            _ => out!("{topic}: a unit you defined, 1 {topic} = {desc}"),
+        }
     } else {
         return false;
     }
@@ -220,28 +274,39 @@ fn units_of(kind: &str) -> Vec<&'static str> {
     TABLE.iter().filter(|row| row.3 == dim).map(|row| row.0.split(' ').next().unwrap()).collect()
 }
 
-/// Exponents of the 7 SI bases (m kg s A K mol cd), then the non-SI extras data, money, angle.
-pub type Dim = [i8; 10];
-pub const NONE: Dim = [0; 10];
+/// Exponents of the 7 SI bases (m kg s A K mol cd), the non-SI extras data, money, angle,
+/// then slots for user base units (`unit pizza`).
+pub type Dim = [i8; 16];
+pub const NONE: Dim = [0; 16];
+const FIRST_USER_BASE: usize = 10;
 
 /// Length, mass, time, current.
 pub const fn d(l: i8, m: i8, t: i8, i: i8) -> Dim {
-    [l, m, t, i, 0, 0, 0, 0, 0, 0]
+    let mut x = NONE;
+    (x[0], x[1], x[2], x[3]) = (l, m, t, i);
+    x
+}
+
+/// Base `i` to the power `p`, times `rest`.
+const fn base(i: usize, p: i8, rest: Dim) -> Dim {
+    let mut x = rest;
+    x[i] += p;
+    x
 }
 const LEN: Dim = d(1, 0, 0, 0);
 const MASS: Dim = d(0, 1, 0, 0);
 pub const TIME: Dim = d(0, 0, 1, 0);
 pub const PER_TIME: Dim = d(0, 0, -1, 0);
 const CURRENT: Dim = d(0, 0, 0, 1);
-const TEMP: Dim = [0, 0, 0, 0, 1, 0, 0, 0, 0, 0];
-const AMOUNT: Dim = [0, 0, 0, 0, 0, 1, 0, 0, 0, 0];
-const MOLAR: Dim = [-3, 0, 0, 0, 0, 1, 0, 0, 0, 0];
-const LIGHT: Dim = [0, 0, 0, 0, 0, 0, 1, 0, 0, 0];
-const LUX: Dim = [-2, 0, 0, 0, 0, 0, 1, 0, 0, 0];
-pub const DATA: Dim = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0];
-const RATE: Dim = [0, 0, -1, 0, 0, 0, 0, 1, 0, 0];
-pub const MONEY: Dim = [0, 0, 0, 0, 0, 0, 0, 0, 1, 0];
-const ANGLE: Dim = [0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
+const TEMP: Dim = base(4, 1, NONE);
+const AMOUNT: Dim = base(5, 1, NONE);
+const MOLAR: Dim = base(5, 1, d(-3, 0, 0, 0));
+const LIGHT: Dim = base(6, 1, NONE);
+const LUX: Dim = base(6, 1, d(-2, 0, 0, 0));
+pub const DATA: Dim = base(7, 1, NONE);
+const RATE: Dim = base(7, 1, PER_TIME);
+pub const MONEY: Dim = base(8, 1, NONE);
+const ANGLE: Dim = base(9, 1, NONE);
 const VOLT: Dim = d(2, 1, -3, -1);
 const OHM: Dim = d(2, 1, -3, -2);
 const COULOMB: Dim = d(0, 0, 1, 1);
@@ -546,6 +611,50 @@ thread_local! {
     static REGISTRY: RefCell<HashMap<String, Rc<UnitDef>>> = RefCell::new(builtin_units());
     static RATES_LOADED: RefCell<bool> = const { RefCell::new(false) };
     static RATES_ERROR: RefCell<String> = const { RefCell::new(String::new()) };
+    /// Units made with `unit`: name and what it was defined as, for `help`.
+    static USER: RefCell<Vec<(String, String)>> = const { RefCell::new(Vec::new()) };
+}
+
+/// `unit pizza` (no value) makes a new base unit; `unit slice = pizza / 8` or `unit dozen = 12` one
+/// in terms of others. Built-in units can't be redefined; user ones can.
+pub fn define(name: &str, value: Option<&Value>) -> Result<(), String> {
+    let user = USER.with(|u| u.borrow().iter().position(|(n, _)| n == name));
+    if user.is_none() && lookup(name).is_ok() {
+        return Err(format!("`{name}` is already a unit"));
+    }
+    let (scale, dim, desc) = match value {
+        // Redefining a base keeps its slot, so values made with it still convert.
+        None if user.is_some_and(|i| USER.with(|u| u.borrow()[i].1.is_empty())) => return Ok(()),
+        None => {
+            let used = USER.with(|u| u.borrow().iter().filter(|(_, d)| d.is_empty()).count());
+            // ponytail: fixed slots in Dim; widen Dim if 6 user bases ever feels tight.
+            if FIRST_USER_BASE + used >= NONE.len() {
+                return Err(format!("too many base units: at most {}", NONE.len() - FIRST_USER_BASE));
+            }
+            (1.0, base(FIRST_USER_BASE + used, 1, NONE), String::new())
+        }
+        Some(v @ Value::Qty(x, u)) => (u.to_si(*x), u.dim(), v.to_string()),
+        Some(v) => match num(v) {
+            Some(x) => (x, NONE, v.to_string()),
+            None => return Err(format!("expected a quantity or number, got {}", v.type_name())),
+        },
+    };
+    if scale.is_nan() {
+        return Err(rate_error());
+    }
+    let def = Rc::new(UnitDef { name: name.into(), scale: Cell::new(scale), offset: 0.0, dim });
+    REGISTRY.with(|r| r.borrow_mut().insert(name.into(), def));
+    USER.with(|u| {
+        let mut u = u.borrow_mut();
+        u.retain(|(n, _)| n != name);
+        u.push((name.into(), desc));
+    });
+    Ok(())
+}
+
+/// Names of units made with `unit`, for completion.
+pub fn user_units() -> Vec<String> {
+    USER.with(|u| u.borrow().iter().map(|(n, _)| n.clone()).collect())
 }
 
 /// ECB currencies frankfurter.dev has; known without fetching, so `25 USD/h * 40 h` stays offline.
@@ -644,6 +753,16 @@ pub fn names_with_dim(dim: Dim) -> Vec<String> {
     v.sort();
     v.dedup();
     v
+}
+
+/// A unit from space-separated `name^power` terms: `m s^-1`.
+pub fn terms(s: &str) -> Result<Unit, String> {
+    let mut u = Unit::default();
+    for t in s.split(' ') {
+        let (name, p) = t.split_once('^').unwrap_or((t, "1"));
+        u = u.mul(&unit(name)?.pow(p.parse().map_err(|_| format!("bad power in `{t}`"))?), 1);
+    }
+    Ok(u)
 }
 
 pub fn unit(name: &str) -> Result<Unit, String> {
@@ -755,6 +874,52 @@ mod tests {
         assert_eq!(show("1 uF to nF"), "1000 nF");
         assert_eq!(show("2000 mAh to coulomb"), "7200 coulomb");
         assert_eq!(show("3000 rpm to Hz"), "50 Hz");
+        assert_eq!(
+            show(
+                "unit sprint = 2 wk
+3 sprint to d"
+            ),
+            "42 d"
+        );
+        assert_eq!(
+            show(
+                "unit pizza
+unit slice = pizza / 8
+2 pizza to slice"
+            ),
+            "16 slice"
+        );
+        assert_eq!(
+            show(
+                "unit dozen = 12
+2 dozen to dozen"
+            ),
+            "2 dozen"
+        );
+        assert!(try_eval("unit km = 3").is_err());
+        assert!(
+            try_eval(
+                "unit widget
+1 pizza + 1 widget"
+            )
+            .is_err()
+        );
+        assert_eq!(
+            show(
+                "unit = 5
+unit * 2"
+            ),
+            "10"
+        );
+        assert_eq!(show("0.0012 km to best"), "1.2 m");
+        assert_eq!(show("3600 J/s to best"), "3.6 kW");
+        assert_eq!(show("1 kg*m^2/s^2 to best"), "1 J");
+        assert_eq!(show("1.5e9 B.simplify"), "1.5 GB");
+        assert_eq!(show("5000 ft to best"), "5000 ft");
+        assert_eq!(show("20 C to best"), "20 C");
+        assert_eq!(show("5 cd to best"), "5 cd");
+        assert_eq!(show("0.00002 m to best"), "20 µm");
+        assert!(try_eval("5 to best").is_err());
         assert!(try_eval("5 km + 1 kg").is_err());
         assert!(try_eval("5 km to kg").is_err());
     }

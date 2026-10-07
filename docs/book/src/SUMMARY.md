@@ -21,6 +21,7 @@
   - [formatting](math/formatting.md)
   - [random](math/random.md)
 - [units](units.md)
+  - [constants](units/constants.md)
   - [money](units/money.md)
   - [goofy](units/goofy.md)
 - [time](time.md)

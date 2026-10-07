@@ -312,6 +312,17 @@ impl Parser<'_> {
                     return Err(Error::new("invalid regex", tok_span).note(why));
                 }
             },
+            // `unit pizza`, `unit slice = pizza / 8`; `unit` stays usable as a variable otherwise.
+            Tok::Ident(s) if s == "unit" && matches!((self.peek(), self.peek_at(1)), (Tok::Ident(_), Tok::Assign | Tok::Newline | Tok::Eof | Tok::RBrace)) => {
+                let Tok::Ident(name) = self.bump() else { unreachable!() };
+                let value = if *self.peek() == Tok::Assign {
+                    self.bump();
+                    Some(Box::new(self.expr(0)?))
+                } else {
+                    None
+                };
+                ExprKind::UnitDef(name, value)
+            }
             // `a m`: a variable holding a number, given a unit.
             Tok::Ident(s) if self.unit_next() => {
                 let var = self.mk(ExprKind::Ident(s), start);

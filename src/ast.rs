@@ -48,6 +48,8 @@ pub enum ExprKind {
     For(Pat, Box<Expr>, Box<Expr>),
     Block(Vec<Expr>),
     Return(Option<Box<Expr>>),
+    /// `unit pizza` or `unit slice = pizza / 8`.
+    UnitDef(String, Option<Box<Expr>>),
     Break,
     Continue,
 }
