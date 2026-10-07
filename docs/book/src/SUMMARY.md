@@ -30,3 +30,4 @@
   - [binary](dev/binary.md)
   - [colors](dev/colors.md)
 - [fun](fun.md)
+  - [placeholder](fun/placeholder.md)

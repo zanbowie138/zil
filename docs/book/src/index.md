@@ -55,7 +55,7 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 | [text.ciphers](text/ciphers.md) | Caesar, ROT13, Atbash, Vigenère, Morse, Braille (for fun, not secrecy) |
 | [data](data.md) | length, search, sorting and picking across strings, lists and maps; lists and maps below |
 | [data.lists](data/lists.md) | ranges, map/filter/reduce, building lists |
-| [data.maps](data/maps.md) | keys and values of maps |
+| [data.maps](data/maps.md) | keys, values, lookups, merging and transforming maps |
 | [math](math.md) | rounding, roots, logs, constants; exact fractions and big ints |
 | [math.stats](math/stats.md) | sums, averages, spread and extremes of lists; units welcome |
 | [math.trig](math/trig.md) | sine, cosine and friends; angles as units |
@@ -74,4 +74,5 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 | [dev.net](dev/net.md) | IP addresses, CIDR blocks, subnets |
 | [dev.binary](dev/binary.md) | hex dumps and entropy of strings and byte lists |
 | [dev.colors](dev/colors.md) | colors as "#rrggbb": RGB/HSL, mixing, lightening, WCAG contrast |
-| [fun](fun.md) | fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals |
+| [fun](fun.md) | fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; lorem ipsum placeholder text below |
+| [fun.placeholder](fun/placeholder.md) | lorem ipsum placeholder text |

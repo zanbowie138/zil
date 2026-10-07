@@ -1,6 +1,6 @@
 # fun
 
-fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals
+fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; lorem ipsum placeholder text below
 
 > Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
@@ -12,6 +12,12 @@ fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals
 1999 to roman
 # → "MCMXCIX"
 ```
+
+## Submodules
+
+| module | about |
+|---|---|
+| [placeholder](fun/placeholder.md) | lorem ipsum placeholder text |
 
 ## Functions
 
@@ -30,7 +36,7 @@ fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals
 
 ```zil
 fortune()
-# → "Someone will thank you for a comment you wrote long ago."
+# → "A refactor is in your future. It will touch more files than you think."
 ```
 
 See also: [eight_ball](fun.md#eight_ball)
@@ -52,9 +58,9 @@ See also: [yes_or_no](fun.md#yes_or_no), [fortune](fun.md#fortune)
 
 ```zil
 coin()
-# → "tails"
+# → "heads"
 coin(3)
-# → ["heads", "heads", "heads"]
+# → ["tails", "heads", "heads"]
 ```
 
 See also: [rand](math/random.md#rand)
@@ -76,7 +82,7 @@ See also: [eight_ball](fun.md#eight_ball)
 
 ```zil
 excuse()
-# → "The intern had root access."
+# → "That's not a bug, it's undocumented behavior."
 ```
 
 See also: [fortune](fun.md#fortune)
@@ -102,10 +108,10 @@ eight_ball("will it compile?")
 # → "Yes."
 # best of five
 coin(5)
-# → ["heads", "heads", "heads", "tails", "tails"]
+# → ["tails", "tails", "heads", "heads", "heads"]
 # standup
 excuse()
-# → "It must be a timezone thing."
+# → "It was DNS."
 # should I ship it?
 yes_or_no()
 # → "no"
