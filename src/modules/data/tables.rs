@@ -158,16 +158,19 @@ pub fn grid(t: &Table, color: bool) -> String {
 /// `grid`, with each cell shown by `cell`.
 pub fn grid_with(t: &Table, color: bool, cell: &dyn Fn(&Value) -> String) -> String {
     let paint = |c: &str, s: &str| if color && !c.is_empty() { format!("{c}{s}{RESET}") } else { s.to_string() };
-    let cells: Vec<Vec<String>> = t.rows.iter().map(|r| r.iter().map(cell).collect()).collect();
     let n = t.cols.len();
-    let width = |c: usize| cells.iter().map(|r| r[c].chars().count()).chain([t.cols[c].chars().count()]).max().unwrap_or(0);
-    let widths: Vec<usize> = (0..n).map(width).collect();
     let numeric: Vec<bool> = (0..n)
         .map(|c| {
             let mut vs = t.rows.iter().map(|r| &r[c]).filter(|v| !matches!(v, Value::Nil)).peekable();
             vs.peek().is_some() && vs.all(|v| crate::tint(v) == crate::CYAN)
         })
         .collect();
+    // One long cell (a description, a list) would otherwise pad its whole column: text past MAX ends in `…`.
+    const MAX: usize = 32;
+    let fit = |c: usize, s: String| if numeric[c] || s.chars().count() <= MAX { s } else { s.chars().take(MAX - 1).chain(['…']).collect() };
+    let cells: Vec<Vec<String>> = t.rows.iter().map(|r| r.iter().enumerate().map(|(c, v)| fit(c, cell(v))).collect()).collect();
+    let width = |c: usize| cells.iter().map(|r| r[c].chars().count()).chain([t.cols[c].chars().count()]).max().unwrap_or(0);
+    let widths: Vec<usize> = (0..n).map(width).collect();
     let iw = t.rows.len().saturating_sub(1).to_string().len();
     let line = |idx: &str, row: &[(String, &str)]| {
         let mut s = format!(" {}", paint(DIM, &format!("{idx:>iw$}")));
@@ -218,5 +221,7 @@ mod tests {
     fn grid() {
         let crate::value::Value::Table(t) = crate::interp::tests::eval(r#"[{name: "a", n: 10}, {name: "bb", n: 2}].table"#) else { panic!() };
         assert_eq!(super::grid(&t, false), " #  name   n\n────────────\n 0  a     10\n 1  bb     2\n────────────\n 2 rows · 2 columns");
+        let crate::value::Value::Table(t) = crate::interp::tests::eval(r#"[{s: "x".repeat(40)}].table"#) else { panic!() };
+        assert!(super::grid(&t, false).contains(&format!("{}…\n", "x".repeat(31))));
     }
 }
