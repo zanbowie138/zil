@@ -143,7 +143,7 @@ pub fn unit_of(spec: &UnitSpec) -> Result<Unit, String> {
 fn topic(topic: &str) -> bool {
     use crate::help::show;
     if topic == "units" {
-        println!("\nunits");
+        println!("\n{}", crate::help::heading("units"));
         for (kind, _) in DIMS {
             println!("  {kind:<14} {}", units_of(kind).join(" "));
         }

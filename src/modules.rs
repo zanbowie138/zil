@@ -173,6 +173,7 @@ mod tests {
         let mut seen = std::collections::HashMap::new();
         for m in MODULES {
             for f in m.fns {
+                assert!(!MODULES.iter().any(|o| o.name == f.name), "fn {} collides with a module name, hiding its help page", f.name);
                 if let Some(other) = seen.insert(f.name, m.name) {
                     panic!("{} exported by both {other} and {}", f.name, m.name);
                 }

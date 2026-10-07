@@ -66,7 +66,7 @@ true
 | [`len(v)`](#len) | length of a string, list or map |
 | [`read_file(path)`](#read_file) | file contents as a string |
 | [`write_file(path, v)`](#write_file) | write v to a file as text |
-| [`help(topic?)`](#help) | this help; topic is a function, unit or unit kind |
+| [`help(topic?)`](#help) | this help; topic is a function, module, unit, or any value to list functions for its type |
 
 ### print
 
@@ -278,7 +278,7 @@ See also: [read_file](general.md#read_file)
 
 ### help
 
-`help(topic?)`: this help; topic is a function, unit or unit kind
+`help(topic?)`: this help; topic is a function, module, unit, or any value to list functions for its type
 
 ## More examples
 

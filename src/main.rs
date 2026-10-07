@@ -94,6 +94,7 @@ impl Names {
         let mut v: Vec<String> = ms.iter().flat_map(|m| m.fns.iter().map(|f| f.name).chain(m.consts.iter().map(|c| c.0)).chain(m.targets.iter().map(|t| t.0)).chain([m.name])).map(String::from).collect();
         v.extend(modules::units::TABLE.iter().flat_map(|u| u.0.split_whitespace()).map(String::from));
         v.extend(modules::units::DIMS.iter().map(|d| d.0.to_string()));
+        v.extend(["syntax", "examples"].map(String::from));
         v.sort();
         v.dedup();
         Names(v, globals)
@@ -156,29 +157,13 @@ const DIM: &str = "[2m";
 const CYAN: &str = "[36m";
 const GREEN: &str = "[32m";
 const MAGENTA: &str = "[35m";
+const BOLD: &str = "[1m";
 const RESET: &str = "[0m";
 
 /// Syntax colors for the line being typed; unlexable bits stay plain.
 impl rustyline::highlight::Highlighter for Names {
     fn highlight<'l>(&self, line: &'l str, _: usize) -> Cow<'l, str> {
-        use logos::Logos;
-        let mut out = String::with_capacity(line.len() * 2);
-        let mut last = 0;
-        for (tok, span) in Tok::lexer(line).spanned() {
-            let color = match tok {
-                Ok(Tok::Int(_) | Tok::Float(_) | Tok::Dec(_) | Tok::Based(_) | Tok::Currency(_)) => CYAN,
-                Ok(Tok::Str(_) | Tok::Regex(_)) => GREEN,
-                Ok(Tok::Fn | Tok::If | Tok::Else | Tok::While | Tok::For | Tok::In | Tok::To | Tok::Of | Tok::Return | Tok::Break | Tok::Continue | Tok::True | Tok::False | Tok::Nil) => MAGENTA,
-                _ => continue,
-            };
-            out.push_str(&line[last..span.start]);
-            out.push_str(color);
-            out.push_str(&line[span.clone()]);
-            out.push_str(RESET);
-            last = span.end;
-        }
-        out.push_str(&line[last..]);
-        Cow::Owned(out)
+        Cow::Owned(highlight(line))
     }
     fn highlight_prompt<'b, 's: 'b, 'p: 'b>(&'s self, prompt: &'p str, _: bool) -> Cow<'b, str> {
         Cow::Owned(format!("{DIM}{prompt}{RESET}"))
@@ -191,19 +176,50 @@ impl rustyline::highlight::Highlighter for Names {
     }
 }
 
-/// A REPL result, colored by type when stdout is a terminal and `NO_COLOR` is unset.
-fn show(v: &Value) -> String {
-    use std::io::IsTerminal;
-    if !std::io::stdout().is_terminal() || std::env::var_os("NO_COLOR").is_some() {
-        return v.to_string();
+/// `src` with numbers, strings and keywords colored; unlexable bits stay plain.
+fn highlight(src: &str) -> String {
+    use logos::Logos;
+    let mut out = String::with_capacity(src.len() * 2);
+    let mut last = 0;
+    for (tok, span) in Tok::lexer(src).spanned() {
+        let color = match tok {
+            Ok(Tok::Int(_) | Tok::Float(_) | Tok::Dec(_) | Tok::Based(_) | Tok::Currency(_)) => CYAN,
+            Ok(Tok::Str(_) | Tok::Regex(_)) => GREEN,
+            Ok(Tok::Fn | Tok::If | Tok::Else | Tok::While | Tok::For | Tok::In | Tok::To | Tok::Of | Tok::Return | Tok::Break | Tok::Continue | Tok::True | Tok::False | Tok::Nil) => MAGENTA,
+            _ => continue,
+        };
+        out.push_str(&src[last..span.start]);
+        out.push_str(color);
+        out.push_str(&src[span.clone()]);
+        out.push_str(RESET);
+        last = span.end;
     }
-    let color = match v {
+    out.push_str(&src[last..]);
+    out
+}
+
+/// Whether to print colors: stdout is a terminal and `NO_COLOR` is unset.
+fn color_on() -> bool {
+    use std::io::IsTerminal;
+    std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none()
+}
+
+/// A value's color by type, as REPL results and help show it.
+fn tint(v: &Value) -> &'static str {
+    match v {
         Value::Int(..) | Value::Big(..) | Value::Frac(..) | Value::Float(_) | Value::Qty(..) => CYAN,
         Value::Str(_) | Value::Regex(_) => GREEN,
         Value::Bool(_) | Value::Nil => MAGENTA,
         _ => "",
-    };
-    format!("{DIM}={RESET} {color}{v}{RESET}")
+    }
+}
+
+/// A REPL result, colored by type when `color_on`.
+fn show(v: &Value) -> String {
+    if !color_on() {
+        return v.to_string();
+    }
+    format!("{DIM}={RESET} {}{v}{RESET}", tint(v))
 }
 impl rustyline::validate::Validator for Names {}
 impl rustyline::Helper for Names {}

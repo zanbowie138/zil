@@ -69,7 +69,7 @@ const FNS: &[Doc] = &[
     doc("len", "len(v)", "length of a string, list or map", &[r#""héllo".len"#, "[1, 2, 3].len", "{a: 1}.len"], &[]),
     doc("read_file", "read_file(path)", "file contents as a string", &[], &["write_file", "lines"]),
     doc("write_file", "write_file(path, v)", "write v to a file as text", &[], &["read_file"]),
-    doc("help", "help(topic?)", "this help; topic is a function, unit or unit kind", &[], &[]),
+    doc("help", "help(topic?)", "this help; topic is a function, module, unit, or any value to list functions for its type", &[], &[]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -94,6 +94,12 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             Nil
         }
         ("help", [Fn(_)]) => return Err("user-defined function; no help available".into()),
+        ("help", [v]) => {
+            if !crate::help::type_page(v.type_name()) {
+                println!("no functions take a {} first; help() for an overview", v.type_name());
+            }
+            Nil
+        }
         ("type", [v]) => Value::str(v.type_name()),
         ("str", [v @ (Float(_) | Frac(_, false))]) => Value::str(num(v).unwrap().to_string()),
         ("str", [v]) => Value::str(v.to_string()),

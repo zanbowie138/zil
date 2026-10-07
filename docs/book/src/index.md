@@ -56,10 +56,10 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 | [units](units.md) | numbers with units, combined and converted; currencies use live rates |
 | [goofy_units](goofy_units.md) | bananas for scale, smoots, fortnights; every item also works as item_for_scale |
 | [money](money.md) | currencies shown as money, pay, interest, loans, splitting bills |
-| [color](color.md) | colors as "#rrggbb": RGB/HSL, mixing, lightening, WCAG contrast |
+| [colors](colors.md) | colors as "#rrggbb": RGB/HSL, mixing, lightening, WCAG contrast |
 | [net](net.md) | IP addresses, CIDR blocks, subnets |
 | [binary](binary.md) | hex dumps, entropy, checksums of strings and byte lists |
-| [roman](roman.md) | Roman numerals, both ways |
+| [numerals](numerals.md) | Roman numerals, both ways |
 | [ciphers](ciphers.md) | Caesar, ROT13, Atbash, Vigenère, Morse, Braille (for fun, not secrecy) |
-| [fortune](fortune.md) | fortune cookies, a magic 8-ball, coin flips, excuses |
+| [oracles](oracles.md) | fortune cookies, a magic 8-ball, coin flips, excuses |
 | [general](general.md) | values, printing, conversions, number bases, parsing, files |

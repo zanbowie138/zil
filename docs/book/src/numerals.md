@@ -1,4 +1,4 @@
-# roman
+# numerals
 
 Roman numerals, both ways
 

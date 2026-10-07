@@ -99,7 +99,7 @@ date("2026-12-25")
 date("next friday at 5pm")
 # → 2026-10-09 17:00:00 -05:00
 date("3 days ago")
-# → 2026-10-03 22:40:54 -05:00
+# → 2026-10-03 23:04:30 -05:00
 date("25.12.2026", "%d.%m.%Y")
 # → 2026-12-25
 date(2026, 12, 25, 18, 30)
@@ -149,7 +149,7 @@ See also: [month](dates.md#month), [weekday](dates.md#weekday)
 
 ```zil
 now.hour
-# → 22
+# → 23
 ```
 
 See also: [minute](dates.md#minute), [second](dates.md#second)
@@ -160,7 +160,7 @@ See also: [minute](dates.md#minute), [second](dates.md#second)
 
 ```zil
 now.minute
-# → 40
+# → 4
 ```
 
 See also: [hour](dates.md#hour), [second](dates.md#second)
@@ -171,7 +171,7 @@ See also: [hour](dates.md#hour), [second](dates.md#second)
 
 ```zil
 now.second
-# → 54
+# → 30
 ```
 
 See also: [hour](dates.md#hour), [minute](dates.md#minute)
@@ -195,7 +195,7 @@ See also: [day](dates.md#day), [format](dates.md#format)
 now.format("%B %d, %Y")
 # → "October 06, 2026"
 now.format("%H:%M")
-# → "22:40"
+# → "23:04"
 format("%5.2f%%", 12.345)
 # → "12.35%"
 ```
@@ -210,7 +210,7 @@ See also: [date](dates.md#date), [fixed](math.md#fixed)
 today.with({day: 1})
 # → 2026-10-01
 now.with({hour: 9, minute: 0})
-# → 2026-10-06 09:00:54 -05:00
+# → 2026-10-06 09:00:30 -05:00
 ```
 
 See also: [start_of](dates.md#start_of), [date](dates.md#date)
@@ -372,7 +372,7 @@ See also: [end_of](dates.md#end_of), [with](dates.md#with)
 now.end_of("month")
 # → 2026-10-31 23:59:59 -05:00
 (today.end_of("year") - now).parts
-# → "86 d 2 h 19 min"
+# → "86 d 1 h 55 min"
 ```
 
 See also: [start_of](dates.md#start_of)
@@ -385,7 +385,7 @@ See also: [start_of](dates.md#start_of)
 today.next("friday")
 # → 2026-10-09
 now.next("mon")
-# → 2026-10-12 22:40:54 -05:00
+# → 2026-10-12 23:04:30 -05:00
 ```
 
 See also: [prev](dates.md#prev), [nth_weekday](dates.md#nth_weekday)
@@ -563,7 +563,7 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 # → 2026-12-26 09:30:00 +09:00
 # countdown
 (date("2027-01-01") - now).parts
-# → "86 d 2 h 19 min"
+# → "86 d 1 h 55 min"
 # relative time
 (now - 3 h).relative
 # → "3 hours ago"

@@ -7,7 +7,7 @@ use crate::value::Value;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 pub const MODULE: Module = Module {
-    name: "fortune",
+    name: "oracles",
     about: "fortune cookies, a magic 8-ball, coin flips, excuses",
     #[rustfmt::skip]
     examples: &[

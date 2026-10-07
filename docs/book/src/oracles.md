@@ -1,4 +1,4 @@
-# fortune
+# oracles
 
 fortune cookies, a magic 8-ball, coin flips, excuses
 
@@ -21,10 +21,10 @@ fortune cookies, a magic 8-ball, coin flips, excuses
 
 ```zil
 fortune()
-# → "A wise developer once said: it works on my machine."
+# → "The cache is lying to you."
 ```
 
-See also: [eight_ball](fortune.md#eight_ball)
+See also: [eight_ball](oracles.md#eight_ball)
 
 ### eight_ball
 
@@ -35,7 +35,7 @@ eight_ball("is it Friday?")
 # → "It is decidedly so."
 ```
 
-See also: [yes_or_no](fortune.md#yes_or_no), [fortune](fortune.md#fortune)
+See also: [yes_or_no](oracles.md#yes_or_no), [fortune](oracles.md#fortune)
 
 ### coin
 
@@ -45,7 +45,7 @@ See also: [yes_or_no](fortune.md#yes_or_no), [fortune](fortune.md#fortune)
 coin()
 # → "tails"
 coin(3)
-# → ["tails", "heads", "heads"]
+# → ["heads", "tails", "tails"]
 ```
 
 See also: [rand](random.md#rand)
@@ -56,10 +56,10 @@ See also: [rand](random.md#rand)
 
 ```zil
 yes_or_no()
-# → "yes"
+# → "no"
 ```
 
-See also: [eight_ball](fortune.md#eight_ball)
+See also: [eight_ball](oracles.md#eight_ball)
 
 ### excuse
 
@@ -67,10 +67,10 @@ See also: [eight_ball](fortune.md#eight_ball)
 
 ```zil
 excuse()
-# → "It must be a timezone thing."
+# → "Mercury is in retrograde."
 ```
 
-See also: [fortune](fortune.md#fortune)
+See also: [fortune](oracles.md#fortune)
 
 ## More examples
 
@@ -82,10 +82,10 @@ eight_ball("will it compile?")
 # → "Don't count on it."
 # best of five
 coin(5)
-# → ["heads", "tails", "heads", "heads", "tails"]
+# → ["tails", "heads", "heads", "heads", "heads"]
 # standup
 excuse()
-# → "The intern had root access."
+# → "I was told the requirements would not change."
 # should I ship it?
 yes_or_no()
 # → "yes"

@@ -6,7 +6,7 @@ use crate::lexer::Span;
 use crate::value::Value;
 
 pub const MODULE: Module = Module {
-    name: "roman",
+    name: "numerals",
     about: "Roman numerals, both ways",
     #[rustfmt::skip]
     examples: &[

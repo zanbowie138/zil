@@ -6,7 +6,7 @@ use crate::lexer::Span;
 use crate::value::{Value, num};
 
 pub const MODULE: Module = Module {
-    name: "color",
+    name: "colors",
     about: "colors as \"#rrggbb\": RGB/HSL, mixing, lightening, WCAG contrast",
     #[rustfmt::skip]
     examples: &[

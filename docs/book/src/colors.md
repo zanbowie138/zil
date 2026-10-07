@@ -1,4 +1,4 @@
-# color
+# colors
 
 colors as "#rrggbb": RGB/HSL, mixing, lightening, WCAG contrast
 
@@ -33,7 +33,7 @@ color([255, 0, 128])
 # → "#ff0080"
 ```
 
-See also: [rgb](color.md#rgb), [hsl](color.md#hsl)
+See also: [rgb](colors.md#rgb), [hsl](colors.md#hsl)
 
 ### rgb
 
@@ -46,7 +46,7 @@ rgb(255, 136, 0)
 # → [255, 165, 0]
 ```
 
-See also: [hsl](color.md#hsl), [color](color.md#color)
+See also: [hsl](colors.md#hsl), [color](colors.md#color)
 
 ### hsl
 
@@ -59,7 +59,7 @@ hsl(210, 80, 50)
 # → [180, 100, 25]
 ```
 
-See also: [rgb](color.md#rgb), [color](color.md#color)
+See also: [rgb](colors.md#rgb), [color](colors.md#color)
 
 ### mix
 
@@ -72,7 +72,7 @@ mix("white", "black", 25%)
 # → "#bfbfbf"
 ```
 
-See also: [lighten](color.md#lighten), [darken](color.md#darken)
+See also: [lighten](colors.md#lighten), [darken](colors.md#darken)
 
 ### lighten
 
@@ -83,7 +83,7 @@ lighten("#3478f6", 20%)
 # → "#96b9fa"
 ```
 
-See also: [darken](color.md#darken), [mix](color.md#mix)
+See also: [darken](colors.md#darken), [mix](colors.md#mix)
 
 ### darken
 
@@ -94,7 +94,7 @@ darken("#3478f6", 20%)
 # → "#0847bc"
 ```
 
-See also: [lighten](color.md#lighten), [mix](color.md#mix)
+See also: [lighten](colors.md#lighten), [mix](colors.md#mix)
 
 ### invert
 
@@ -105,7 +105,7 @@ invert("navy")
 # → "#ffff7f"
 ```
 
-See also: [grayscale](color.md#grayscale)
+See also: [grayscale](colors.md#grayscale)
 
 ### grayscale
 
@@ -116,7 +116,7 @@ grayscale("tomato")
 # → "#969696"
 ```
 
-See also: [invert](color.md#invert)
+See also: [invert](colors.md#invert)
 
 ### contrast
 
@@ -129,7 +129,7 @@ contrast("#777", "white")
 # → 4.48
 ```
 
-See also: [swatch](color.md#swatch)
+See also: [swatch](colors.md#swatch)
 
 ### swatch
 
@@ -142,7 +142,7 @@ swatch("tomato")
 # → "\u{1b}[48;2;255;0;0m    \u{1b}[0m #ff0000 \u{1b}[48;2;255;215;0m    \u{1b}[0m #ffd700 \u{1b}[48;2;0;128;128m    \u{1b}[0m #008080"
 ```
 
-See also: [color](color.md#color)
+See also: [color](colors.md#color)
 
 ## More examples
 
