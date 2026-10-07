@@ -100,7 +100,7 @@ impl Fail {
 }
 
 /// Type names a signature may use: what `type()` returns, plus `num` (int, frac or float) and `any`.
-pub const TYPES: &[&str] = &["nil", "bool", "int", "frac", "float", "quantity", "str", "regex", "date", "list", "map", "set", "fn", "num", "any"];
+pub const TYPES: &[&str] = &["nil", "bool", "int", "frac", "float", "quantity", "uncertain", "str", "regex", "date", "list", "map", "set", "fn", "num", "any"];
 
 /// One form of a typed signature, like `round(x: num|quantity, digits?: int)`; a trailing `...` repeats the last parameter.
 pub struct Form {
@@ -282,6 +282,8 @@ pub const DISPATCH: &[&Module] = &[
     &data::lists::MODULE,
     &data::maps::MODULE,
     &data::sets::MODULE,
+    // Before units, which would otherwise claim `qty * uncertain` and fail.
+    &math::uncertainty::MODULE,
     &math::bits::MODULE,
     &time::MODULE,
     &time::zones::MODULE,

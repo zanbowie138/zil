@@ -26,6 +26,9 @@ pub enum Value {
     Frac(Rc<BigRational>, bool),
     Float(f64),
     Qty(f64, Unit),
+    /// `5 ± 0.1 m`: value, uncertainty (≥ 0) and unit, which is empty for a plain number.
+    /// Behind an `Rc` so `Value` stays small: every eval frame holds several.
+    Unc(Rc<(f64, f64, Unit)>),
     Str(Rc<str>),
     Regex(Rc<Regex>),
     Date(Rc<Zoned>),
@@ -63,6 +66,10 @@ impl Value {
         Value::Str(s.into())
     }
 
+    pub fn unc(x: f64, e: f64, u: Unit) -> Value {
+        Value::Unc(Rc::new((x, e, u)))
+    }
+
     pub fn date(z: Zoned) -> Value {
         Value::Date(Rc::new(z))
     }
@@ -90,6 +97,7 @@ impl Value {
             Value::Frac(..) => "frac",
             Value::Float(_) => "float",
             Value::Qty(..) => "quantity",
+            Value::Unc(..) => "uncertain",
             Value::Str(_) => "str",
             Value::Regex(_) => "regex",
             Value::Date(_) => "date",
@@ -113,6 +121,8 @@ impl Value {
                 Some(s) => write!(f, "{s}"),
                 None => write!(f, "{} {u}", fmt_float(*n)),
             },
+            Value::Unc(c) if c.2.0.is_empty() => write!(f, "{} ± {}", fmt_float(c.0), fmt_float(c.1)),
+            Value::Unc(c) => write!(f, "{} ± {} {}", fmt_float(c.0), fmt_float(c.1), c.2),
             Value::Str(s) if top => write!(f, "{s}"),
             Value::Str(s) => write!(f, "{s:?}"),
             Value::Regex(r) => write!(f, "r\"{}\"", r.as_str()),
@@ -180,6 +190,7 @@ impl PartialEq for Value {
             (Int(..) | Big(..) | Frac(..), Int(..) | Big(..) | Frac(..)) => ratio(self) == ratio(other),
             (Int(..) | Big(..) | Frac(..) | Float(_), Int(..) | Big(..) | Frac(..) | Float(_)) => num(self) == num(other),
             (Qty(..), Qty(..)) => compare(self, other) == Some(Ordering::Equal),
+            (Unc(a), Unc(b)) => Value::qty(a.0, a.2.clone()) == Value::qty(b.0, b.2.clone()) && Value::qty(a.1, a.2.clone()) == Value::qty(b.1, b.2.clone()),
             (Str(a), Str(b)) => a == b,
             (Regex(a), Regex(b)) => a.as_str() == b.as_str(),
             (Date(a), Date(b)) => a.timestamp() == b.timestamp(),

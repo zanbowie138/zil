@@ -219,7 +219,7 @@ fn color_on() -> bool {
 /// A value's color by type, as REPL results and help show it.
 fn tint(v: &Value) -> &'static str {
     match v {
-        Value::Int(..) | Value::Big(..) | Value::Frac(..) | Value::Float(_) | Value::Qty(..) => CYAN,
+        Value::Int(..) | Value::Big(..) | Value::Frac(..) | Value::Float(_) | Value::Qty(..) | Value::Unc(..) => CYAN,
         Value::Str(_) | Value::Regex(_) => GREEN,
         Value::Bool(_) | Value::Nil => MAGENTA,
         _ => "",

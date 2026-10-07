@@ -17,7 +17,7 @@ rounding, roots, logs, constants; exact fractions and big ints
 # n%
 20%
 # → 0.2
-# x ± n%
+# x + n%, x - n%
 50 + 10%
 # → 55
 # n% of x
@@ -36,6 +36,7 @@ rounding, roots, logs, constants; exact fractions and big ints
 | [bases](math/bases.md) | hex, binary, octal and any base 2-36; digits of a number |
 | [formatting](math/formatting.md) | format specs in strings, printf, and fixed/sci/percent/commas |
 | [random](math/random.md) | numbers, picks, shuffles, UUIDs |
+| [uncertainty](math/uncertainty.md) | measurements with an error, `5 ± 0.1 m`, propagated through arithmetic and math (first order, independent errors) |
 
 ## Functions
 

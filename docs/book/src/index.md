@@ -65,6 +65,7 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 | [math.bases](math/bases.md) | hex, binary, octal and any base 2-36; digits of a number |
 | [math.formatting](math/formatting.md) | format specs in strings, printf, and fixed/sci/percent/commas |
 | [math.random](math/random.md) | numbers, picks, shuffles, UUIDs |
+| [math.uncertainty](math/uncertainty.md) | measurements with an error, `5 ± 0.1 m`, propagated through arithmetic and math (first order, independent errors) |
 | [units](units.md) | numbers with units, combined and converted; currencies use live rates |
 | [units.constants](units/constants.md) | physical constants (CODATA 2018) as quantities; `h` is still hours, so Planck's constant is `h_planck` |
 | [units.money](units/money.md) | currencies shown as money, pay, interest, loans, splitting bills |

@@ -43,7 +43,7 @@ fn infix_bp(t: &Tok) -> Option<(u8, u8)> {
         Tok::Caret => (18, 19),
         Tok::Amp => (20, 21),
         Tok::Shl | Tok::Shr => (22, 23),
-        Tok::Plus | Tok::Minus => (24, 25),
+        Tok::Plus | Tok::Minus | Tok::PlusMinus => (24, 25),
         Tok::Star | Tok::Slash | Tok::SlashSlash | Tok::Percent | Tok::Of => (26, 27),
         Tok::StarStar => (30, 29),
         _ => return None,
@@ -68,6 +68,7 @@ fn binop(t: &Tok) -> BinOp {
         Tok::In => BinOp::In,
         Tok::Plus => BinOp::Add,
         Tok::Minus => BinOp::Sub,
+        Tok::PlusMinus => BinOp::PlusMinus,
         Tok::Star | Tok::Of => BinOp::Mul,
         Tok::Slash => BinOp::Div,
         Tok::SlashSlash => BinOp::IntDiv,
@@ -710,8 +711,13 @@ fn to_pat(e: &Expr) -> PResult<Pat> {
     }
 }
 
-/// `a op b`, where `x + 20%` means `x * (1 + 20%)` and `x - 20%` means `x * (1 - 20%)`.
+/// `a op b`, where `x + 20%` means `x * (1 + 20%)`, `x - 20%` means `x * (1 - 20%)` and `x ± 20%` means `x ± x * 20%`.
 fn arith(op: BinOp, lhs: Expr, rhs: Expr) -> ExprKind {
+    if op == BinOp::PlusMinus && matches!(rhs.kind, ExprKind::Percent(_)) {
+        let span = rhs.span.clone();
+        let err = Expr { kind: ExprKind::Binary(BinOp::Mul, Box::new(lhs.clone()), Box::new(rhs)), span };
+        return ExprKind::Binary(op, Box::new(lhs), Box::new(err));
+    }
     if matches!(op, BinOp::Add | BinOp::Sub) && matches!(rhs.kind, ExprKind::Percent(_)) {
         let span = rhs.span.clone();
         let one = Expr { kind: ExprKind::Int(1, 10), span: span.clone() };

@@ -1,7 +1,7 @@
 use crate::Error;
 use crate::ast::{BinOp, Expr, ExprKind, FnDef, Pat, Radix, Target, UnOp};
 use crate::lexer::Span;
-use crate::modules::{self, units};
+use crate::modules::{self, math::uncertainty, units};
 use crate::value::{Value, compare, exact, num, ratio};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
@@ -189,12 +189,22 @@ impl Interp {
                 self.depth -= 1;
                 r
             }
-            Value::Builtin(m, name) => {
-                let doc = m.fns.iter().find(|f| f.name == *name).expect("builtins have docs");
-                (m.call)(self, name, &args, span).map_err(|f| f.error(doc, &args, span, arg_spans))
-            }
+            Value::Builtin(m, name) => self.call_builtin(m, name, args, span, arg_spans),
             v => Err(Error::new(format!("cannot call a {}", v.type_name()), span.clone()).note(format!("{} is {}", name.unwrap_or("it"), modules::short(v)))),
         }
+    }
+
+    /// Out of `call_at` so its locals don't grow every recursion level.
+    #[inline(never)]
+    fn call_builtin(&mut self, m: &'static modules::Module, name: &'static str, args: Vec<Value>, span: &Span, arg_spans: &[Span]) -> Result<Value, Error> {
+        let doc = m.fns.iter().find(|f| f.name == name).expect("builtins have docs");
+        let mut call = |args: &[Value]| (m.call)(self, name, args, span);
+        let r = if args.iter().any(|a| matches!(a, Value::Unc(..))) && uncertainty::LIFTED.contains(&name) {
+            uncertainty::propagate(&args, call)
+        } else {
+            call(&args)
+        };
+        r.map_err(|f| f.error(doc, &args, span, arg_spans))
     }
 
     /// `obj.key`: a map's key, else a zero-arg method (`s.upper` is `upper(s)`), else nil for maps.
@@ -373,6 +383,7 @@ impl Interp {
                 (UnOp::Neg, Value::Frac(r, f)) => Value::Frac(Rc::new(-&*r), f),
                 (UnOp::Neg, Value::Float(n)) => Value::Float(-n),
                 (UnOp::Neg, Value::Qty(n, u)) => Value::Qty(-n, u),
+                (UnOp::Neg, Value::Unc(c)) => Value::unc(-c.0, c.1, c.2.clone()),
                 (UnOp::Neg, v) => return Err(err(format!("cannot negate a {}", v.type_name()))),
                 (UnOp::BitNot, Value::Int(n, b)) => Value::Int(!n, b),
                 (UnOp::BitNot, Value::Big(n, b)) => exact(BigRational::from_integer(!&*n), b, false),
@@ -626,6 +637,7 @@ fn verb(op: BinOp) -> &'static str {
     match op {
         BinOp::Add => "add",
         BinOp::Sub => "subtract",
+        BinOp::PlusMinus => "attach an uncertainty to",
         BinOp::Mul => "multiply",
         BinOp::Div | BinOp::IntDiv => "divide",
         BinOp::Rem => "take the remainder of",

@@ -7,6 +7,7 @@ pub mod numtheory;
 pub mod random;
 pub mod stats;
 pub mod trig;
+pub mod uncertainty;
 
 use crate::ast::Radix;
 use crate::interp::Interp;
@@ -36,7 +37,7 @@ pub const MODULE: Module = Module {
     #[rustfmt::skip]
     guide: &[
         ("constants", &[("pi e tau phi inf nan", "")]),
-        ("operators", &[("n%", "20%"), ("x ± n%", "50 + 10%"), ("n% of x", "20% of 50")]),
+        ("operators", &[("n%", "20%"), ("x + n%, x - n%", "50 + 10%"), ("n% of x", "20% of 50")]),
     ],
     fns: FNS,
     #[rustfmt::skip]
@@ -50,7 +51,7 @@ pub const MODULE: Module = Module {
         ("pi", std::f64::consts::PI), ("e", std::f64::consts::E), ("tau", std::f64::consts::TAU),
         ("phi", 1.618033988749895), ("inf", f64::INFINITY), ("nan", f64::NAN),
     ],
-    children: &[stats::MODULE, trig::MODULE, numtheory::MODULE, bits::MODULE, bases::MODULE, formatting::MODULE, random::MODULE],
+    children: &[stats::MODULE, trig::MODULE, numtheory::MODULE, bits::MODULE, bases::MODULE, formatting::MODULE, random::MODULE, uncertainty::MODULE],
     ..Module::EMPTY
 };
 

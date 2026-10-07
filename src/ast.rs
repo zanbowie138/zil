@@ -104,6 +104,8 @@ pub enum UnOp {
 pub enum BinOp {
     Add,
     Sub,
+    /// `x ± e`: x with uncertainty e.
+    PlusMinus,
     Mul,
     Div,
     IntDiv,

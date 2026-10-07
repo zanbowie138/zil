@@ -102,6 +102,10 @@ pub enum Tok {
     Plus,
     #[token("-")]
     Minus,
+    /// `5 ± 0.1`: a value with an uncertainty.
+    #[token("±")]
+    #[token("+-")]
+    PlusMinus,
     #[token("*")]
     Star,
     #[token("**")]

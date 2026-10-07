@@ -20,6 +20,7 @@
   - [bases](math/bases.md)
   - [formatting](math/formatting.md)
   - [random](math/random.md)
+  - [uncertainty](math/uncertainty.md)
 - [units](units.md)
   - [constants](units/constants.md)
   - [money](units/money.md)
