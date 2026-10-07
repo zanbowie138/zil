@@ -21,7 +21,7 @@ pub const MODULE: Module = Module {
         ]),
     ],
     #[rustfmt::skip]
-    guide: &[("coordinates", &[("latitude north and longitude east are positive, in degrees", ""), ("times come back in the date's time zone", "")])],
+    guide: &[("coordinates", &[("latitude north and longitude east are positive, in degrees", ""), ("or name a place: a city or country, or a map with lat and lon", r#"sunset("Oslo", date(2026, 6, 21))"#), ("times come back in the date's time zone", "")])],
     fns: FNS,
     call,
     ..Module::EMPTY
@@ -29,9 +29,9 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("sunrise", "sunrise(lat: num, lon: num, day?: date)", "when the sun rises there on that day (default today), in the day's time zone; nil during polar night or midnight sun", &["sunrise(40.71, -74.01, date(2026, 3, 20))"], &["sunset", "day_length"]),
-    doc("sunset", "sunset(lat: num, lon: num, day?: date)", "when the sun sets there on that day (default today); nil if it doesn't", &["sunset(51.5, -0.13, date(2026, 12, 21))"], &["sunrise", "day_length"]),
-    doc("day_length", "day_length(lat: num, lon: num, day?: date)", "time from sunrise to sunset: 0 h in polar night, 24 h under the midnight sun", &["day_length(0, 0, date(2026, 3, 20)) to h min", "day_length(70, 25, date(2026, 6, 21))"], &["sunrise", "sunset"]),
+    doc("sunrise", "sunrise(lat: num, lon: num, day?: date) / sunrise(place: str|map, day?: date)", "when the sun rises there on that day (default today), in the day's time zone; nil during polar night or midnight sun", &["sunrise(40.71, -74.01, date(2026, 3, 20))", r#"sunrise("Reykjavik").hour"#], &["sunset", "day_length"]),
+    doc("sunset", "sunset(lat: num, lon: num, day?: date) / sunset(place: str|map, day?: date)", "when the sun sets there on that day (default today); nil if it doesn't", &["sunset(51.5, -0.13, date(2026, 12, 21))", r#"sunset("Oslo", date(2026, 6, 21))"#], &["sunrise", "day_length"]),
+    doc("day_length", "day_length(lat: num, lon: num, day?: date) / day_length(place: str|map, day?: date)", "time from sunrise to sunset: 0 h in polar night, 24 h under the midnight sun", &["day_length(0, 0, date(2026, 3, 20)) to h min", "day_length(70, 25, date(2026, 6, 21))"], &["sunrise", "sunset"]),
     doc("moon_phase", "moon_phase(day?: date)", "the moon's phase and how much of it is lit", &["moon_phase()", "moon_phase(date(2026, 1, 3))"], &["sunrise"]),
 ];
 
@@ -69,10 +69,24 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         Some(_) => Err(Fail::BadArgs),
     };
     Ok(match (name, args) {
-        ("sunrise" | "sunset" | "day_length", [lat, lon, rest @ ..]) if rest.len() <= 1 => {
-            let lat = num(lat).filter(|l| (-90.0..=90.0).contains(l)).ok_or(Fail::Arg(0, "latitude must be a number from -90 to 90".into()))?;
-            let lon = num(lon).filter(|l| (-180.0..=180.0).contains(l)).ok_or(Fail::Arg(1, "longitude must be a number from -180 to 180".into()))?;
-            let z = day(rest.first())?;
+        ("sunrise" | "sunset" | "day_length", [first, rest @ ..]) if rest.len() <= 2 => {
+            let (lat, lon, z) = match (first, rest) {
+                // A named place defaults to today on its own clock.
+                (Str(_) | Map(_), [] | [Date(_)]) => {
+                    let (lat, lon, zone) = crate::modules::geo::place(first).map_err(|m| Fail::Arg(0, m))?;
+                    let z = match (rest.first(), zone) {
+                        (None, Some(zone)) => Zoned::now().with_time_zone(jiff::tz::db().get(zone).map_err(|e| e.to_string())?),
+                        (d, _) => day(d)?,
+                    };
+                    (lat, lon, z)
+                }
+                (lat, [lon, rest @ ..]) if rest.len() <= 1 => {
+                    let lat = num(lat).filter(|l| (-90.0..=90.0).contains(l)).ok_or(Fail::Arg(0, "latitude must be a number from -90 to 90".into()))?;
+                    let lon = num(lon).filter(|l| (-180.0..=180.0).contains(l)).ok_or(Fail::Arg(1, "longitude must be a number from -180 to 180".into()))?;
+                    (lat, lon, day(rest.first())?)
+                }
+                _ => return Err(Fail::BadArgs),
+            };
             let at = |secs: f64| -> Result<Value, Fail> {
                 let ts = Timestamp::from_second(secs.round() as i64).map_err(|e| e.to_string())?;
                 Ok(Value::date(ts.to_zoned(z.time_zone().clone())))
@@ -126,5 +140,8 @@ mod tests {
         );
         assert_eq!(show("moon_phase(date(\"2026-01-03T10:03Z\"))"), "🌕 full moon, 100% lit");
         assert!(show("moon_phase(date(\"2026-01-18T19:52Z\"))").starts_with("🌑 new moon"));
+        // A place without a day means today on that place's clock.
+        assert_eq!(show(r#"sunrise("Tokyo").format("%Z")"#), "JST");
+        assert_eq!(show(r#"round(day_length("Oslo", date(2026, 6, 21)) to h)"#), "19 h");
     }
 }

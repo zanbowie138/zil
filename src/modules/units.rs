@@ -237,7 +237,7 @@ fn topic(topic: &str) -> bool {
         out!("  {:<w$}  3-letter codes (USD EUR GBP ...), live rates fetched when converting", "currency");
         out!("help(\"length\") or help(\"km\") for details");
     } else if topic == "currency" {
-        out!("currency: 3-letter codes like USD, EUR, GBP, JPY. Rates come from frankfurter.dev,");
+        out!("currency: 3-letter codes like USD, EUR, GBP, JPY. Rates by Exchange Rate API (exchangerate-api.com),");
         out!("are fetched only when two currencies meet, after allow_network_access(), and cached for a day.");
         out!("  100 USD to EUR");
     } else if let Some(kind) = DIMS.iter().map(|d| d.0).find(|k| *k == topic) {
@@ -658,7 +658,7 @@ pub fn user_units() -> Vec<String> {
     USER.with(|u| u.borrow().iter().map(|(n, _)| n.clone()).collect())
 }
 
-/// ECB currencies frankfurter.dev has; known without fetching, so `25 USD/h * 40 h` stays offline.
+/// Common currencies, known without fetching, so `25 USD/h * 40 h` stays offline.
 const CURRENCIES: &str = "AUD BGN BRL CAD CHF CNY CZK DKK EUR GBP HKD HUF IDR ILS INR ISK JPY KRW MXN MYR NOK NZD PHP PLN RON SEK SGD THB TRY USD ZAR";
 
 fn currency(code: &str, scale: f64) -> Rc<UnitDef> {
@@ -723,7 +723,7 @@ pub fn lookup(name: &str) -> Result<Rc<UnitDef>, String> {
     if let Some(u) = REGISTRY.with(|r| r.borrow().get(name).cloned()) {
         return Ok(u);
     }
-    // A currency the ECB added after CURRENCIES was written.
+    // Any other code the rate source has (VND, ARS, ...): load the rates to find out.
     let looks_like_currency = name.len() == 3 && name.bytes().all(|b| b.is_ascii_uppercase());
     if looks_like_currency && !RATES_LOADED.with(|l| *l.borrow()) {
         load_rates_once();
@@ -779,12 +779,12 @@ fn fetch_rates() -> Result<String, String> {
     if !crate::modules::sys::network_allowed() {
         return Err("not cached; call allow_network_access() to fetch them".into());
     }
-    ureq::get("https://api.frankfurter.dev/v1/latest").call().and_then(|mut r| r.body_mut().read_to_string()).map_err(|e| e.to_string())
+    ureq::get("https://open.er-api.com/v6/latest/EUR").call().and_then(|mut r| r.body_mut().read_to_string()).map_err(|e| e.to_string())
 }
 
-/// Units per 1 EUR from frankfurter.dev (ECB data), cached on disk for a day.
+/// Units per 1 EUR from open.er-api.com (about 160 currencies, updated daily), cached on disk for a day.
 fn load_rates() -> Result<Vec<(String, f64)>, String> {
-    let cache = crate::cache_dir().map(|d| d.join("rates.json"));
+    let cache = crate::cache_dir().map(|d| d.join("er-rates.json"));
     let age = cache.as_ref().and_then(|p| p.metadata().ok()?.modified().ok()?.elapsed().ok());
     let body = match &cache {
         Some(p) if age.is_some_and(|a| a.as_secs() < 24 * 3600) => std::fs::read_to_string(p).map_err(|e| e.to_string())?,

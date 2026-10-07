@@ -1,0 +1,253 @@
+# GeoNames (CC-BY 4.0, geonames.org): code, code3, name, capital, area km2, population, continent, currency, calling, languages, neighbours, zones (biggest first)
+AD	AND	Andorra	Andorra la Vella	468	77006	EU	EUR	376	ca	ES,FR	Europe/Andorra
+AE	ARE	United Arab Emirates	Abu Dhabi	82880	9630959	AS	AED	971	ar-AE,fa,en,hi,ur	SA,OM	Asia/Dubai
+AF	AFG	Afghanistan	Kabul	647500	37172386	AS	AFN	93	fa-AF,ps,uz-AF,tk	TM,CN,IR,TJ,PK,UZ	Asia/Kabul
+AG	ATG	Antigua and Barbuda	St. John's	443	96286	NA	XCD	1-268	en-AG		America/Antigua
+AI	AIA	Anguilla	The Valley	102	13254	NA	XCD	1-264	en-AI		America/Anguilla
+AL	ALB	Albania	Tirana	28748	2866376	EU	ALL	355	sq,el	MK,GR,ME,RS,XK	Europe/Tirane
+AM	ARM	Armenia	Yerevan	29800	3090500	AS	AMD	374	hy	GE,IR,AZ,TR	Asia/Yerevan
+AO	AGO	Angola	Luanda	1246700	30809762	AF	AOA	244	pt-AO	CD,NA,ZM,CG	Africa/Luanda
+AQ	ATA	Antarctica		14000000	0	AN					
+AR	ARG	Argentina	Buenos Aires	2766890	44494502	SA	ARS	54	es-AR,en,it,de,fr,gn	CL,BO,UY,PY,BR	America/Argentina/Buenos_Aires America/Argentina/Cordoba America/Argentina/Salta America/Argentina/Mendoza America/Argentina/Tucuman America/Argentina/Catamarca America/Argentina/San_Juan America/Argentina/Jujuy America/Argentina/San_Luis America/Argentina/Rio_Gallegos America/Argentina/La_Rioja America/Argentina/Ushuaia
+AS	ASM	American Samoa	Pago Pago	199	55465	OC	USD	1-684	en-AS,sm,to		Pacific/Pago_Pago
+AT	AUT	Austria	Vienna	83858	8847037	EU	EUR	43	de-AT,hr,hu,sl	CH,DE,HU,SK,CZ,IT,SI,LI	Europe/Vienna
+AU	AUS	Australia	Canberra	7686850	24992369	OC	AUD	61	en-AU		Australia/Sydney Australia/Melbourne Australia/Brisbane Australia/Perth Australia/Adelaide Australia/Hobart Australia/Darwin Australia/Broken_Hill
+AW	ABW	Aruba	Oranjestad	193	105845	NA	AWG	297	nl-AW,pap,es,en		America/Aruba
+AX	ALA	Aland Islands	Mariehamn	1580	26711	EU	EUR	358-18	sv-AX		Europe/Mariehamn
+AZ	AZE	Azerbaijan	Baku	86600	10224900	AS	AZN	994	az,ru,hy	GE,IR,AM,TR,RU	Asia/Baku
+BA	BIH	Bosnia and Herzegovina	Sarajevo	51129	3323929	EU	BAM	387	bs,hr-BA,sr-BA	HR,ME,RS	Europe/Sarajevo
+BB	BRB	Barbados	Bridgetown	431	286641	NA	BBD	1-246	en-BB		America/Barbados
+BD	BGD	Bangladesh	Dhaka	144000	161356039	AS	BDT	880	bn-BD,en	MM,IN	Asia/Dhaka
+BE	BEL	Belgium	Brussels	30510	11422068	EU	EUR	32	nl-BE,fr-BE,de-BE	DE,NL,LU,FR	Europe/Brussels
+BF	BFA	Burkina Faso	Ouagadougou	274200	19751535	AF	XOF	226	fr-BF,mos	NE,BJ,GH,CI,TG,ML	Africa/Ouagadougou
+BG	BGR	Bulgaria	Sofia	110910	7000039	EU	BGN	359	bg,tr-BG,rom	MK,GR,RO,TR,RS	Europe/Sofia
+BH	BHR	Bahrain	Manama	665	1569439	AS	BHD	973	ar-BH,en,fa,ur		Asia/Bahrain
+BI	BDI	Burundi	Gitega	27830	11175378	AF	BIF	257	fr-BI,rn	TZ,CD,RW	Africa/Bujumbura
+BJ	BEN	Benin	Porto-Novo	112620	11485048	AF	XOF	229	fr-BJ	NE,TG,BF,NG	Africa/Porto-Novo
+BL	BLM	Saint Barthelemy	Gustavia	21	8450	NA	EUR	590	fr		America/St_Barthelemy
+BM	BMU	Bermuda	Hamilton	53	63968	NA	BMD	1-441	en-BM,pt		Atlantic/Bermuda
+BN	BRN	Brunei	Bandar Seri Begawan	5770	428962	AS	BND	673	ms-BN,en-BN	MY	Asia/Brunei Asia/Pontianak
+BO	BOL	Bolivia	Sucre	1098580	11353142	SA	BOB	591	es-BO,qu,ay	PE,CL,PY,BR,AR	America/La_Paz
+BQ	BES	Bonaire, Saint Eustatius and Saba 		328	18012	NA	USD	599	nl,pap,en		America/Kralendijk
+BR	BRA	Brazil	Brasilia	8511965	209469333	SA	BRL	55	pt-BR,es,en,fr	SR,PE,BO,UY,GY,PY,GF,VE,CO,AR	America/Sao_Paulo America/Fortaleza America/Bahia America/Recife America/Belem America/Maceio America/Manaus America/Cuiaba America/Campo_Grande America/Porto_Velho America/Araguaina America/Santarem America/Rio_Branco America/Boa_Vista America/Eirunepe America/Noronha
+BS	BHS	Bahamas	Nassau	13940	385640	NA	BSD	1-242	en-BS		America/Nassau
+BT	BTN	Bhutan	Thimphu	47000	754394	AS	BTN	975	dz	CN,IN	Asia/Thimphu
+BV	BVT	Bouvet Island		49	0	AN	NOK				
+BW	BWA	Botswana	Gaborone	600370	2254126	AF	BWP	267	en-BW,tn-BW	ZW,ZA,NA	Africa/Gaborone
+BY	BLR	Belarus	Minsk	207600	9485386	EU	BYN	375	be,ru	PL,LT,UA,RU,LV	Europe/Minsk
+BZ	BLZ	Belize	Belmopan	22966	383071	NA	BZD	501	en-BZ,es	GT,MX	America/Belize
+CA	CAN	Canada	Ottawa	9984670	37058856	NA	CAD	1	en-CA,fr-CA,iu	US	America/Toronto America/Vancouver America/Edmonton America/Regina America/Halifax America/Winnipeg America/Moncton America/St_Johns America/Glace_Bay America/Dawson_Creek America/Whitehorse America/Goose_Bay America/Swift_Current America/Iqaluit America/Rankin_Inlet America/Creston America/Cambridge_Bay America/Blanc-Sablon America/Atikokan America/Inuvik America/Fort_Nelson America/Detroit America/Dawson
+CC	CCK	Cocos Islands	West Island	14	628	AS	AUD	61	ms-CC,en		Indian/Cocos
+CD	COD	Democratic Republic of the Congo	Kinshasa	2345410	84068091	AF	CDF	243	fr-CD,ln,ktu,kg,sw,lua	TZ,CF,SS,RW,ZM,BI,UG,CG,AO	Africa/Kinshasa Africa/Lubumbashi
+CF	CAF	Central African Republic	Bangui	622984	4666377	AF	XAF	236	fr-CF,sg,ln,kg	TD,SD,CD,SS,CM,CG	Africa/Bangui
+CG	COG	Republic of the Congo	Brazzaville	342000	5244363	AF	XAF	242	fr-CG,kg,ln-CG	CF,GA,CD,CM,AO	Africa/Brazzaville
+CH	CHE	Switzerland	Bern	41290	8516543	EU	CHF	41	de-CH,fr-CH,it-CH,rm	DE,IT,LI,FR,AT	Europe/Zurich
+CI	CIV	Ivory Coast	Yamoussoukro	322460	25069229	AF	XOF	225	fr-CI	LR,GH,GN,BF,ML	Africa/Abidjan Africa/Accra
+CK	COK	Cook Islands	Avarua	240	21388	OC	NZD	682	en-CK,mi		Pacific/Rarotonga
+CL	CHL	Chile	Santiago	756950	18729160	SA	CLP	56	es-CL	PE,BO,AR	America/Santiago America/Punta_Arenas America/Coyhaique Pacific/Easter
+CM	CMR	Cameroon	Yaounde	475440	25216237	AF	XAF	237	en-CM,fr-CM	TD,CF,GA,GQ,CG,NG	Africa/Douala
+CN	CHN	China	Beijing	9596960	1411778724	AS	CNY	86	zh-CN,yue,wuu,dta,ug,za	LA,BT,TJ,KZ,MN,AF,NP,MM,KG,PK,KP,RU,VN,IN	Asia/Shanghai Asia/Urumqi Asia/Macau
+CO	COL	Colombia	Bogota	1138910	49648685	SA	COP	57	es-CO	EC,PE,PA,BR,VE	America/Bogota
+CR	CRI	Costa Rica	San Jose	51100	4999441	NA	CRC	506	es-CR,en	PA,NI	America/Costa_Rica
+CU	CUB	Cuba	Havana	110860	11338138	NA	CUP	53	es-CU,pap	US	America/Havana America/New_York
+CV	CPV	Cabo Verde	Praia	4033	543767	AF	CVE	238	pt-CV		Atlantic/Cape_Verde
+CW	CUW	Curacao	 Willemstad	444	159849	NA	XCG	599	nl,pap		America/Curacao
+CX	CXR	Christmas Island	Flying Fish Cove	135	1500	OC	AUD	61	en,zh,ms-CX		Indian/Christmas
+CY	CYP	Cyprus	Nicosia	9250	1189265	EU	EUR	357	el-CY,tr-CY,en		Asia/Nicosia Asia/Famagusta Europe/Athens
+CZ	CZE	Czechia	Prague	78866	10625695	EU	CZK	420	cs,sk	PL,DE,SK,AT	Europe/Prague
+DE	DEU	Germany	Berlin	357021	82927922	EU	EUR	49	de	CH,PL,NL,DK,BE,CZ,LU,FR,AT	Europe/Berlin Europe/Busingen
+DJ	DJI	Djibouti	Djibouti	23000	958920	AF	DJF	253	fr-DJ,ar,so-DJ,aa	ER,ET,SO	Africa/Djibouti
+DK	DNK	Denmark	Copenhagen	43094	5797446	EU	DKK	45	da-DK,en,fo,de-DK	DE	Europe/Copenhagen
+DM	DMA	Dominica	Roseau	754	71625	NA	XCD	1-767	en-DM		America/Dominica
+DO	DOM	Dominican Republic	Santo Domingo	48730	10627165	NA	DOP	1-809 and 1-829	es-DO	HT	America/Santo_Domingo
+DZ	DZA	Algeria	Algiers	2381740	42228429	AF	DZD	213	ar-DZ	NE,EH,LY,MR,TN,MA,ML	Africa/Algiers
+EC	ECU	Ecuador	Quito	283560	17084357	SA	USD	593	es-EC	PE,CO	America/Guayaquil Pacific/Galapagos
+EE	EST	Estonia	Tallinn	45226	1320884	EU	EUR	372	et,ru	RU,LV	Europe/Tallinn
+EG	EGY	Egypt	Cairo	1001450	98423595	AF	EGP	20	ar-EG,en,fr	LY,SD,IL,PS	Africa/Cairo
+EH	ESH	Western Sahara	El-Aaiun	266000	273008	AF	MAD	212	ar,mey	DZ,MR,MA	Africa/El_Aaiun Africa/Casablanca
+ER	ERI	Eritrea	Asmara	121320	6209262	AF	ERN	291	aa-ER,ar,tig,kun,ti-ER	ET,SD,DJ	Africa/Asmara
+ES	ESP	Spain	Madrid	504782	46723749	EU	EUR	34	es-ES,ca,gl,eu,oc	AD,PT,GI,FR,MA	Europe/Madrid Atlantic/Canary Africa/Ceuta
+ET	ETH	Ethiopia	Addis Ababa	1127127	109224559	AF	ETB	251	am,en-ET,om-ET,ti-ET,so-ET,sid	ER,KE,SD,SS,SO,DJ	Africa/Addis_Ababa
+FI	FIN	Finland	Helsinki	337030	5518050	EU	EUR	358	fi-FI,sv-FI,smn	NO,RU,SE	Europe/Helsinki
+FJ	FJI	Fiji	Suva	18270	883483	OC	FJD	679	en-FJ,fj		Pacific/Fiji
+FK	FLK	Falkland Islands	Stanley	12173	2638	SA	FKP	500	en-FK		Atlantic/Stanley
+FM	FSM	Micronesia	Palikir	702	112640	OC	USD	691	en-FM,chk,pon,yap,kos,uli,woe,nkr,kpg		Pacific/Pohnpei Pacific/Chuuk Pacific/Kosrae
+FO	FRO	Faroe Islands	Torshavn	1399	48497	EU	DKK	298	fo,da-FO		Atlantic/Faroe
+FR	FRA	France	Paris	547030	66987244	EU	EUR	33	fr-FR,frp,br,co,ca,eu,oc	CH,DE,BE,LU,IT,AD,MC,ES	Europe/Paris
+GA	GAB	Gabon	Libreville	267667	2119275	AF	XAF	241	fr-GA	CM,GQ,CG	Africa/Libreville
+GB	GBR	United Kingdom	London	244820	66488991	EU	GBP	44	en-GB,cy-GB,gd	IE	Europe/London Asia/Nicosia
+GD	GRD	Grenada	St. George's	344	111454	NA	XCD	1-473	en-GD		America/Grenada
+GE	GEO	Georgia	Tbilisi	69700	3704500	AS	GEL	995	ka,ru,hy,az	AM,AZ,TR,RU	Asia/Tbilisi Europe/Moscow
+GF	GUF	French Guiana	Cayenne	91000	195506	SA	EUR	594	fr-GF	SR,BR	America/Cayenne
+GG	GGY	Guernsey	St Peter Port	78	65228	EU	GBP	44-1481	en,nrf		Europe/Guernsey
+GH	GHA	Ghana	Accra	239460	29767108	AF	GHS	233	en-GH,ak,ee,tw	CI,TG,BF	Africa/Accra
+GI	GIB	Gibraltar	Gibraltar	6.5	33718	EU	GIP	350	en-GI,es,it,pt	ES	Europe/Gibraltar
+GL	GRL	Greenland	Nuuk	2166086	56025	NA	DKK	299	kl,da-GL,en		America/Nuuk
+GM	GMB	Gambia	Banjul	11300	2280102	AF	GMD	220	en-GM,mnk,wof,wo,ff	SN	Africa/Banjul
+GN	GIN	Guinea	Conakry	245857	12414318	AF	GNF	224	fr-GN	LR,SN,SL,CI,GW,ML	Africa/Conakry
+GP	GLP	Guadeloupe	Basse-Terre	1780	443000	NA	EUR	590	fr-GP		America/Guadeloupe
+GQ	GNQ	Equatorial Guinea	Ciudad de la Paz	28051	1308974	AF	XAF	240	es-GQ,fr,pt	GA,CM	Africa/Malabo
+GR	GRC	Greece	Athens	131940	10727668	EU	EUR	30	el-GR,en,fr	AL,MK,TR,BG	Europe/Athens
+GS	SGS	South Georgia and the South Sandwich Islands	Grytviken	3903	30	AN	GBP		en		Atlantic/South_Georgia
+GT	GTM	Guatemala	Guatemala City	108890	17247807	NA	GTQ	502	es-GT	MX,HN,BZ,SV	America/Guatemala
+GU	GUM	Guam	Hagatna	549	165768	OC	USD	1-671	en-GU,ch-GU		Pacific/Guam
+GW	GNB	Guinea-Bissau	Bissau	36120	1874309	AF	XOF	245	pt-GW,pov	SN,GN	Africa/Bissau
+GY	GUY	Guyana	Georgetown	214970	779004	SA	GYD	592	en-GY	SR,BR,VE	America/Guyana
+HK	HKG	Hong Kong	Hong Kong	1092	7396076	AS	HKD	852	zh-HK,yue,zh,en		Asia/Hong_Kong
+HM	HMD	Heard Island and McDonald Islands		412	0	AN	AUD	 			
+HN	HND	Honduras	Tegucigalpa	112090	9587522	NA	HNL	504	es-HN,cab,miq	GT,NI,SV	America/Tegucigalpa
+HR	HRV	Croatia	Zagreb	56542	3871833	EU	EUR	385	hr-HR,sr	HU,SI,BA,ME,RS	Europe/Zagreb
+HT	HTI	Haiti	Port-au-Prince	27750	11123176	NA	HTG	509	ht,fr-HT	DO	America/Port-au-Prince
+HU	HUN	Hungary	Budapest	93030	9768785	EU	HUF	36	hu-HU	SK,SI,RO,UA,HR,AT,RS	Europe/Budapest
+ID	IDN	Indonesia	Jakarta	1919440	267663435	AS	IDR	62	id,en,nl,jv	PG,TL,MY	Asia/Jakarta Asia/Makassar Asia/Jayapura Asia/Pontianak Asia/Ho_Chi_Minh
+IE	IRL	Ireland	Dublin	70280	4853506	EU	EUR	353	en-IE,ga-IE	GB	Europe/Dublin
+IL	ISR	Israel	Jerusalem	20770	8883800	AS	ILS	972	he,ar-IL,en-IL,	SY,JO,LB,EG,PS	Asia/Jerusalem
+IM	IMN	Isle of Man	Douglas	572	84077	EU	GBP	44-1624	en,gv		Europe/Isle_of_Man
+IN	IND	India	New Delhi	3287590	1352617328	AS	INR	91	en-IN,hi,bn,te,mr,ta,ur,gu,kn,ml,or,pa,as,bh,sat,ks,ne,sd,kok,doi,mni,sit,sa,fr,lus,inc	CN,NP,MM,BT,PK,BD	Asia/Kolkata Asia/Karachi
+IO	IOT	British Indian Ocean Territory	Diego Garcia	60	4000	AS	USD	246	en-IO		Indian/Chagos
+IQ	IRQ	Iraq	Baghdad	437072	38433600	AS	IQD	964	ar-IQ,ku,hy	SY,SA,IR,JO,TR,KW	Asia/Baghdad
+IR	IRN	Iran	Tehran	1648000	81800269	AS	IRR	98	fa-IR,ku	TM,AF,IQ,AM,PK,AZ,TR	Asia/Tehran
+IS	ISL	Iceland	Reykjavik	103000	353574	EU	ISK	354	is,en,de,da,sv,no		Atlantic/Reykjavik
+IT	ITA	Italy	Rome	301230	60431283	EU	EUR	39	it-IT,de-IT,fr-IT,sc,ca,co,sl	CH,VA,SI,SM,FR,AT	Europe/Rome
+JE	JEY	Jersey	Saint Helier	116	90812	EU	GBP	44-1534	en,fr,nrf		Europe/Jersey
+JM	JAM	Jamaica	Kingston	10991	2934855	NA	JMD	1-876	en-JM		America/Jamaica
+JO	JOR	Jordan	Amman	92300	9956011	AS	JOD	962	ar-JO,en	SY,SA,IQ,IL,PS	Asia/Amman
+JP	JPN	Japan	Tokyo	377835	126529100	AS	JPY	81	ja		Asia/Tokyo
+KE	KEN	Kenya	Nairobi	582650	51393010	AF	KES	254	en-KE,sw-KE	ET,TZ,SS,SO,UG	Africa/Nairobi
+KG	KGZ	Kyrgyzstan	Bishkek	198500	6315800	AS	KGS	996	ky,uz,ru	CN,TJ,UZ,KZ	Asia/Bishkek
+KH	KHM	Cambodia	Phnom Penh	181040	16249798	AS	KHR	855	km,fr,en	LA,TH,VN	Asia/Phnom_Penh
+KI	KIR	Kiribati	Tarawa	811	115847	OC	AUD	686	en-KI,gil		Pacific/Tarawa Pacific/Kiritimati
+KM	COM	Comoros	Moroni	2170	832322	AF	KMF	269	ar,fr-KM		Indian/Comoro
+KN	KNA	Saint Kitts and Nevis	Basseterre	261	52441	NA	XCD	1-869	en-KN		America/St_Kitts
+KP	PRK	North Korea	Pyongyang	120540	25549819	AS	KPW	850	ko-KP	CN,KR,RU	Asia/Pyongyang
+KR	KOR	South Korea	Seoul	98480	51635256	AS	KRW	82	ko-KR,en	KP	Asia/Seoul
+XK	XKX	Kosovo	Pristina	10908	1845300	EU	EUR		sq,sr	RS,AL,MK,ME	Europe/Belgrade Europe/Sarajevo
+KW	KWT	Kuwait	Kuwait City	17820	4137309	AS	KWD	965	ar-KW,en	SA,IQ	Asia/Kuwait
+KY	CYM	Cayman Islands	George Town	262	64174	NA	KYD	1-345	en-KY		America/Cayman
+KZ	KAZ	Kazakhstan	Nur-Sultan	2717300	18276499	AS	KZT	7	kk,ru	TM,CN,KG,UZ,RU	Asia/Almaty Asia/Aqtobe Asia/Qostanay Asia/Qyzylorda Asia/Atyrau Asia/Oral Asia/Aqtau
+LA	LAO	Laos	Vientiane	236800	7061507	AS	LAK	856	lo,fr,en	CN,MM,KH,TH,VN	Asia/Vientiane
+LB	LBN	Lebanon	Beirut	10400	6848925	AS	LBP	961	ar-LB,fr-LB,en,hy	SY,IL	Asia/Beirut
+LC	LCA	Saint Lucia	Castries	616	181889	NA	XCD	1-758	en-LC		America/St_Lucia
+LI	LIE	Liechtenstein	Vaduz	160	37910	EU	CHF	423	de-LI	CH,AT	Europe/Vaduz
+LK	LKA	Sri Lanka	Colombo	65610	21670000	AS	LKR	94	si,ta,en		Asia/Colombo
+LR	LBR	Liberia	Monrovia	111370	4818977	AF	LRD	231	en-LR	SL,CI,GN	Africa/Monrovia
+LS	LSO	Lesotho	Maseru	30355	2108132	AF	LSL	266	en-LS,st,zu,xh	ZA	Africa/Maseru
+LT	LTU	Lithuania	Vilnius	65200	2789533	EU	EUR	370	lt,ru,pl	PL,BY,RU,LV	Europe/Vilnius
+LU	LUX	Luxembourg	Luxembourg	2586	607728	EU	EUR	352	lb,de-LU,fr-LU	DE,BE,FR	Europe/Luxembourg
+LV	LVA	Latvia	Riga	64589	1926542	EU	EUR	371	lv,ru,lt	LT,EE,BY,RU	Europe/Riga
+LY	LBY	Libya	Tripoli	1759540	6678567	AF	LYD	218	ar-LY,it,en	TD,NE,DZ,SD,TN,EG	Africa/Tripoli
+MA	MAR	Morocco	Rabat	446550	36029138	AF	MAD	212	ar-MA,ber,fr	DZ,EH,ES	Africa/Casablanca Africa/El_Aaiun
+MC	MCO	Monaco	Monaco	1.95	38682	EU	EUR	377	fr-MC,en,it	FR	Europe/Monaco
+MD	MDA	Moldova	Chisinau	33843	3545883	EU	MDL	373	ro,ru,gag,tr	RO,UA	Europe/Chisinau
+ME	MNE	Montenegro	Podgorica	14026	622345	EU	EUR	382	sr,hu,bs,sq,hr,rom	AL,HR,BA,RS,XK	Europe/Podgorica
+MF	MAF	Saint Martin	Marigot	53	37264	NA	EUR	590	fr	SX	America/Marigot
+MG	MDG	Madagascar	Antananarivo	587040	26262368	AF	MGA	261	fr-MG,mg		Indian/Antananarivo
+MH	MHL	Marshall Islands	Majuro	181.3	58413	OC	USD	692	mh,en-MH		Pacific/Majuro Pacific/Kwajalein
+MK	MKD	North Macedonia	Skopje	25333	2082958	EU	MKD	389	mk,sq,tr,rmm,sr	AL,GR,BG,RS,XK	Europe/Skopje
+ML	MLI	Mali	Bamako	1240000	19077690	AF	XOF	223	fr-ML,bm	SN,NE,DZ,CI,GN,MR,BF	Africa/Bamako Africa/Nouakchott Africa/Abidjan
+MM	MMR	Myanmar	Nay Pyi Taw	678500	53708395	AS	MMK	95	my	CN,LA,TH,BD,IN	Asia/Yangon Asia/Kolkata
+MN	MNG	Mongolia	Ulaanbaatar	1565000	3170208	AS	MNT	976	mn,ru	CN,RU	Asia/Ulaanbaatar Asia/Hovd
+MO	MAC	Macao	Macao	254	631636	AS	MOP	853	zh,zh-MO,pt		Asia/Macau
+MP	MNP	Northern Mariana Islands	Saipan	477	56882	OC	USD	1-670	fil,tl,zh,ch-MP,en-MP		Pacific/Saipan
+MQ	MTQ	Martinique	Fort-de-France	1100	432900	NA	EUR	596	fr-MQ		America/Martinique
+MR	MRT	Mauritania	Nouakchott	1030700	4403319	AF	MRU	222	ar-MR,fuc,snk,fr,mey,wo	SN,DZ,EH,ML	Africa/Nouakchott
+MS	MSR	Montserrat	Plymouth	102	9341	NA	XCD	1-664	en-MS		America/Montserrat
+MT	MLT	Malta	Valletta	316	483530	EU	EUR	356	mt,en-MT		Europe/Malta
+MU	MUS	Mauritius	Port Louis	2040	1265303	AF	MUR	230	en-MU,bho,fr		Indian/Mauritius
+MV	MDV	Maldives	Male	300	515696	AS	MVR	960	dv,en		Indian/Maldives
+MW	MWI	Malawi	Lilongwe	118480	17563749	AF	MWK	265	ny,yao,tum,swk	TZ,MZ,ZM	Africa/Blantyre
+MX	MEX	Mexico	Mexico City	1972550	126190788	NA	MXN	52	es-MX	GT,US,BZ	America/Mexico_City America/Monterrey America/Merida America/Tijuana America/Mazatlan America/Hermosillo America/Matamoros America/Chihuahua America/Ciudad_Juarez America/Cancun America/Bahia_Banderas America/Ojinaga
+MY	MYS	Malaysia	Kuala Lumpur	329750	31528585	AS	MYR	60	ms-MY,en,zh,ta,te,ml,pa,th	BN,TH,ID	Asia/Kuala_Lumpur Asia/Kuching
+MZ	MOZ	Mozambique	Maputo	801590	29495962	AF	MZN	258	pt-MZ,vmw	ZW,TZ,SZ,ZA,ZM,MW	Africa/Maputo
+NA	NAM	Namibia	Windhoek	825418	2448255	AF	NAD	264	en-NA,af,de,hz,naq	ZA,BW,ZM,AO	Africa/Windhoek
+NC	NCL	New Caledonia	Noumea	19060	284060	OC	XPF	687	fr-NC		Pacific/Noumea
+NE	NER	Niger	Niamey	1267000	22442948	AF	XOF	227	fr-NE,ha,kr,dje	TD,BJ,DZ,LY,BF,NG,ML	Africa/Niamey
+NF	NFK	Norfolk Island	Kingston	34.6	1828	OC	AUD	672	en-NF		Pacific/Norfolk
+NG	NGA	Nigeria	Abuja	923768	195874740	AF	NGN	234	en-NG,ha,yo,ig,ff	TD,NE,BJ,CM	Africa/Lagos
+NI	NIC	Nicaragua	Managua	129494	6465513	NA	NIO	505	es-NI,en	CR,HN	America/Managua
+NL	NLD	The Netherlands	Amsterdam	41526	17231017	EU	EUR	31	nl-NL,fy-NL	DE,BE	Europe/Amsterdam
+NO	NOR	Norway	Oslo	324220	5314336	EU	NOK	47	no,nb,nn,se,fi	FI,RU,SE	Europe/Oslo
+NP	NPL	Nepal	Kathmandu	140800	28087871	AS	NPR	977	ne,en	CN,IN	Asia/Kathmandu
+NR	NRU	Nauru	Yaren	21	12704	OC	AUD	674	na,en-NR		Pacific/Nauru
+NU	NIU	Niue	Alofi	260	2166	OC	NZD	683	niu,en-NU		Pacific/Niue
+NZ	NZL	New Zealand	Wellington	268680	4885500	OC	NZD	64	en-NZ,mi		Pacific/Auckland Pacific/Chatham
+OM	OMN	Oman	Muscat	212460	4829483	AS	OMR	968	ar-OM,en,bal,ur	SA,YE,AE	Asia/Muscat
+PA	PAN	Panama	Panama City	78200	4176873	NA	PAB	507	es-PA,en	CR,CO	America/Panama
+PE	PER	Peru	Lima	1285220	31989256	SA	PEN	51	es-PE,qu,ay	EC,CL,BO,BR,CO	America/Lima
+PF	PYF	French Polynesia	Papeete	4167	277679	OC	XPF	689	fr-PF,ty		Pacific/Tahiti Pacific/Marquesas Pacific/Gambier
+PG	PNG	Papua New Guinea	Port Moresby	462840	8606316	OC	PGK	675	en-PG,ho,meu,tpi	ID	Pacific/Port_Moresby Pacific/Bougainville
+PH	PHL	Philippines	Manila	300000	106651922	AS	PHP	63	tl,en-PH,fil,ceb,ilo,hil,war,pam,bik,bcl,pag,mrw,tsg,mdh,cbk,krj,sgd,msb,akl,ibg,yka,mta,abx		Asia/Manila
+PK	PAK	Pakistan	Islamabad	803940	212215030	AS	PKR	92	ur-PK,en-PK,pa,sd,ps,brh	CN,AF,IR,IN	Asia/Karachi
+PL	POL	Poland	Warsaw	312685	37978548	EU	PLN	48	pl	DE,LT,SK,CZ,BY,UA,RU	Europe/Warsaw
+PM	SPM	Saint Pierre and Miquelon	Saint-Pierre	242	7012	NA	EUR	508	fr-PM		America/Miquelon
+PN	PCN	Pitcairn	Adamstown	47	46	OC	NZD	870	en-PN		Pacific/Pitcairn
+PR	PRI	Puerto Rico	San Juan	9104	3195153	NA	USD	1-787 and 1-939	en-PR,es-PR		America/Puerto_Rico
+PS	PSE	Palestinian Territory	East Jerusalem	5970	4569087	AS	ILS	970	ar-PS	JO,IL,EG	Asia/Hebron Asia/Gaza Asia/Jerusalem
+PT	PRT	Portugal	Lisbon	92391	10281762	EU	EUR	351	pt-PT,mwl	ES	Europe/Lisbon Atlantic/Madeira Atlantic/Azores
+PW	PLW	Palau	Melekeok	458	17907	OC	USD	680	pau,sov,en-PW,tox,ja,fil,zh		Pacific/Palau
+PY	PRY	Paraguay	Asuncion	406750	6956071	SA	PYG	595	es-PY,gn	BO,BR,AR	America/Asuncion
+QA	QAT	Qatar	Doha	11437	2781677	AS	QAR	974	ar-QA,es	SA	Asia/Qatar
+RE	REU	Reunion	Saint-Denis	2517	776948	AF	EUR	262	fr-RE		Indian/Reunion
+RO	ROU	Romania	Bucharest	237500	19473936	EU	RON	40	ro,hu,rom	MD,HU,UA,BG,RS	Europe/Bucharest
+RS	SRB	Serbia	Belgrade	88361	6982084	EU	RSD	381	sr,hu,bs,rom	AL,HU,MK,RO,HR,BA,BG,ME,XK	Europe/Belgrade
+RU	RUS	Russia	Moscow	17100000	144478050	EU	RUB	7	ru,tt,xal,cau,ady,kv,ce,tyv,cv,udm,tut,mns,bua,myv,mdf,chm,ba,inh,kbd,krc,av,sah,nog	GE,CN,BY,UA,KZ,LV,PL,EE,LT,FI,MN,NO,AZ,KP	Europe/Moscow Asia/Yekaterinburg Europe/Samara Asia/Vladivostok Asia/Krasnoyarsk Asia/Irkutsk Asia/Novokuznetsk Asia/Novosibirsk Europe/Volgograd Europe/Saratov Asia/Barnaul Asia/Omsk Asia/Yakutsk Europe/Kirov Europe/Ulyanovsk Asia/Tomsk Asia/Chita Europe/Kaliningrad Europe/Astrakhan Asia/Sakhalin Asia/Kamchatka Asia/Magadan Asia/Anadyr
+RW	RWA	Rwanda	Kigali	26338	12301939	AF	RWF	250	rw,en-RW,fr-RW,sw	TZ,CD,BI,UG	Africa/Kigali
+SA	SAU	Saudi Arabia	Riyadh	1960582	33699947	AS	SAR	966	ar-SA	QA,OM,IQ,YE,JO,AE,KW	Asia/Riyadh
+SB	SLB	Solomon Islands	Honiara	28450	652858	OC	SBD	677	en-SB,tpi		Pacific/Guadalcanal
+SC	SYC	Seychelles	Victoria	455	96762	AF	SCR	248	en-SC,fr-SC		Indian/Mahe
+SD	SDN	Sudan	Khartoum	1861484	41801533	AF	SDG	249	ar-SD,en,fia	SS,TD,EG,ET,ER,LY,CF	Africa/Khartoum
+SS	SSD	South Sudan	Juba	644329	8260490	AF	SSP	211	en	CD,CF,ET,KE,SD,UG	Africa/Juba
+SE	SWE	Sweden	Stockholm	449964	10183175	EU	SEK	46	sv-SE,se,sma,fi-SE	NO,FI	Europe/Stockholm
+SG	SGP	Singapore	Singapore	692.7	5638676	AS	SGD	65	cmn,en-SG,ms-SG,ta-SG,zh-SG		Asia/Singapore
+SH	SHN	Saint Helena	Jamestown	410	7460	AF	SHP	290	en-SH		Atlantic/St_Helena
+SI	SVN	Slovenia	Ljubljana	20273	2067372	EU	EUR	386	sl,sh	HU,IT,HR,AT	Europe/Ljubljana
+SJ	SJM	Svalbard and Jan Mayen	Longyearbyen	62049	2550	EU	NOK	47	no,ru		Arctic/Longyearbyen
+SK	SVK	Slovakia	Bratislava	48845	5447011	EU	EUR	421	sk,hu	PL,HU,CZ,UA,AT	Europe/Bratislava Europe/Prague
+SL	SLE	Sierra Leone	Freetown	71740	7650154	AF	SLE	232	en-SL,men,tem	LR,GN	Africa/Freetown
+SM	SMR	San Marino	San Marino	61.2	33785	EU	EUR	378	it-SM	IT	Europe/San_Marino
+SN	SEN	Senegal	Dakar	196190	15854360	AF	XOF	221	fr-SN,wo,fuc,mnk	GN,MR,GW,GM,ML	Africa/Dakar
+SO	SOM	Somalia	Mogadishu	637657	15008154	AF	SOS	252	so-SO,ar-SO,it,en-SO	ET,KE,DJ	Africa/Mogadishu Africa/Addis_Ababa
+SR	SUR	Suriname	Paramaribo	163270	575991	SA	SRD	597	nl-SR,en,srn,hns,jv	GY,BR,GF	America/Paramaribo
+ST	STP	Sao Tome and Principe	Sao Tome	1001	197700	AF	STN	239	pt-ST		Africa/Sao_Tome
+SV	SLV	El Salvador	San Salvador	21040	6420744	NA	USD	503	es-SV	GT,HN	America/El_Salvador
+SX	SXM	Sint Maarten	Philipsburg	21	40654	NA	XCG	599	nl,en	MF	America/Lower_Princes
+SY	SYR	Syria	Damascus	185180	16906283	AS	SYP	963	ar-SY,ku,hy,arc,fr,en	IQ,JO,IL,TR,LB	Asia/Damascus
+SZ	SWZ	Eswatini	Mbabane	17363	1136191	AF	SZL	268	en-SZ,ss-SZ	ZA,MZ	Africa/Mbabane
+TC	TCA	Turks and Caicos Islands	Cockburn Town	430	37665	NA	USD	1-649	en-TC		America/Grand_Turk
+TD	TCD	Chad	N'Djamena	1284000	15477751	AF	XAF	235	fr-TD,ar-TD,sre	NE,LY,CF,SD,CM,NG	Africa/Ndjamena
+TF	ATF	French Southern Territories	Port-aux-Francais	7829	140	AN	EUR		fr		Indian/Kerguelen
+TG	TGO	Togo	Lome	56785	7889094	AF	XOF	228	fr-TG,ee,hna,kbp,dag,ha	BJ,GH,BF	Africa/Lome
+TH	THA	Thailand	Bangkok	514000	69428524	AS	THB	66	th,en	LA,MM,KH,MY	Asia/Bangkok
+TJ	TJK	Tajikistan	Dushanbe	143100	9100837	AS	TJS	992	tg,ru	CN,AF,KG,UZ	Asia/Dushanbe
+TK	TKL	Tokelau		10	1466	OC	NZD	690	tkl,en-TK		Pacific/Fakaofo
+TL	TLS	Timor Leste	Dili	15007	1267972	OC	USD	670	tet,pt-TL,id,en	ID	Asia/Dili
+TM	TKM	Turkmenistan	Ashgabat	488100	5850908	AS	TMT	993	tk,ru,uz	AF,IR,UZ,KZ	Asia/Ashgabat
+TN	TUN	Tunisia	Tunis	163610	11565204	AF	TND	216	ar-TN,fr	DZ,LY	Africa/Tunis
+TO	TON	Tonga	Nuku'alofa	748	103197	OC	TOP	676	to,en-TO		Pacific/Tongatapu
+TR	TUR	Turkey	Ankara	780580	82319724	AS	TRY	90	tr-TR,ku,diq,az,av	SY,GE,IQ,IR,GR,AM,AZ,BG	Europe/Istanbul Asia/Baghdad
+TT	TTO	Trinidad and Tobago	Port of Spain	5128	1389858	NA	TTD	1-868	en-TT,hns,fr,es,zh		America/Port_of_Spain
+TV	TUV	Tuvalu	Funafuti	26	11508	OC	AUD	688	tvl,en,sm,gil		Pacific/Funafuti
+TW	TWN	Taiwan	Taipei	35980	23451837	AS	TWD	886	zh-TW,zh,nan,hak		Asia/Taipei
+TZ	TZA	Tanzania	Dodoma	945087	56318348	AF	TZS	255	sw-TZ,en,ar	MZ,KE,CD,RW,ZM,BI,UG,MW	Africa/Dar_es_Salaam
+UA	UKR	Ukraine	Kyiv	603700	40000000	EU	UAH	380	uk,ru-UA,rom,pl,hu	PL,MD,HU,SK,BY,RO,RU	Europe/Kyiv Europe/Simferopol
+UG	UGA	Uganda	Kampala	236040	42723139	AF	UGX	256	en-UG,lg,sw,ar	TZ,KE,SS,CD,RW	Africa/Kampala
+UM	UMI	United States Minor Outlying Islands		0	0	OC	USD	1	en-UM		
+US	USA	United States	Washington	9629091	327167434	NA	USD	1	en-US,es-US,haw,fr	CA,MX,CU	America/New_York America/Chicago America/Los_Angeles America/Denver America/Phoenix America/Detroit America/Indiana/Indianapolis Pacific/Honolulu America/Kentucky/Louisville America/Boise America/Anchorage America/Indiana/Vincennes America/Menominee America/Juneau America/Sitka America/North_Dakota/New_Salem America/Nome America/Indiana/Tell_City America/Indiana/Knox America/North_Dakota/Beulah America/Kentucky/Monticello America/Indiana/Winamac America/Indiana/Petersburg America/Indiana/Vevay America/Metlakatla America/Indiana/Marengo America/North_Dakota/Center
+UY	URY	Uruguay	Montevideo	176220	3449299	SA	UYU	598	es-UY	BR,AR	America/Montevideo
+UZ	UZB	Uzbekistan	Tashkent	447400	32955400	AS	UZS	998	uz,ru,tg	TM,AF,KG,TJ,KZ	Asia/Tashkent Asia/Samarkand Asia/Bishkek
+VA	VAT	Vatican	Vatican City	0.44	921	EU	EUR	379	la,it,fr	IT	Europe/Vatican
+VC	VCT	Saint Vincent and the Grenadines	Kingstown	389	110211	NA	XCD	1-784	en-VC,fr		America/St_Vincent
+VE	VEN	Venezuela	Caracas	912050	28870195	SA	VES	58	es-VE	GY,BR,CO	America/Caracas
+VG	VGB	British Virgin Islands	Road Town	153	29802	NA	USD	1-284	en-VG		America/Tortola
+VI	VIR	U.S. Virgin Islands	Charlotte Amalie	352	106977	NA	USD	1-340	en-VI		America/St_Thomas
+VN	VNM	Vietnam	Hanoi	329560	95540395	AS	VND	84	vi,en,fr,zh,km	CN,LA,KH	Asia/Bangkok Asia/Ho_Chi_Minh Asia/Vientiane Asia/Shanghai
+VU	VUT	Vanuatu	Port Vila	12200	292680	OC	VUV	678	bi,en-VU,fr-VU		Pacific/Efate
+WF	WLF	Wallis and Futuna	Mata Utu	274	16025	OC	XPF	681	wls,fud,fr-WF		Pacific/Wallis
+WS	WSM	Samoa	Apia	2944	196130	OC	WST	685	sm,en-WS		Pacific/Apia
+YE	YEM	Yemen	Sanaa	527970	28498687	AS	YER	967	ar-YE	SA,OM	Asia/Aden
+YT	MYT	Mayotte	Mamoudzou	374	279471	AF	EUR	262	fr-YT		Indian/Mayotte
+ZA	ZAF	South Africa	Pretoria	1219912	57779622	AF	ZAR	27	zu,xh,af,nso,en-ZA,tn,st,ts,ss,ve,nr	ZW,SZ,MZ,BW,NA,LS	Africa/Johannesburg
+ZM	ZMB	Zambia	Lusaka	752614	17351822	AF	ZMW	260	en-ZM,bem,loz,lun,lue,ny,toi	ZW,TZ,MZ,CD,NA,MW,AO	Africa/Lusaka
+ZW	ZWE	Zimbabwe	Harare	390580	16868409	AF	ZWG	263	en-ZW,sn,nr,nd	ZA,MZ,BW,ZM	Africa/Harare
+CS	SCG	Serbia and Montenegro	Belgrade	102350	10829175	EU	RSD	381	cu,hu,sq,sr	AL,HU,MK,RO,HR,BA,BG	
+AN	ANT	Netherlands Antilles	Willemstad	960	300000	NA	ANG	599	nl-AN,en,es	GP	

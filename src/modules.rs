@@ -16,6 +16,7 @@ pub mod data;
 pub mod dev;
 pub mod fs;
 pub mod fun;
+pub mod geo;
 pub mod math;
 pub mod sys;
 pub mod text;
@@ -278,7 +279,7 @@ impl Module {
 
 /// Root modules, in `help()` order.
 pub const TREE: &[Module] =
-    &[core::MODULE, fs::MODULE, sys::MODULE, text::MODULE, data::MODULE, math::MODULE, units::MODULE, time::MODULE, dev::MODULE, fun::MODULE];
+    &[core::MODULE, fs::MODULE, sys::MODULE, text::MODULE, data::MODULE, math::MODULE, units::MODULE, time::MODULE, geo::MODULE, dev::MODULE, fun::MODULE];
 
 /// Modules with hooks, in the order hooks are tried.
 pub const DISPATCH: &[&Module] = &[
@@ -292,6 +293,7 @@ pub const DISPATCH: &[&Module] = &[
     &math::bits::MODULE,
     &time::MODULE,
     &time::zones::MODULE,
+    &geo::MODULE,
     &units::MODULE,
     &core::MODULE,
     &dev::MODULE,

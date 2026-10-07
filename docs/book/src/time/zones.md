@@ -14,7 +14,7 @@ date("2026-12-25 18:30") to UTC
 # to "Zone/Name"
 date("2026-12-25 18:30") to "Asia/Tokyo"
 # → 2026-12-26 09:30:00 +09:00
-# to "City"
+# to "City" or "Country"
 date("2026-12-25 18:30") to "Sao Paulo"
 # → 2026-12-25 21:30:00 -03:00
 ```
@@ -57,7 +57,7 @@ See also: [utc](../time/zones.md#utc)
 
 ```zil
 clock(["Tokyo", "London"])
-# → {Tokyo: 2026-10-08 02:55:47 +09:00, London: 2026-10-07 18:55:47 +01:00}
+# → {Tokyo: 2026-10-08 03:16:37 +09:00, London: 2026-10-07 19:16:37 +01:00}
 clock("Asia/Kolkata").hour >= 0
 # → true
 ```
@@ -77,5 +77,5 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 # → 2026-10-07 23:00:00 +01:00
 # world clock
 clock(["Tokyo", "London", "New York"])
-# → {Tokyo: 2026-10-08 02:55:47 +09:00, London: 2026-10-07 18:55:47 +01:00, New York: 2026-10-07 13:55:47 -04:00}
+# → {Tokyo: 2026-10-08 03:16:37 +09:00, London: 2026-10-07 19:16:37 +01:00, New York: 2026-10-07 14:16:37 -04:00}
 ```

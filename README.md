@@ -35,3 +35,9 @@ The full reference lives in [`docs/book`](docs/book/src/index.md) and is generat
 ```sh
 cargo run -- --docs docs/book/src
 ```
+
+## Data
+
+Country and city data in `src/modules/geo/` comes from [GeoNames](https://www.geonames.org/) under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), trimmed to capitals and cities over 500k people.
+
+Currency rates are [Rates By Exchange Rate API](https://www.exchangerate-api.com).

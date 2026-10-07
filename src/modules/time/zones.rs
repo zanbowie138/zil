@@ -1,4 +1,4 @@
-//! Time zones: the same moment on another clock. Zones are IANA names or city names (`"Tokyo"`, `"new york"`).
+//! Time zones: the same moment on another clock. Zones are IANA names, or city or country names (`"Tokyo"`, `"Seattle"`, `"India"`).
 
 use super::e;
 use crate::ast::Target;
@@ -24,7 +24,7 @@ pub const MODULE: Module = Module {
         ("conversions", &[
             ("to UTC, to local", r#"date("2026-12-25 18:30") to UTC"#),
             ("to \"Zone/Name\"", r#"date("2026-12-25 18:30") to "Asia/Tokyo""#),
-            ("to \"City\"", r#"date("2026-12-25 18:30") to "Sao Paulo""#),
+            ("to \"City\" or \"Country\"", r#"date("2026-12-25 18:30") to "Sao Paulo""#),
         ]),
     ],
     fns: FNS,
@@ -80,12 +80,12 @@ pub fn zone(name: &str) -> Result<TimeZone, String> {
     let city = name.trim().replace(' ', "_");
     let names: Vec<_> = db.available().collect();
     let full = names.iter().map(|n| n.as_str()).find(|n| n.rsplit('/').next().is_some_and(|c| c.eq_ignore_ascii_case(&city)));
-    match full {
+    match full.or_else(|| crate::modules::geo::zone_of(name)) {
         Some(n) => db.get(n).map_err(e),
         None => {
             let cities: Vec<_> = names.iter().filter_map(|n| n.as_str().rsplit_once('/').map(|(_, c)| c.replace('_', " ").to_lowercase())).collect();
             let hint = crate::error::did_you_mean(&name.to_lowercase(), cities.iter().map(|c| c.as_str()));
-            Err(format!("unknown time zone or city {name:?}{hint}"))
+            Err(format!("unknown time zone, city or country {name:?}{hint}"))
         }
     }
 }

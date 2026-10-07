@@ -1,0 +1,371 @@
+//! Places: countries and cities from an embedded GeoNames extract (CC-BY 4.0, geonames.org): about 250
+//! countries and 1300 cities (capitals and everything over 500k people). Time zones, currencies and the
+//! sky look places up here, so `5pm to "Seattle"`, `$100 to "Japan"` and `sunset("Oslo")` work.
+
+use crate::ast::Target;
+use crate::error::did_you_mean;
+use crate::interp::Interp;
+use crate::lexer::Span;
+use crate::modules::units::{self, MONEY};
+use crate::modules::{Call, Claim, Doc, Fail, Module, doc};
+use crate::value::{Table, Value, num};
+use indexmap::IndexMap;
+use std::sync::LazyLock;
+
+pub const MODULE: Module = Module {
+    name: "geo",
+    about: "countries and cities: lookups, distance, bearing, nearest city; place names work as time zones and currencies",
+    #[rustfmt::skip]
+    examples: &[
+        ("geo", &[
+            ("currency of a country", r#"country("Vietnam").currency"#),
+            ("time in any city", r#"date("2026-12-25 18:30") to "Seattle""#),
+            ("flight distance", r#"great_circle("New York", "London") to mi"#),
+            ("which way to Mecca", r#"bearing("London", "Mecca")"#),
+            ("sunset in a city", r#"sunset("Oslo", date(2026, 6, 21))"#),
+            ("euro countries", r#"countries().filter(|c| c.currency == "EUR").len"#),
+            ("biggest cities in Japan", r#"cities().filter(|c| c.country == "Japan").map(|c| c.name).take(3)"#),
+        ]),
+    ],
+    #[rustfmt::skip]
+    guide: &[
+        ("names", &[
+            ("countries by name or ISO code", r#"country("JPN").name"#),
+            ("short names and accents optional", r#"[city("NYC").name, city("Sao Paulo").name]"#),
+            ("the biggest city wins; add \", country\" or \", state\" to pick another", r#"city("Hyderabad, PK").country"#),
+        ]),
+        ("places", &[
+            ("a place is a city or country name (a country means its capital), or a map with lat and lon", r#"great_circle("Paris", {lat: 0, lon: 0})"#),
+        ]),
+        ("currencies", &[("$100 to \"Vietnam\" converts into a place's currency (rates load as for 20 USD to EUR)", "")]),
+        ("data", &[("GeoNames (CC-BY 4.0, geonames.org): capitals and cities over 500k people", "")]),
+    ],
+    fns: FNS,
+    call,
+    convert: Some(convert),
+    ..Module::EMPTY
+};
+
+#[rustfmt::skip]
+const FNS: &[Doc] = &[
+    doc("country", "country(name: str)", "a country by name or ISO code: {name, code, code3, capital, currency, zones, calling, population, area, continent, flag, languages, neighbours}", &[r#"country("Japan")"#, r#"country("UK").currency"#], &["city", "countries"]),
+    doc("city", "city(name: str)", "a city: {name, country, admin, population, lat, lon, zone}; the biggest of that name unless qualified like \"Portland, US\"", &[r#"city("Tokyo")"#, r#"city("Seattle").zone"#], &["country", "cities", "nearest"]),
+    doc("countries", "countries()", "every country as a table", &["countries().len", r#"countries().filter(|c| c.continent == "Oceania").map(|c| c.name).take(3)"#], &["country", "cities"]),
+    doc("cities", "cities()", "every city as a table, biggest first", &["cities()[0].name"], &["city", "countries"]),
+    doc("great_circle", "great_circle(from: str|map, to: str|map)", "great-circle distance between places", &[r#"great_circle("Tokyo", "Paris")"#, r#"great_circle("NYC", "LA") to mi"#], &["bearing", "nearest"]),
+    doc("bearing", "bearing(from: str|map, to: str|map)", "initial compass bearing from one place to another, clockwise from north", &[r#"bearing("NYC", "London")"#], &["great_circle"]),
+    doc("nearest", "nearest(lat: num, lon: num)", "the known city closest to a point", &["nearest(48.9, 2.3).name"], &["city", "great_circle"]),
+];
+
+pub struct Country {
+    pub code: &'static str,
+    code3: &'static str,
+    pub name: &'static str,
+    capital: &'static str,
+    area: f64,
+    population: i64,
+    continent: &'static str,
+    pub currency: &'static str,
+    calling: &'static str,
+    languages: &'static str,
+    neighbours: &'static str,
+    /// Biggest first, the capital's first of all.
+    pub zones: Vec<&'static str>,
+}
+
+pub struct City {
+    pub name: &'static str,
+    ascii: &'static str,
+    pub country: &'static str,
+    admin_code: &'static str,
+    admin: &'static str,
+    population: i64,
+    pub lat: f64,
+    pub lon: f64,
+    pub zone: &'static str,
+}
+
+fn rows(tsv: &'static str) -> impl Iterator<Item = Vec<&'static str>> {
+    tsv.lines().filter(|l| !l.starts_with('#')).map(|l| l.split('\t').collect())
+}
+
+static COUNTRIES: LazyLock<Vec<Country>> = LazyLock::new(|| {
+    rows(include_str!("geo/countries.tsv"))
+        .map(|f| Country {
+            code: f[0],
+            code3: f[1],
+            name: f[2],
+            capital: f[3],
+            area: f[4].parse().unwrap_or(0.0),
+            population: f[5].parse().unwrap_or(0),
+            continent: f[6],
+            currency: f[7],
+            calling: f[8],
+            languages: f[9],
+            neighbours: f[10],
+            zones: f[11].split(' ').filter(|z| !z.is_empty()).collect(),
+        })
+        .collect()
+});
+
+/// Biggest first, so the first match of a name is the one people mean.
+static CITIES: LazyLock<Vec<City>> = LazyLock::new(|| {
+    rows(include_str!("geo/cities.tsv"))
+        .map(|f| City {
+            name: f[0],
+            ascii: f[1],
+            country: f[2],
+            admin_code: f[3],
+            admin: f[4],
+            population: f[5].parse().unwrap_or(0),
+            lat: f[6].parse().unwrap_or(0.0),
+            lon: f[7].parse().unwrap_or(0.0),
+            zone: f[8],
+        })
+        .collect()
+});
+
+#[rustfmt::skip]
+const COUNTRY_ALIASES: &[(&str, &str)] = &[
+    ("america", "US"), ("united states of america", "US"), ("the united states", "US"),
+    ("uk", "GB"), ("britain", "GB"), ("great britain", "GB"), ("england", "GB"), ("scotland", "GB"), ("wales", "GB"), ("northern ireland", "GB"),
+    ("uae", "AE"), ("emirates", "AE"), ("korea", "KR"), ("netherlands", "NL"), ("holland", "NL"), ("czech republic", "CZ"),
+    ("cote d'ivoire", "CI"), ("burma", "MM"), ("turkiye", "TR"), ("vatican city", "VA"), ("drc", "CD"), ("congo", "CD"),
+];
+
+#[rustfmt::skip]
+const CITY_ALIASES: &[(&str, &str)] = &[
+    ("nyc", "New York City"), ("new york", "New York City"), ("la", "Los Angeles"), ("sf", "San Francisco"),
+    ("dc", "Washington, US"), ("washington dc", "Washington, US"), ("washington, dc", "Washington, US"),
+    ("bombay", "Mumbai"), ("calcutta", "Kolkata"), ("madras", "Chennai"), ("saigon", "Ho Chi Minh City"), ("hcmc", "Ho Chi Minh City"),
+    ("kiev", "Kyiv"), ("peking", "Beijing"), ("rio", "Rio de Janeiro"), ("cdmx", "Mexico City"), ("mecca", "Makkah"),
+];
+
+fn alias(aliases: &[(&str, &'static str)], key: &str) -> Option<&'static str> {
+    aliases.iter().find(|a| a.0 == key).map(|a| a.1)
+}
+
+fn key(s: &str) -> String {
+    s.trim().to_lowercase()
+}
+
+pub fn find_country(name: &str) -> Option<&'static Country> {
+    let k = key(name);
+    let code = alias(COUNTRY_ALIASES, &k);
+    COUNTRIES.iter().find(|c| code.map_or(c.code.eq_ignore_ascii_case(&k) || c.code3.eq_ignore_ascii_case(&k) || key(c.name) == k, |code| c.code == code))
+}
+
+/// `"Portland"` or `"Portland, US"`: the qualifier is a country (name or code) or a state/province (name or code).
+pub fn find_city(name: &str) -> Option<&'static City> {
+    let k = key(name);
+    let k = alias(CITY_ALIASES, &k).map_or(k, key);
+    let (base, qual) = match k.rsplit_once(',') {
+        Some((b, q)) => (b.trim(), Some(q.trim())),
+        None => (k.as_str(), None),
+    };
+    let fits = |c: &City| match qual {
+        None => true,
+        Some(q) => [c.admin_code, c.admin].iter().any(|a| key(a) == q) || find_country(q).is_some_and(|k| k.code == c.country),
+    };
+    CITIES.iter().find(|c| (key(c.name) == base || key(c.ascii) == base) && fits(c))
+}
+
+fn country_of(c: &City) -> &'static Country {
+    COUNTRIES.iter().find(|k| k.code == c.country).expect("every city's country is listed")
+}
+
+fn capital(k: &Country) -> Option<&'static City> {
+    CITIES.iter().find(|c| c.country == k.code && c.name == k.capital)
+}
+
+/// A city by name, else a country's capital.
+pub fn find_place(name: &str) -> Option<&'static City> {
+    find_city(name).or_else(|| find_country(name).and_then(capital))
+}
+
+pub fn unknown(name: &str) -> String {
+    let names = COUNTRIES.iter().map(|c| c.name).chain(CITIES.iter().map(|c| c.ascii));
+    let lower: Vec<String> = names.map(key).collect();
+    format!("unknown city or country {name:?}{}", did_you_mean(&key(name), lower.iter().map(String::as_str)))
+}
+
+/// A city's time zone, or a country's capital's (or its biggest zone if the capital isn't listed).
+pub fn zone_of(name: &str) -> Option<&'static str> {
+    find_city(name).map(|c| c.zone).or_else(|| find_country(name).and_then(|k| k.zones.first().copied()))
+}
+
+/// A country's currency, or the currency of a city's country.
+fn currency_of(name: &str) -> Result<&'static str, String> {
+    let k = find_country(name).or_else(|| find_city(name).map(country_of)).ok_or_else(|| unknown(name))?;
+    Some(k.currency).filter(|c| !c.is_empty()).ok_or_else(|| format!("{} has no currency", k.name))
+}
+
+/// `(lat, lon, zone)` of a place argument: a name, or a map with `lat` and `lon` (and no zone).
+pub fn place(v: &Value) -> Result<(f64, f64, Option<&'static str>), String> {
+    match v {
+        Value::Str(s) => find_place(s).map(|c| (c.lat, c.lon, Some(c.zone))).ok_or_else(|| unknown(s)),
+        Value::Map(m) => {
+            let m = m.borrow();
+            let get = |k: &str| m.get(k).and_then(num).ok_or_else(|| format!("a place map needs numeric `lat` and `lon`, missing `{k}`"));
+            Ok((get("lat")?, get("lon")?, None))
+        }
+        v => Err(format!("a place is a name or a map with lat and lon, got {}", v.type_name())),
+    }
+}
+
+const RADIUS_KM: f64 = 6371.0088;
+
+// ponytail: spherical earth, off by up to ~0.5% against the ellipsoid; Vincenty if survey accuracy ever matters.
+fn haversine((lat1, lon1): (f64, f64), (lat2, lon2): (f64, f64)) -> f64 {
+    let (p1, p2, dl) = (lat1.to_radians(), lat2.to_radians(), (lon2 - lon1).to_radians());
+    let h = ((p2 - p1) / 2.0).sin().powi(2) + p1.cos() * p2.cos() * (dl / 2.0).sin().powi(2);
+    2.0 * RADIUS_KM * h.sqrt().asin()
+}
+
+fn bearing_deg((lat1, lon1): (f64, f64), (lat2, lon2): (f64, f64)) -> f64 {
+    let (p1, p2, dl) = (lat1.to_radians(), lat2.to_radians(), (lon2 - lon1).to_radians());
+    let y = dl.sin() * p2.cos();
+    let x = p1.cos() * p2.sin() - p1.sin() * p2.cos() * dl.cos();
+    y.atan2(x).to_degrees().rem_euclid(360.0)
+}
+
+fn strs(s: &str, sep: char) -> Value {
+    Value::list(s.split(sep).filter(|x| !x.is_empty()).map(Value::str).collect())
+}
+
+fn flag(code: &str) -> String {
+    code.bytes().filter_map(|b| char::from_u32(0x1F1E6 + u32::from(b.wrapping_sub(b'A')))).collect()
+}
+
+fn continent(code: &str) -> &'static str {
+    match code {
+        "AF" => "Africa",
+        "AN" => "Antarctica",
+        "AS" => "Asia",
+        "EU" => "Europe",
+        "NA" => "North America",
+        "OC" => "Oceania",
+        "SA" => "South America",
+        _ => "",
+    }
+}
+
+fn country_map(k: &Country) -> Result<Value, String> {
+    let s = |x: &str| if x.is_empty() { Value::Nil } else { Value::str(x) };
+    let m = IndexMap::from([
+        ("name".into(), Value::str(k.name)),
+        ("code".into(), Value::str(k.code)),
+        ("code3".into(), Value::str(k.code3)),
+        ("capital".into(), s(k.capital)),
+        ("currency".into(), s(k.currency)),
+        ("zones".into(), Value::list(k.zones.iter().map(|z| Value::str(*z)).collect())),
+        ("calling".into(), if k.calling.is_empty() { Value::Nil } else { Value::str(format!("+{}", k.calling)) }),
+        ("population".into(), Value::int(k.population)),
+        ("area".into(), Value::qty(k.area, units::terms("km^2")?)),
+        ("continent".into(), Value::str(continent(k.continent))),
+        ("flag".into(), Value::str(flag(k.code))),
+        ("languages".into(), strs(k.languages, ',')),
+        ("neighbours".into(), strs(k.neighbours, ',')),
+    ]);
+    Ok(Value::map(m))
+}
+
+fn city_map(c: &City) -> Value {
+    Value::map(IndexMap::from([
+        ("name".into(), Value::str(c.name)),
+        ("country".into(), Value::str(country_of(c).name)),
+        ("admin".into(), Value::str(c.admin)),
+        ("population".into(), Value::int(c.population)),
+        ("lat".into(), Value::Float(c.lat)),
+        ("lon".into(), Value::Float(c.lon)),
+        ("zone".into(), Value::str(c.zone)),
+    ]))
+}
+
+fn table(maps: Vec<Value>) -> Value {
+    Value::table(Table::from_maps(&maps).expect("all maps"))
+}
+
+fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
+    let at = |i: usize| move |m: String| Fail::Arg(i, m);
+    Ok(match (name, args) {
+        ("country", [Value::Str(s)]) => country_map(find_country(s).ok_or_else(|| Fail::Arg(0, unknown(s)))?)?,
+        ("city", [Value::Str(s)]) => city_map(find_city(s).ok_or_else(|| Fail::Arg(0, unknown(s)))?),
+        ("countries", []) => table(COUNTRIES.iter().map(country_map).collect::<Result<_, _>>()?),
+        ("cities", []) => table(CITIES.iter().map(city_map).collect()),
+        ("great_circle" | "bearing", [a, b]) => {
+            let (a, b) = (place(a).map_err(at(0))?, place(b).map_err(at(1))?);
+            let (a, b) = ((a.0, a.1), (b.0, b.1));
+            match name {
+                "great_circle" => Value::qty(haversine(a, b), units::unit("km")?),
+                _ => Value::qty(bearing_deg(a, b), units::unit("deg")?),
+            }
+        }
+        ("nearest", [lat, lon]) => {
+            let p = (num(lat).ok_or(Fail::BadArgs)?, num(lon).ok_or(Fail::BadArgs)?);
+            let c = CITIES.iter().min_by(|a, b| haversine(p, (a.lat, a.lon)).total_cmp(&haversine(p, (b.lat, b.lon)))).expect("cities");
+            city_map(c)
+        }
+        _ => return Err(Fail::BadArgs),
+    })
+}
+
+/// `$100 to "Japan"`: money into a place's currency.
+fn convert(v: &Value, t: &Target) -> Claim {
+    let (Value::Qty(x, u), Target::Str(name)) = (v, t) else {
+        return None;
+    };
+    if u.dim() != MONEY {
+        return None;
+    }
+    Some(currency_of(name).and_then(units::unit).and_then(|c| units::to_unit(*x, u, c)))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::interp::tests::{show, try_eval};
+
+    fn err(src: &str) -> String {
+        let e = try_eval(src).expect_err("an error");
+        format!(
+            "{}
+{}",
+            e.msg,
+            e.help.join(
+                "
+"
+            )
+        )
+    }
+
+    #[test]
+    fn lookups() {
+        assert_eq!(show(r#"[country("JP").name, country("jpn").currency, country("USA").code, country("Britain").code]"#), r#"["Japan", "JPY", "US", "GB"]"#);
+        assert_eq!(show(r#"country("France").flag"#), "🇫🇷");
+        assert_eq!(
+            show(r#"[city("Sao Paulo").name, city("NYC").country, city("Portland").admin, city("Hyderabad, PK").country]"#),
+            r#"["São Paulo", "United States", "Oregon", "Pakistan"]"#
+        );
+        assert!(err(r#"city("Toyko")"#).contains("`tokyo`"));
+        assert_eq!(show(r#"nearest(48.9, 2.3).name"#), "Paris");
+        assert_eq!(show(r#"countries().filter(|c| c.code == "DE").len"#), "1");
+    }
+
+    #[test]
+    fn distances() {
+        // London to New York is about 5570 km.
+        assert_eq!(show(r#"round(great_circle("London", "NYC"))"#), "5570 km");
+        assert_eq!(show(r#"round(bearing({lat: 0, lon: 0}, {lat: 10, lon: 0}))"#), "0 deg");
+        assert_eq!(show(r#"round(bearing({lat: 0, lon: 0}, {lat: 0, lon: 10}))"#), "90 deg");
+        // A country means its capital.
+        assert_eq!(show(r#"great_circle("Japan", "Tokyo")"#), "0 km");
+    }
+
+    #[test]
+    fn integrations() {
+        assert_eq!(show(r#"(date("2026-12-25T12:00Z") to "Seattle").format("%H:%M %Z")"#), "04:00 PST");
+        assert_eq!(show(r#"(date("2026-12-25T12:00Z") to "India").format("%H:%M")"#), "17:30");
+        assert!(err(r#"$1 to "Antarctica""#).contains("has no currency"));
+        assert!(err(r#"$1 to "Narnia""#).contains("unknown city or country"));
+    }
+}

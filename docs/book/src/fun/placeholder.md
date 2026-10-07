@@ -30,7 +30,7 @@ See also: [fortune](../fun.md#fortune)
 
 ```zil
 team_name()
-# → "The Sneaky Goblins"
+# → "The Electric Pirates"
 ```
 
 See also: [person_name](../fun/placeholder.md#person_name)
@@ -41,7 +41,7 @@ See also: [person_name](../fun/placeholder.md#person_name)
 
 ```zil
 person_name()
-# → "Sam Smith"
+# → "Kofi Kim"
 ```
 
 See also: [team_name](../fun/placeholder.md#team_name)
@@ -59,8 +59,8 @@ lorem().split.len
 # → 69
 # name the squad
 team_name()
-# → "The Midnight Yetis"
+# → "The Golden Hedgehogs"
 # a test user
 person_name()
-# → "Liam Okafor"
+# → "Amara Chen"
 ```

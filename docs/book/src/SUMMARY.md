@@ -40,6 +40,7 @@
   - [calendar_math](time/calendar_math.md)
   - [zones](time/zones.md)
   - [sky](time/sky.md)
+- [geo](geo.md)
 - [dev](dev.md)
   - [net](dev/net.md)
   - [binary](dev/binary.md)

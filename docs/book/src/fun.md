@@ -39,7 +39,7 @@ fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; placeholde
 
 ```zil
 fortune()
-# → "Good things come to those who rebase."
+# → "The cache is lying to you."
 ```
 
 See also: [eight_ball](fun.md#eight_ball)
@@ -63,7 +63,7 @@ See also: [yes_or_no](fun.md#yes_or_no), [fortune](fun.md#fortune)
 coin()
 # → "heads"
 coin(3)
-# → ["tails", "heads", "heads"]
+# → ["heads", "tails", "heads"]
 ```
 
 See also: [rand](math/random.md#rand)
@@ -85,7 +85,7 @@ See also: [eight_ball](fun.md#eight_ball)
 
 ```zil
 excuse()
-# → "Cosmic rays flipped a bit."
+# → "That's not a bug, it's undocumented behavior."
 ```
 
 See also: [fortune](fun.md#fortune)
@@ -111,10 +111,10 @@ eight_ball("will it compile?")
 # → "Yes."
 # best of five
 coin(5)
-# → ["heads", "heads", "heads", "heads", "tails"]
+# → ["tails", "heads", "tails", "tails", "heads"]
 # standup
 excuse()
-# → "The tests were flaky."
+# → "Mercury is in retrograde."
 # should I ship it?
 yes_or_no()
 # → "no"

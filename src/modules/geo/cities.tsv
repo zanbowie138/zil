@@ -1,0 +1,1281 @@
+# GeoNames (CC-BY 4.0, geonames.org): name, ascii, country, admin1 code, admin1, population, lat, lon, zone; capitals + pop >= 500k
+Shanghai	Shanghai	CN	23	Shanghai	24874500	31.22222	121.45806	Asia/Shanghai
+Chongqing	Chongqing	CN	33	Chongqing	22000000	29.56026	106.55771	Asia/Shanghai
+Chengdu	Chengdu	CN	32	Sichuan	20937757	30.66667	104.06667	Asia/Shanghai
+Beijing	Beijing	CN	22	Beijing	18960744	39.9075	116.39723	Asia/Shanghai
+Guangzhou	Guangzhou	CN	30	Guangdong	18676605	23.11667	113.25	Asia/Shanghai
+Shenzhen	Shenzhen	CN	30	Guangdong	17494398	22.54554	114.0683	Asia/Shanghai
+Kinshasa	Kinshasa	CD	06	Kinshasa	16000000	-4.32758	15.31357	Africa/Kinshasa
+Istanbul	Istanbul	TR	34	Istanbul	15701602	41.01384	28.94966	Europe/Istanbul
+Lagos	Lagos	NG	05	Lagos	15388000	6.45407	3.39467	Africa/Lagos
+Ho Chi Minh City	Ho Chi Minh City	VN	79	Ho Chi Minh City (HCMC)	14002598	10.82302	106.62965	Asia/Ho_Chi_Minh
+Tianjin	Tianjin	CN	28	Tianjin	13866009	39.14222	117.17667	Asia/Shanghai
+Wuhan	Wuhan	CN	12	Hubei	13739000	30.58333	114.26667	Asia/Shanghai
+Lahore	Lahore	PK	04	Punjab	13004135	31.558	74.35071	Asia/Karachi
+Xi’an	Xi'an	CN	26	Shaanxi	12952907	34.25833	108.92861	Asia/Shanghai
+Mumbai	Mumbai	IN	16	Maharashtra	12691836	19.07283	72.88261	Asia/Kolkata
+São Paulo	Sao Paulo	BR	27	Sao Paulo	12400232	-23.5475	-46.63611	America/Sao_Paulo
+Mexico City	Mexico City	MX	09	Mexico City	12294193	19.42847	-99.12766	America/Mexico_City
+Hangzhou	Hangzhou	CN	02	Zhejiang	11936010	30.29365	120.16142	Asia/Shanghai
+Karachi	Karachi	PK	05	Sindh	11624219	24.8608	67.0104	Asia/Karachi
+Delhi	Delhi	IN	07	Delhi	11034555	28.65195	77.23149	Asia/Kolkata
+Moscow	Moscow	RU	48	Moscow	10381222	55.75204	37.61781	Europe/Moscow
+Dhaka	Dhaka	BD	81	Dhaka Division	10356500	23.7104	90.40744	Asia/Dhaka
+Seoul	Seoul	KR	11	Seoul	10349312	37.566	126.9784	Asia/Seoul
+Harbin	Harbin	CN	08	Heilongjiang	10009854	45.75	126.65	Asia/Shanghai
+Tokyo	Tokyo	JP	40	Tokyo	9733276	35.6895	139.69171	Asia/Tokyo
+Dongguan	Dongguan	CN	30	Guangdong	9644871	23.01797	113.74866	Asia/Shanghai
+Cairo	Cairo	EG	11	Cairo	9606916	30.06263	31.24967	Africa/Cairo
+Hefei	Hefei	CN	01	Anhui	9465881	31.86389	117.28083	Asia/Shanghai
+Johannesburg	Johannesburg	ZA	06	Gauteng	9418183	-26.20227	28.04363	Africa/Johannesburg
+Weifang	Weifang	CN	25	Shandong	9386705	36.71	119.10194	Asia/Shanghai
+Nanjing	Nanjing	CN	04	Jiangsu	9314685	32.06167	118.77778	Asia/Shanghai
+Shenyang	Shenyang	CN	19	Liaoning	9070093	41.79222	123.43278	Asia/Shanghai
+Foshan	Foshan	CN	30	Guangdong	9042509	23.02677	113.13148	Asia/Shanghai
+London	London	GB	ENG	England	8961989	51.50853	-0.12574	Europe/London
+New York City	New York City	US	NY	New York	8804190	40.71427	-74.00597	America/New_York
+Jakarta	Jakarta	ID	04	Jakarta	8540121	-6.21462	106.84513	Asia/Jakarta
+Bengaluru	Bengaluru	IN	19	Karnataka	8495492	12.97194	77.59369	Asia/Kolkata
+Jinan	Jinan	CN	25	Shandong	8352574	36.66833	116.99722	Asia/Shanghai
+Hanoi	Hanoi	VN	01	Hanoi	8053663	21.0245	105.84117	Asia/Bangkok
+Taipei	Taipei	TW	04	Taiwan	7871900	25.05306	121.52639	Asia/Taipei
+Lima	Lima	PE	LMA	Lima Province	7737002	-12.04318	-77.02824	America/Lima
+Bogotá	Bogota	CO	34	Bogota D.C.	7674366	4.60971	-74.08175	America/Bogota
+Dalian	Dalian	CN	19	Liaoning	7450785	38.91222	121.60222	Asia/Shanghai
+Hong Kong	Hong Kong	HK			7396076	22.27832	114.17469	Asia/Hong_Kong
+Baghdad	Baghdad	IQ	07	Baghdad	7216000	33.34058	44.40088	Asia/Baghdad
+Wuzhong	Wuzhong	CN	21	Ningxia	7202654	37.9867	106.201	Asia/Shanghai
+Qingdao	Qingdao	CN	25	Shandong	7172451	36.06488	120.38042	Asia/Shanghai
+Tehran	Tehran	IR	26	Tehran	7153309	35.69439	51.42151	Asia/Tehran
+Yantai	Yantai	CN	25	Shandong	7102100	37.47649	121.44081	Asia/Shanghai
+Hyderabad	Hyderabad	IN	40	Telangana	6993262	17.38405	78.45636	Asia/Kolkata
+Rio de Janeiro	Rio de Janeiro	BR	21	Rio de Janeiro	6747815	-22.90642	-43.18223	America/Sao_Paulo
+Suzhou	Suzhou	CN	04	Jiangsu	6715559	31.30408	120.59538	Asia/Shanghai
+Zhengzhou	Zhengzhou	CN	09	Henan	6650532	34.75778	113.64861	Asia/Shanghai
+Ahmedabad	Ahmedabad	IN	09	Gujarat	6357693	23.02579	72.58727	Asia/Kolkata
+Abidjan	Abidjan	CI	93	Abidjan Autonomous District	6321017	5.35444	-4.00167	Africa/Abidjan
+Nanning	Nanning	CN	16	Guangxi	5977185	22.81667	108.31667	Asia/Shanghai
+Kunming	Kunming	CN	29	Yunnan	5950578	25.03889	102.71833	Asia/Shanghai
+Shijiazhuang	Shijiazhuang	CN	10	Hebei	5758403	38.04139	114.47861	Asia/Shanghai
+Changchun	Changchun	CN	05	Jilin	5691024	43.88	125.32278	Asia/Shanghai
+Pudong	Pudong	CN	23	Shanghai	5681512	31.23995	121.50094	Asia/Shanghai
+Sydney	Sydney	AU	02	New South Wales	5638830	-33.86785	151.20732	Australia/Sydney
+Singapore	Singapore	SG			5638700	1.28967	103.85007	Asia/Singapore
+Melbourne	Melbourne	AU	07	Victoria	5435590	-37.814	144.96332	Australia/Melbourne
+Dar es Salaam	Dar es Salaam	TZ	23	Dar es Salaam Region	5383728	-6.82349	39.26951	Africa/Dar_es_Salaam
+Saint Petersburg	Saint Petersburg	RU	66	St.-Petersburg	5351935	59.93863	30.31413	Europe/Moscow
+Taiyuan	Taiyuan	CN	24	Shanxi	5305061	37.86944	112.56028	Asia/Shanghai
+Alexandria	Alexandria	EG	06	Alexandria	5263542	31.20176	29.91582	Africa/Cairo
+Bangkok	Bangkok	TH	40	Bangkok	5104476	13.75398	100.50144	Asia/Bangkok
+Kano	Kano	NG	29	Kano State	4910000	12.00012	8.51672	Africa/Lagos
+Santiago	Santiago	CL	12	Santiago Metropolitan	4837295	-33.45694	-70.64827	America/Santiago
+Cape Town	Cape Town	ZA	11	Western Cape	4772846	-33.92584	18.42322	Africa/Johannesburg
+Peshawar	Peshawar	PK	03	Khyber Pakhtunkhwa	4758762	34.008	71.57849	Asia/Karachi
+Zibo	Zibo	CN	25	Shandong	4704138	36.79056	118.06333	Asia/Shanghai
+Jeddah	Jeddah	SA	14	Mecca Region	4697000	21.49012	39.18624	Asia/Riyadh
+Chennai	Chennai	IN	25	Tamil Nadu	4681087	13.08784	80.27847	Asia/Kolkata
+Kolkata	Kolkata	IN	28	West Bengal	4631392	22.56263	88.36304	Asia/Kolkata
+Xiamen	Xiamen	CN	07	Fujian	4617251	24.47979	118.08187	Asia/Shanghai
+Surat	Surat	IN	09	Gujarat	4591246	21.19594	72.83023	Asia/Kolkata
+Yangzhou	Yangzhou	CN	04	Jiangsu	4559797	32.39722	119.43583	Asia/Shanghai
+Huai'an	Huai'an	CN	04	Jiangsu	4556230	33.58861	119.01917	Asia/Shanghai
+Guiyang	Guiyang	CN	18	Guizhou	4506134	26.58333	106.71667	Asia/Shanghai
+Yangon	Yangon	MM	17	Yangon	4477638	16.80528	96.15611	Asia/Yangon
+Bao'an	Bao'an	CN	30	Guangdong	4476554	22.55213	113.88288	Asia/Shanghai
+Kabul	Kabul	AF	13	Kabul	4434550	34.52813	69.17233	Asia/Kabul
+Nairobi	Nairobi	KE	05	Nairobi County	4397073	-1.28333	36.81667	Africa/Nairobi
+Wuxi	Wuxi	CN	04	Jiangsu	4396835	31.56887	120.28857	Asia/Shanghai
+Giza	Giza	EG	08	Giza	4367343	30.00944	31.20861	Africa/Cairo
+Lanzhou	Lanzhou	CN	15	Gansu	4359446	36.05701	103.83987	Asia/Shanghai
+Bamako	Bamako	ML	01	Bamako	4227569	12.60915	-7.97522	Africa/Bamako
+Riyadh	Riyadh	SA	10	Riyadh Region	4205961	24.68773	46.72185	Asia/Riyadh
+Fuzhou	Fuzhou	CN	07	Fujian	4094491	26.06139	119.30611	Asia/Shanghai
+Ürümqi	UEruemqi	CN	13	Xinjiang	4054000	43.80096	87.60046	Asia/Urumqi
+New Taipei City	New Taipei City	TW	03	Taipei	4004367	25.06199	121.45703	Asia/Taipei
+Chattogram	Chattogram	BD	84	Chittagong	3920222	22.3384	91.83168	Asia/Dhaka
+Addis Ababa	Addis Ababa	ET	44	Addis Ababa	3860000	9.02497	38.74689	Africa/Addis_Ababa
+Zaozhuang	Zaozhuang	CN	25	Shandong	3855601	34.86472	117.55417	Asia/Shanghai
+Zhongshan	Zhongshan	CN	30	Guangdong	3841873	22.52306	113.37912	Asia/Shanghai
+Shantou	Shantou	CN	30	Guangdong	3838900	23.35489	116.67876	Asia/Shanghai
+Los Angeles	Los Angeles	US	CA	California	3820914	34.05223	-118.24368	America/Los_Angeles
+Faisalabad	Faisalabad	PK	04	Punjab	3800193	31.41554	73.08969	Asia/Karachi
+Dubai	Dubai	AE	03	Dubai	3790000	25.07725	55.30927	Asia/Dubai
+Yokohama	Yokohama	JP	19	Kanagawa	3777491	35.43333	139.65	Asia/Tokyo
+Ningbo	Ningbo	CN	02	Zhejiang	3731203	29.87819	121.54945	Asia/Shanghai
+Casablanca	Casablanca	MA	06	Casablanca-Settat	3665954	33.58831	-7.61138	Africa/Casablanca
+Ibadan	Ibadan	NG	32	Oyo State	3649000	7.37756	3.90591	Africa/Lagos
+Puyang	Puyang	CN	02	Zhejiang	3590000	29.45679	119.88872	Asia/Shanghai
+Ankara	Ankara	TR	68	Ankara	3517182	39.91987	32.85427	Europe/Istanbul
+Shiyan	Shiyan	CN	12	Hubei	3460000	32.6475	110.77806	Asia/Shanghai
+Hohhot	Hohhot	CN	20	Inner Mongolia	3446100	40.81056	111.65222	Asia/Shanghai
+Berlin	Berlin	DE	16	State of Berlin	3426354	52.52437	13.41053	Europe/Berlin
+Tangshan	Tangshan	CN	10	Hebei	3372102	39.64381	118.18319	Asia/Shanghai
+Rawalpindi	Rawalpindi	PK	04	Punjab	3357612	33.59733	73.0479	Asia/Karachi
+Lüliang	Lueliang	CN	24	Shanxi	3346500	37.5192	111.14436	Asia/Shanghai
+Durban	Durban	ZA	02	KwaZulu-Natal	3338026	-29.8579	31.0292	Africa/Johannesburg
+Anshan	Anshan	CN	19	Liaoning	3325372	41.12361	122.99	Asia/Shanghai
+Changzhou	Changzhou	CN	04	Jiangsu	3290918	31.77359	119.95401	Asia/Shanghai
+Busan	Busan	KR	10	Busan	3285147	35.10168	129.03004	Asia/Seoul
+Madrid	Madrid	ES	29	Madrid	3255944	40.4165	-3.70256	Europe/Madrid
+Pyongyang	Pyongyang	KP	12	Pyongyang	3222000	39.03385	125.75432	Asia/Pyongyang
+Pune	Pune	IN	16	Maharashtra	3124458	18.51957	73.85535	Asia/Kolkata
+Datong	Datong	CN	24	Shanxi	3105591	40.09361	113.29139	Asia/Shanghai
+Bursa	Bursa	TR	16	Bursa Province	3101833	40.19559	29.06013	Europe/Istanbul
+Changsha	Changsha	CN	11	Hunan	3093980	28.19874	112.97087	Asia/Shanghai
+Quezon City	Quezon City	PH	NCR	National Capital Region	3084270	14.6488	121.0509	Asia/Manila
+Jaipur	Jaipur	IN	24	Rajasthan	3046163	26.91962	75.78781	Asia/Kolkata
+Huainan	Huainan	CN	01	Anhui	3033528	32.62639	116.99694	Asia/Shanghai
+Surabaya	Surabaya	ID	08	East Java	3018022	-7.24917	112.75083	Asia/Jakarta
+Incheon	Incheon	KR	12	Incheon	3015482	37.45646	126.70515	Asia/Seoul
+Haikou	Haikou	CN	31	Hainan	3001600	20.03421	110.34651	Asia/Shanghai
+Caracas	Caracas	VE	25	Distrito Federal	3000000	10.48801	-66.87919	America/Caracas
+Kyiv	Kyiv	UA	12	Kyiv City	2952301	50.45466	30.5238	Europe/Kyiv
+İzmir	Izmir	TR	35	Izmir Province	2938292	38.41273	27.13838	Europe/Istanbul
+Huizhou	Huizhou	CN	30	Guangdong	2900113	23.11147	114.41523	Asia/Shanghai
+Buenos Aires	Buenos Aires	AR	07	Buenos Aires F.D.	2891082	-34.61315	-58.37723	America/Argentina/Buenos_Aires
+Yinchuan	Yinchuan	CN	21	Ningxia	2859074	38.46806	106.27306	Asia/Shanghai
+Taichung	Taichung	TW	04	Taiwan	2850285	24.1469	120.6839	Asia/Taipei
+Kanpur	Kanpur	IN	36	Uttar Pradesh	2823249	26.46523	80.34975	Asia/Kolkata
+Toronto	Toronto	CA	08	Ontario	2794356	43.70643	-79.39864	America/Toronto
+Quito	Quito	EC	18	Pichincha	2781641	-0.22985	-78.52495	America/Guayaquil
+Brisbane	Brisbane	AU	04	Queensland	2780063	-27.46794	153.02809	Australia/Brisbane
+Luanda	Luanda	AO	20	Luanda	2776168	-8.83682	13.23432	Africa/Luanda
+Baotou	Baotou	CN	20	Inner Mongolia	2761700	40.6516	109.84389	Asia/Shanghai
+Osaka	Osaka	JP	32	Osaka	2753862	34.69379	135.50107	Asia/Tokyo
+Linyi	Linyi	CN	25	Shandong	2743843	35.06306	118.34278	Asia/Shanghai
+Baoding	Baoding	CN	10	Hebei	2739887	38.87288	115.46246	Asia/Shanghai
+Kaohsiung	Kaohsiung	TW	02	Takao	2737660	22.61626	120.31333	Asia/Taipei
+Brooklyn	Brooklyn	US	NY	New York	2736074	40.6501	-73.94958	America/New_York
+Guayaquil	Guayaquil	EC	10	Guayas	2723665	-2.19616	-79.88621	America/Guayaquil
+Belo Horizonte	Belo Horizonte	BR	15	Minas Gerais	2721564	-19.92083	-43.93778	America/Sao_Paulo
+Minhang	Minhang	CN	23	Shanghai	2716600	31.10881	121.37471	Asia/Shanghai
+Bazhong	Bazhong	CN	32	Sichuan	2712894	31.8694	106.74432	Asia/Shanghai
+Salvador	Salvador	BR	05	Bahia	2711840	-12.97563	-38.49096	America/Bahia
+Abuja	Abuja	NG	11	FCT	2690000	9.05785	7.49508	Africa/Lagos
+Gazipur	Gazipur	BD	81	Dhaka Division	2674697	23.99844	90.42234	Asia/Dhaka
+Chicago	Chicago	US	IL	Illinois	2664452	41.85003	-87.65005	America/Chicago
+Wenzhou	Wenzhou	CN	02	Zhejiang	2650000	27.99942	120.66682	Asia/Shanghai
+Bekasi	Bekasi	ID	30	West Java	2648272	-6.2349	106.9896	Asia/Jakarta
+Dakar	Dakar	SN	01	Dakar	2646503	14.6937	-17.44406	Africa/Dakar
+Haiphong	Haiphong	VN	31	Hai Phong	2625200	20.86481	106.68345	Asia/Bangkok
+Yunfu	Yunfu	CN	30	Guangdong	2612800	22.92787	112.03809	Asia/Shanghai
+Mogadishu	Mogadishu	SO	02	Banaadir	2587183	2.03711	45.34375	Africa/Mogadishu
+Kumasi	Kumasi	GH	02	Ashanti	2544530	6.68848	-1.62443	Africa/Accra
+Bandung	Bandung	ID	30	West Java	2528163	-6.92222	107.60694	Asia/Jakarta
+Gujranwala	Gujranwala	PK	04	Punjab	2511118	32.15567	74.18705	Asia/Karachi
+Medan	Medan	ID	26	North Sumatra	2486283	3.58333	98.66667	Asia/Jakarta
+Lucknow	Lucknow	IN	36	Uttar Pradesh	2472011	26.83928	80.92313	Asia/Kolkata
+Xining	Xining	CN	06	Qinghai	2467965	36.62554	101.75739	Asia/Shanghai
+Ouagadougou	Ouagadougou	BF	03	Centre	2415266	12.36566	-1.53388	Africa/Ouagadougou
+Nagpur	Nagpur	IN	16	Maharashtra	2405665	21.14631	79.08491	Asia/Kolkata
+Fortaleza	Fortaleza	BR	06	Ceara	2400000	-3.71722	-38.54306	America/Fortaleza
+Cali	Cali	CO	29	Valle del Cauca Department	2392877	3.43054	-76.5199	America/Bogota
+Perth	Perth	AU	08	Western Australia	2384371	-31.95224	115.8614	Australia/Perth
+Daegu	Daegu	KR	15	Daegu	2365523	35.87028	128.59111	Asia/Seoul
+Algiers	Algiers	DZ	01	Algiers	2364230	36.73225	3.08746	Africa/Algiers
+Nanchang	Nanchang	CN	03	Jiangxi	2357839	28.68396	115.85306	Asia/Shanghai
+Baku	Baku	AZ	09	Baki	2351300	40.37767	49.89201	Asia/Baku
+Nagoya	Nagoya	JP	01	Aichi	2332176	35.18147	136.90641	Asia/Tokyo
+Rome	Rome	IT	07	Lazio	2318895	41.89193	12.51133	Europe/Rome
+Queens	Queens	US	NY	New York	2316841	40.68149	-73.83652	America/New_York
+Houston	Houston	US	TX	Texas	2314157	29.76328	-95.36327	America/Chicago
+Mashhad	Mashhad	IR	42	Razavi Khorasan	2307177	36.29807	59.60567	Asia/Tehran
+Shaoxing	Shaoxing	CN	02	Zhejiang	2300000	30.00237	120.57864	Asia/Shanghai
+Nantong	Nantong	CN	04	Jiangsu	2273326	32.03028	120.87472	Asia/Shanghai
+Baoshan	Baoshan	CN	23	Shanghai	2265900	31.40845	121.48956	Asia/Shanghai
+Gaziantep	Gaziantep	TR	83	Gaziantep	2222415	37.05944	37.3825	Europe/Istanbul
+Lubumbashi	Lubumbashi	CD	14	Haut-Katanga	2221925	-11.66089	27.47938	Africa/Lubumbashi
+Manaus	Manaus	BR	04	Amazonas	2219580	-3.10194	-60.025	America/Manaus
+Lusaka	Lusaka	ZM	09	Lusaka Province	2212301	-15.40669	28.28713	Africa/Lusaka
+Brasília	Brasilia	BR	07	Federal District	2207718	-15.77972	-47.92972	America/Sao_Paulo
+Zhuhai	Zhuhai	CN	30	Guangdong	2207090	22.27694	113.56778	Asia/Shanghai
+Santo Domingo	Santo Domingo	DO	34	Nacional	2201941	18.47186	-69.89232	America/Santo_Domingo
+Lomé	Lome	TG	24	Maritime	2188376	6.12874	1.22154	Africa/Lome
+Multan	Multan	PK	04	Punjab	2169915	30.19679	71.47824	Asia/Karachi
+Havana	Havana	CU	02	Havana	2163824	23.13302	-82.38304	America/Havana
+Depok	Depok	ID	30	West Java	2163635	-6.4	106.81861	Asia/Jakarta
+Ordos	Ordos	CN	20	Inner Mongolia	2153638	39.6086	109.78157	Asia/Shanghai
+Paris	Paris	FR	11	Ile-de-France	2138551	48.85341	2.3488	Europe/Paris
+Coimbatore	Coimbatore	IN	25	Tamil Nadu	2136916	11.00555	76.96612	Asia/Kolkata
+Qingyang	Qingyang	CN	15	Gansu	2125400	35.70976	107.64455	Asia/Shanghai
+Port Harcourt	Port Harcourt	NG	50	Rivers State	2120000	4.77742	7.0134	Africa/Lagos
+Pretoria	Pretoria	ZA	06	Gauteng	2112693	-25.74486	28.18783	Africa/Johannesburg
+Córdoba	Cordoba	AR	05	Cordoba	2106734	-31.40648	-64.18853	America/Argentina/Cordoba
+Mbuji-Mayi	Mbuji-Mayi	CD	04	East Kasai	2101332	-6.13603	23.58979	Africa/Lubumbashi
+Aleppo	Aleppo	SY	09	Aleppo	2098210	36.20124	37.16117	Asia/Damascus
+Kunshan	Kunshan	CN	04	Jiangsu	2092496	31.37762	120.95431	Asia/Shanghai
+Zunyi	Zunyi	CN	18	Guizhou	2037775	27.68667	106.90722	Asia/Shanghai
+La Paz	La Paz	BO	04	La Paz Department	2004652	-16.5	-68.15	America/La_Paz
+Lianyungang	Lianyungang	CN	04	Jiangsu	2001009	34.59845	119.21556	Asia/Shanghai
+Medellín	Medellin	CO	02	Antioquia	1999979	6.245	-75.57151	America/Bogota
+Puning	Puning	CN	30	Guangdong	1998619	23.31072	116.16869	Asia/Shanghai
+Indore	Indore	IN	35	Madhya Pradesh	1994397	22.71792	75.8333	Asia/Kolkata
+Brazzaville	Brazzaville	CG	12	Brazzaville	1982000	-4.26613	15.28318	Africa/Brazzaville
+Tashkent	Tashkent	UZ	13	Tashkent	1978028	41.26465	69.21627	Asia/Tashkent
+Ganzhou	Ganzhou	CN	03	Jiangxi	1977253	25.84664	114.9326	Asia/Shanghai
+Almaty	Almaty	KZ	02	Almaty	1977011	43.25249	76.9115	Asia/Almaty
+Khartoum	Khartoum	SD	29	Khartoum	1974647	15.55177	32.53241	Africa/Khartoum
+Hamburg	Hamburg	DE	04	Hamburg	1973896	53.55073	9.99302	Europe/Berlin
+Sapporo	Sapporo	JP	12	Hokkaido	1973832	43.06667	141.35	Asia/Tokyo
+Songjiang	Songjiang	CN	23	Shanghai	1973500	31.03443	121.22326	Asia/Shanghai
+Accra	Accra	GH	01	Greater Accra	1963264	5.55602	-0.1969	Africa/Accra
+Curitiba	Curitiba	BR	18	Parana	1948626	-25.42778	-49.27306	America/Sao_Paulo
+Sanaa	Sanaa	YE	26	Amanat Alasimah	1937451	15.35452	44.20646	Asia/Aden
+Conakry	Conakry	GN	04	Conakry	1928389	9.53795	-13.67729	Africa/Conakry
+Tangerang	Tangerang	ID	33	Banten	1927815	-6.17806	106.63	Asia/Jakarta
+Tijuana	Tijuana	MX	02	Baja California	1922523	32.5027	-117.00371	America/Tijuana
+Hyderabad	Hyderabad	PK	05	Sindh	1921275	25.39689	68.37718	Asia/Karachi
+Beirut	Beirut	LB	04	Beirut	1916100	33.89332	35.50157	Asia/Beirut
+Jieyang	Jieyang	CN	30	Guangdong	1899394	23.5418	116.36581	Asia/Shanghai
+Jilin	Jilin	CN	05	Jilin	1895865	43.84652	126.5608	Asia/Shanghai
+Jiading	Jiading	CN	23	Shanghai	1886100	31.38575	121.24465	Asia/Shanghai
+Bucharest	Bucharest	RO	10	Bucharest	1877155	44.43225	26.10626	Europe/Bucharest
+Camayenne	Camayenne	GN	04	Conakry	1871242	9.535	-13.68778	Africa/Conakry
+Kakamega	Kakamega	KE	20	Kakamega County	1867579	0.28422	34.75229	Africa/Nairobi
+Shangqiu	Shangqiu	CN	09	Henan	1859723	34.4143	115.65613	Asia/Shanghai
+Nanchong	Nanchong	CN	32	Sichuan	1858875	30.79508	106.08473	Asia/Shanghai
+Tainan	Tainan	TW	04	Taiwan	1856642	22.99083	120.21333	Asia/Taipei
+Kaduna	Kaduna	NG	23	Kaduna State	1850000	10.52641	7.43879	Africa/Lagos
+Omdurman	Omdurman	SD	29	Khartoum	1849659	15.64453	32.47773	Africa/Khartoum
+Davao	Davao	PH	11	Davao Region	1848947	7.07306	125.61278	Asia/Manila
+Thāne	Thane	IN	16	Maharashtra	1841488	19.19704	72.96355	Asia/Kolkata
+Iztapalapa	Iztapalapa	MX	09	Mexico City	1835486	19.35529	-99.06224	America/Mexico_City
+Diyarbakır	Diyarbakir	TR	21	Diyarbakir Province	1833684	37.91363	40.21721	Europe/Istanbul
+Santa Cruz de la Sierra	Santa Cruz de la Sierra	BO	08	Santa Cruz Department	1831434	-17.78629	-63.18117	America/La_Paz
+Vadodara	Vadodara	IN	09	Gujarat	1822221	22.29941	73.20812	Asia/Kolkata
+Adana	Adana	TR	81	Adana	1816750	36.98615	35.32531	Europe/Istanbul
+Nanyang	Nanyang	CN	09	Henan	1811812	33.00524	112.54659	Asia/Shanghai
+Abu Dhabi	Abu Dhabi	AE	01	Abu Dhabi	1807000	24.45118	54.39696	Asia/Dubai
+Palembang	Palembang	ID	32	South Sumatra	1801367	-2.91673	104.7458	Asia/Jakarta
+Sharjah	Sharjah	AE	06	Sharjah	1800000	25.3342	55.41221	Asia/Dubai
+Bhopal	Bhopal	IN	35	Madhya Pradesh	1798218	23.25469	77.40289	Asia/Kolkata
+Jiangmen	Jiangmen	CN	30	Guangdong	1795459	22.58333	113.08333	Asia/Shanghai
+Benin City	Benin City	NG	37	Edo State	1782000	6.33815	5.62575	Africa/Lagos
+Jiangyin	Jiangyin	CN	04	Jiangsu	1779515	31.91102	120.26302	Asia/Shanghai
+Fuyang	Fuyang	CN	01	Anhui	1768947	32.9	115.81667	Asia/Shanghai
+Montréal	Montreal	CA	10	Quebec	1762949	45.50884	-73.58781	America/Toronto
+Bayan Nur	Bayan Nur	CN	20	Inner Mongolia	1760000	40.74143	107.38599	Asia/Shanghai
+Chengtangcun	Chengtangcun	CN	25	Shandong	1756300	35.08357	117.19071	Asia/Shanghai
+Maracaibo	Maracaibo	VE	23	Zulia	1752602	10.64232	-71.61089	America/Caracas
+Chaozhou	Chaozhou	CN	30	Guangdong	1750945	23.65396	116.62262	Asia/Shanghai
+Minsk	Minsk	BY	04	Minsk City	1742124	53.90019	27.56653	Europe/Minsk
+Budapest	Budapest	HU	05	Budapest	1741041	47.49835	19.04045	Europe/Budapest
+Qingyuan	Qingyuan	CN	30	Guangdong	1738424	23.7	113.03333	Asia/Shanghai
+Tai’an	Tai'an	CN	25	Shandong	1735425	36.18528	117.12	Asia/Shanghai
+Rasapūdipalem	Rasapudipalem	IN	02	Andhra Pradesh	1728128	17.73308	83.31622	Asia/Kolkata
+Pimpri-Chinchwad	Pimpri-Chinchwad	IN	16	Maharashtra	1727692	18.61867	73.80375	Asia/Kolkata
+Caloocan	Caloocan	PH	NCR	National Capital Region	1712945	14.64953	120.96788	Asia/Manila
+Warsaw	Warsaw	PL	78	Mazovia	1702139	52.22977	21.01178	Europe/Warsaw
+Soweto	Soweto	ZA	06	Gauteng	1695047	-26.26781	27.85849	Africa/Johannesburg
+Semarang	Semarang	ID	07	Central Java	1694740	-6.99306	110.42083	Asia/Jakarta
+Puebla	Puebla	MX	21	Puebla	1692181	19.04778	-98.20723	America/Mexico_City
+Vienna	Vienna	AT	09	Vienna	1691468	48.20849	16.37208	Europe/Vienna
+Barcelona	Barcelona	ES	56	Catalonia	1686208	41.38879	2.15899	Europe/Madrid
+Patna	Patna	IN	34	Bihar	1684297	25.59408	85.13563	Asia/Kolkata
+Mosul	Mosul	IQ	15	Nineveh	1683000	36.335	43.11889	Asia/Baghdad
+Kallakurichi	Kallakurichi	IN	25	Tamil Nadu	1682687	11.73379	78.95925	Asia/Kolkata
+Kampala	Kampala	UG	C	Central Region	1680600	0.31628	32.58219	Africa/Kampala
+Changshu	Changshu	CN	04	Jiangsu	1677050	31.64615	120.74221	Asia/Shanghai
+Rabat	Rabat	MA	04	Rabat-Sale-Kenitra	1655753	34.01325	-6.83255	Africa/Casablanca
+Recife	Recife	BR	30	Pernambuco	1653461	-8.05389	-34.88111	America/Recife
+Phoenix	Phoenix	US	AZ	Arizona	1650070	33.44838	-112.07404	America/Phoenix
+Suzhou	Suzhou	CN	01	Anhui	1647642	33.63611	116.97889	Asia/Shanghai
+Ecatepec de Morelos	Ecatepec de Morelos	MX	15	Mexico	1645352	19.60492	-99.06064	America/Mexico_City
+Lu’an	Lu'an	CN	01	Anhui	1644344	31.73561	116.51688	Asia/Shanghai
+Valencia	Valencia	VE	07	Carabobo	1619470	10.16153	-68.00044	America/Caracas
+Ludhiana	Ludhiana	IN	23	Punjab	1618879	30.91204	75.85379	Asia/Kolkata
+Yancheng	Yancheng	CN	04	Jiangsu	1615717	33.3575	120.1573	Asia/Shanghai
+Novosibirsk	Novosibirsk	RU	53	Novosibirsk Oblast	1612833	55.02259	82.93175	Asia/Novosibirsk
+Erbil	Erbil	IQ	11	Erbil	1612700	36.19117	44.00943	Asia/Baghdad
+Fukuoka	Fukuoka	JP	07	Fukuoka	1612392	33.6	130.41667	Asia/Tokyo
+Taizhou	Taizhou	CN	04	Jiangsu	1607108	32.49069	119.90812	Asia/Shanghai
+Daqing	Daqing	CN	08	Heilongjiang	1604027	46.58333	125	Asia/Shanghai
+Kisangani	Kisangani	CD	30	Tshopo	1602144	0.51528	25.19099	Africa/Lubumbashi
+Manila	Manila	PH	NCR	National Capital Region	1600000	14.6042	120.9822	Asia/Manila
+Wuhu	Wuhu	CN	01	Anhui	1598165	31.35259	118.42947	Asia/Shanghai
+Santiago de Querétaro	Santiago de Queretaro	MX	22	Queretaro	1594212	20.58806	-100.38806	America/Mexico_City
+Dazhou	Dazhou	CN	32	Sichuan	1589435	31.2106	107.46308	Asia/Shanghai
+León de los Aldama	Leon de los Aldama	MX	11	Guanajuato	1579803	21.12183	-101.68253	America/Mexico_City
+Makkah	Makkah	SA	14	Mecca Region	1578722	21.42664	39.82563	Asia/Riyadh
+Philadelphia	Philadelphia	US	PA	Pennsylvania	1573916	39.95238	-75.16362	America/New_York
+Phnom Penh	Phnom Penh	KH	22	Phnom Penh	1573544	11.56245	104.91601	Asia/Phnom_Penh
+Guilin	Guilin	CN	16	Guangxi	1572300	25.28022	110.29639	Asia/Shanghai
+Damascus	Damascus	SY	13	Damascus Governorate	1569394	33.5102	36.29128	Asia/Damascus
+Quetta	Quetta	PK	02	Balochistan	1565546	30.18414	67.00141	Asia/Karachi
+Zhaoqing	Zhaoqing	CN	30	Guangdong	1553109	23.04893	112.46091	Asia/Shanghai
+Onitsha	Onitsha	NG	25	Anambra	1553000	6.14978	6.78569	Africa/Lagos
+Mianyang	Mianyang	CN	32	Sichuan	1550000	31.46784	104.68168	Asia/Shanghai
+Auckland	Auckland	NZ	E7	Auckland	1547200	-36.84853	174.76349	Pacific/Auckland
+Isfahan	Isfahan	IR	28	Isfahan	1547164	32.65246	51.67462	Asia/Tehran
+Wanzhou	Wanzhou	CN	33	Chongqing	1545900	30.76451	108.39586	Asia/Shanghai
+Astana	Astana	KZ	05	Astana	1544142	51.1801	71.44598	Asia/Almaty
+Harare	Harare	ZW	10	Harare	1542813	-17.82772	31.05337	Africa/Harare
+Monrovia	Monrovia	LR	14	Montserrado County	1542549	6.30054	-10.7969	Africa/Monrovia
+Putian	Putian	CN	07	Fujian	1539389	25.43944	119.01028	Asia/Shanghai
+Kawasaki	Kawasaki	JP	19	Kanagawa	1538262	35.52056	139.71722	Asia/Tokyo
+Goiânia	Goiania	BR	29	Goias	1536097	-16.67861	-49.25389	America/Sao_Paulo
+San Antonio	San Antonio	US	TX	Texas	1526656	29.42412	-98.49363	America/Chicago
+Kobe	Kobe	JP	13	Hyogo	1525152	34.6913	135.183	Asia/Tokyo
+Jinzhou	Jinzhou	CN	19	Liaoning	1524362	41.10778	121.14167	Asia/Shanghai
+Stockholm	Stockholm	SE	26	Stockholm	1515017	59.32938	18.06871	Europe/Stockholm
+Ciudad Juárez	Ciudad Juarez	MX	06	Chihuahua	1512450	31.72024	-106.46084	America/Ciudad_Juarez
+Cần Thơ	Can Tho	VN	92	Can Tho City	1507187	10.03711	105.78825	Asia/Ho_Chi_Minh
+Munich	Munich	DE	02	Bavaria	1505005	48.13743	11.57549	Europe/Berlin
+Khulna	Khulna	BD	82	Khulna Division	1500689	22.80979	89.56439	Asia/Dhaka
+Belém	Belem	BR	16	Para	1499641	-1.45583	-48.50444	America/Belem
+Yekaterinburg	Yekaterinburg	RU	71	Sverdlovsk Oblast	1495066	56.85733	60.61529	Asia/Yekaterinburg
+Porto Alegre	Porto Alegre	BR	23	Rio Grande do Sul	1488252	-30.03283	-51.23019	America/Sao_Paulo
+Manhattan	Manhattan	US	NY	New York	1487536	40.78343	-73.96625	America/New_York
+Nashik	Nashik	IN	16	Maharashtra	1486053	19.99727	73.79096	Asia/Kolkata
+Taizhou	Taizhou	CN	02	Zhejiang	1485502	28.66266	121.43312	Asia/Shanghai
+Asunción	Asuncion	PY	22	Asuncion	1482200	-25.28646	-57.647	America/Asuncion
+Yiwu	Yiwu	CN	02	Zhejiang	1481384	29.31506	120.07676	Asia/Shanghai
+Zapopan	Zapopan	MX	14	Jalisco	1476491	20.72111	-103.38742	America/Mexico_City
+Makassar	Makassar	ID	38	South Sulawesi	1474393	-5.14861	119.43194	Asia/Makassar
+Adelaide	Adelaide	AU	05	South Australia	1469163	-34.92866	138.59863	Australia/Adelaide
+Quanzhou	Quanzhou	CN	07	Fujian	1469157	24.91389	118.58583	Asia/Shanghai
+Madurai	Madurai	IN	25	Tamil Nadu	1465625	9.919	78.11953	Asia/Kolkata
+Jinhua	Jinhua	CN	02	Zhejiang	1463990	29.10678	119.64421	Asia/Shanghai
+Kyoto	Kyoto	JP	22	Kyoto	1463723	35.02107	135.75385	Asia/Tokyo
+Cixi	Cixi	CN	02	Zhejiang	1457510	30.1764	121.2457	Asia/Shanghai
+Changde	Changde	CN	11	Hunan	1457419	29.03205	111.69844	Asia/Shanghai
+Kuala Lumpur	Kuala Lumpur	MY	14	Kuala Lumpur	1453975	3.1412	101.68653	Asia/Kuala_Lumpur
+Kayseri	Kayseri	TR	38	Kayseri	1452458	38.73222	35.48528	Europe/Istanbul
+Kaifeng	Kaifeng	CN	09	Henan	1451741	34.7986	114.30742	Asia/Shanghai
+Karaj	Karaj	IR	44	Alborz Province	1448075	35.83266	50.99155	Asia/Tehran
+Kathmandu	Kathmandu	NP	3	Bagmati Province	1442271	27.70169	85.3206	Asia/Kathmandu
+Daejeon	Daejeon	KR	19	Daejeon	1441203	36.34913	127.38493	Asia/Seoul
+Baoji	Baoji	CN	26	Shaanxi	1437802	34.36775	107.23705	Asia/Shanghai
+Suqian	Suqian	CN	04	Jiangsu	1437685	33.94917	118.29583	Asia/Shanghai
+Liuzhou	Liuzhou	CN	16	Guangxi	1436599	24.32405	109.40698	Asia/Shanghai
+Tirunelveli	Tirunelveli	IN	25	Tamil Nadu	1435844	8.72742	77.6838	Asia/Kolkata
+Konya	Konya	TR	71	Konya	1433861	37.87135	32.48464	Europe/Istanbul
+Zhangjiagang	Zhangjiagang	CN	04	Jiangsu	1432044	31.865	120.53889	Asia/Shanghai
+Agra	Agra	IN	36	Uttar Pradesh	1430055	27.18333	78.01667	Asia/Kolkata
+South Tangerang	South Tangerang	ID	33	Banten	1429529	-6.28862	106.71789	Asia/Jakarta
+Tabriz	Tabriz	IR	33	East Azerbaijan	1424641	38.08	46.2919	Asia/Tehran
+Kharkiv	Kharkiv	UA	07	Kharkiv	1421125	49.98177	36.25475	Europe/Kyiv
+Xinyang	Xinyang	CN	09	Henan	1416800	32.12278	114.06556	Asia/Shanghai
+Jinjiang	Jinjiang	CN	07	Fujian	1416151	24.81978	118.57415	Asia/Shanghai
+Faridabad	Faridabad	IN	10	Haryana	1414050	28.41124	77.31316	Asia/Kolkata
+Bozhou	Bozhou	CN	01	Anhui	1409436	33.87722	115.77028	Asia/Shanghai
+Qujing	Qujing	CN	29	Yunnan	1408500	25.48333	103.78333	Asia/Shanghai
+San Diego	San Diego	US	CA	California	1404452	32.71571	-117.16472	America/Los_Angeles
+Gwangju	Gwangju	KR	18	Gwangju	1401235	35.15472	126.91556	Asia/Seoul
+Zhanjiang	Zhanjiang	CN	30	Guangdong	1400709	21.23391	110.38749	Asia/Shanghai
+Fushun	Fushun	CN	19	Liaoning	1400646	41.88669	123.94363	Asia/Shanghai
+Rājkot	Rajkot	IN	09	Gujarat	1390640	22.29161	70.79322	Asia/Kolkata
+Luoyang	Luoyang	CN	09	Henan	1390581	34.67345	112.43684	Asia/Shanghai
+Guadalajara	Guadalajara	MX	14	Jalisco	1385629	20.67738	-103.34749	America/Mexico_City
+The Bronx	The Bronx	US	NY	New York	1385108	40.84985	-73.86641	America/New_York
+Guankou	Guankou	CN	11	Hunan	1380000	28.15861	113.62709	Asia/Shanghai
+Huế	Hue	VN	46	Thua Thien Hue Province	1380000	16.4619	107.59546	Asia/Bangkok
+Milan	Milan	IT	09	Lombardy	1371498	45.46427	9.18951	Europe/Rome
+Najafgarh	Najafgarh	IN	07	Delhi	1365000	28.60922	76.97982	Asia/Kolkata
+Lianjiang	Lianjiang	CN	30	Guangdong	1363470	21.64673	110.28172	Asia/Shanghai
+N'Djamena	N'Djamena	TD	21	N'Djamena	1359526	12.10672	15.0444	Africa/Ndjamena
+Handan	Handan	CN	10	Hebei	1358318	36.60999	114.48764	Asia/Shanghai
+Bannu	Bannu	PK	03	Khyber Pakhtunkhwa	1357890	32.98527	70.60403	Asia/Karachi
+Yichang	Yichang	CN	12	Hubei	1350150	30.71444	111.28472	Asia/Shanghai
+Antananarivo	Antananarivo	MG	11	Analamanga	1349501	-18.91368	47.53613	Indian/Antananarivo
+Heze	Heze	CN	25	Shandong	1346717	35.23929	115.47358	Asia/Shanghai
+Guarulhos	Guarulhos	BR	27	Sao Paulo	1345364	-23.46278	-46.53333	America/Sao_Paulo
+Abobo	Abobo	CI	93	Abidjan Autonomous District	1340083	5.41613	-4.0159	Africa/Abidjan
+Jamshedpur	Jamshedpur	IN	38	Jharkhand	1339438	22.80278	86.18545	Asia/Kolkata
+Douala	Douala	CM	05	Littoral	1338082	4.04827	9.70428	Africa/Douala
+Antalya	Antalya	TR	07	Antalya	1335002	36.90812	30.69556	Europe/Istanbul
+Basrah	Basrah	IQ	02	Basra	1326564	30.50852	47.7804	Asia/Baghdad
+Dallas	Dallas	US	TX	Texas	1326087	32.78306	-96.80667	America/Chicago
+Saitama	Saitama	JP	34	Saitama	1324854	35.90807	139.65657	Asia/Tokyo
+Niamey	Niamey	NE	08	Niamey	1323691	13.51366	2.1098	Africa/Niamey
+Liupanshui	Liupanshui	CN	18	Guizhou	1320825	26.59444	104.83333	Asia/Shanghai
+Taguig	Taguig	PH	NCR	National Capital Region	1308085	14.5243	121.0792	Asia/Manila
+Maoming	Maoming	CN	30	Guangdong	1307802	21.66625	110.91364	Asia/Shanghai
+Calgary	Calgary	CA	01	Alberta	1306784	51.05011	-114.08529	America/Edmonton
+Tripoli	Tripoli	LY	77	Tripoli	1302947	32.88743	13.18733	Africa/Tripoli
+Madinah	Madinah	SA	05	Medina Region	1300000	24.46861	39.61417	Asia/Riyadh
+Yaoundé	Yaounde	CM	11	Centre	1299369	3.86667	11.51667	Africa/Douala
+Batam	Batam	ID	37	Riau	1296960	1.14937	104.02491	Asia/Jakarta
+Qinzhou	Qinzhou	CN	16	Guangxi	1296300	21.98247	108.65061	Asia/Shanghai
+Luohe	Luohe	CN	09	Henan	1294974	33.57424	114.03261	Asia/Shanghai
+Xiangyang	Xiangyang	CN	12	Hubei	1294733	32.0422	112.14479	Asia/Shanghai
+Yangjiang	Yangjiang	CN	30	Guangdong	1292987	21.85563	111.96272	Asia/Shanghai
+Yixing	Yixing	CN	04	Jiangsu	1285785	31.36059	119.82016	Asia/Shanghai
+Pimpri	Pimpri	IN	16	Maharashtra	1284606	18.62292	73.80696	Asia/Kolkata
+Da Nang	Da Nang	VN	48	Da Nang City	1276000	16.06778	108.22083	Asia/Ho_Chi_Minh
+Amman	Amman	JO	16	Amman	1275857	31.95522	35.94503	Asia/Amman
+Budta	Budta	PH	14	Autonomous Region in Muslim Mindanao	1273715	7.20417	124.43972	Asia/Manila
+Belgrade	Belgrade	RS	SE	Central Serbia	1273651	44.80401	20.46513	Europe/Belgrade
+Biên Hòa	Bien Hoa	VN	75	Dong Nai	1272235	10.94469	106.82432	Asia/Ho_Chi_Minh
+Kananga	Kananga	CD	23	Kasai-Central	1271704	-5.89624	22.41659	Africa/Lubumbashi
+Qingpu	Qingpu	CN	23	Shanghai	1271424	31.15394	121.11408	Asia/Shanghai
+Montevideo	Montevideo	UY	10	Montevideo Department	1270737	-34.90328	-56.18816	America/Montevideo
+Xuchang	Xuchang	CN	09	Henan	1265536	34.03189	113.86299	Asia/Shanghai
+Kalyān	Kalyan	IN	16	Maharashtra	1262255	19.2437	73.13554	Asia/Kolkata
+Zigong	Zigong	CN	32	Sichuan	1262064	29.34162	104.77689	Asia/Shanghai
+Nizhniy Novgorod	Nizhniy Novgorod	RU	51	Nizhny Novgorod Oblast	1259013	56.32867	44.00205	Europe/Moscow
+Jepara	Jepara	ID	07	Central Java	1257912	-6.5924	110.671	Asia/Jakarta
+Maputo	Maputo	MZ	11	Maputo City	1254837	-25.96553	32.58322	Africa/Maputo
+Xuzhou	Xuzhou	CN	04	Jiangsu	1253991	34.20442	117.28386	Asia/Shanghai
+Dammam	Dammam	SA	06	Eastern Province	1252523	26.43442	50.10326	Asia/Riyadh
+Neijiang	Neijiang	CN	32	Sichuan	1251095	29.58354	105.06216	Asia/Shanghai
+Shiraz	Shiraz	IR	07	Fars	1249942	29.61031	52.53113	Asia/Tehran
+Heshan	Heshan	CN	11	Hunan	1249807	28.56938	112.34733	Asia/Shanghai
+Dombivali	Dombivali	IN	16	Maharashtra	1247327	19.21667	73.08333	Asia/Kolkata
+Kazan	Kazan	RU	73	Tatarstan Republic	1243500	55.78874	49.12214	Europe/Moscow
+Jining	Jining	CN	25	Shandong	1241012	35.405	116.58139	Asia/Shanghai
+Barquisimeto	Barquisimeto	VE	13	Lara	1240714	10.0647	-69.35703	America/Caracas
+Shubrā al Khaymah	Shubra al Khaymah	EG	12	Qalyubia	1240289	30.12511	31.25053	Africa/Cairo
+Putuo	Putuo	CN	23	Shanghai	1239100	31.251	121.3897	Asia/Shanghai
+Port-au-Prince	Port-au-Prince	HT	11	Ouest	1234742	18.54349	-72.33881	America/Port-au-Prince
+Suwon	Suwon	KR	13	Gyeonggi-do	1234582	37.29111	127.00889	Asia/Seoul
+Liaocheng	Liaocheng	CN	25	Shandong	1229768	36.45064	116.00247	Asia/Shanghai
+Jinzhong	Jinzhong	CN	24	Shanxi	1226617	37.68403	112.75471	Asia/Shanghai
+Callao	Callao	PE	07	Callao	1226200	-12.05162	-77.13452	America/Lima
+Meerut	Meerut	IN	36	Uttar Pradesh	1223184	28.98002	77.70636	Asia/Kolkata
+Virār	Virar	IN	16	Maharashtra	1222390	19.45591	72.81136	Asia/Kolkata
+Nowrangapur	Nowrangapur	IN	21	Odisha	1220946	19.23114	82.54826	Asia/Kolkata
+Karbala	Karbala	IQ	12	Karbala	1218732	32.61603	44.02488	Asia/Baghdad
+Changzhi	Changzhi	CN	24	Shanxi	1214940	36.18389	113.10528	Asia/Shanghai
+Tianshui	Tianshui	CN	15	Gansu	1212791	34.57952	105.74238	Asia/Shanghai
+Sadr City	Sadr City	IQ	07	Baghdad	1211849	33.3889	44.4583	Asia/Baghdad
+Yangpu	Yangpu	CN	23	Shanghai	1210800	31.26193	121.51904	Asia/Shanghai
+Mombasa	Mombasa	KE	37	Mombasa County	1208333	-4.05466	39.66359	Africa/Nairobi
+Mandalay	Mandalay	MM	08	Mandalay Region	1208099	21.97473	96.08359	Asia/Yangon
+Srinagar	Srinagar	IN	12	Jammu and Kashmir	1206419	34.08565	74.80555	Asia/Kolkata
+Barranquilla	Barranquilla	CO	04	Atlantico	1206319	10.96854	-74.78132	America/Bogota
+Chelyabinsk	Chelyabinsk	RU	13	Chelyabinsk	1202371	55.1611	61.42877	Asia/Yekaterinburg
+Mérida	Merida	MX	31	Yucatan	1201000	20.967	-89.62318	America/Merida
+Hiroshima	Hiroshima	JP	11	Hiroshima	1200754	34.4	132.45	Asia/Tokyo
+Santiago de los Caballeros	Santiago de los Caballeros	DO	25	Santiago Province	1200000	19.45036	-70.69085	America/Santo_Domingo
+Shymkent	Shymkent	KZ	1537272	Shymkent	1200000	42.30988	69.60042	Asia/Almaty
+Weinan	Weinan	CN	26	Shaanxi	1199290	34.50355	109.50891	Asia/Shanghai
+Ghāziābād	Ghaziabad	IN	36	Uttar Pradesh	1199191	28.66535	77.43915	Asia/Kolkata
+Matola	Matola	MZ	04	Maputo Province	1198988	-25.96222	32.45889	Africa/Maputo
+Dhanbad	Dhanbad	IN	38	Jharkhand	1196214	23.79759	86.42992	Asia/Kolkata
+Arequipa	Arequipa	PE	04	Arequipa	1195700	-16.39899	-71.53747	America/Lima
+Fes	Fes	MA	03	Fes-Meknes	1191905	34.03313	-5.00028	Africa/Casablanca
+Gustavo Adolfo Madero	Gustavo Adolfo Madero	MX	09	Mexico City	1185772	19.49392	-99.11075	America/Mexico_City
+Nouakchott	Nouakchott	MR			1184530	18.08581	-15.9785	Africa/Nouakchott
+Jiaxing	Jiaxing	CN	02	Zhejiang	1180000	30.7522	120.75	Asia/Shanghai
+Aurangabad	Aurangabad	IN	16	Maharashtra	1175116	19.87757	75.34226	Asia/Kolkata
+Zhongwei	Zhongwei	CN	21	Ningxia	1174600	37.51129	105.19067	Asia/Shanghai
+Omsk	Omsk	RU	54	Omsk Oblast	1172070	54.99244	73.36859	Asia/Omsk
+Pikine	Pikine	SN	01	Dakar	1170791	14.76457	-17.39071	Africa/Dakar
+Pekanbaru	Pekanbaru	ID	37	Riau	1167599	0.51667	101.44167	Asia/Jakarta
+Panjin	Panjin	CN	19	Liaoning	1166481	41.121	122.0739	Asia/Shanghai
+Bandar Lampung	Bandar Lampung	ID	15	Lampung	1166066	-5.42917	105.26111	Asia/Jakarta
+Prague	Prague	CZ	52	Prague	1165581	50.08804	14.42076	Europe/Prague
+Varanasi	Varanasi	IN	36	Uttar Pradesh	1164404	25.31668	83.01041	Asia/Kolkata
+Jiujiang	Jiujiang	CN	03	Jiangxi	1164268	29.70475	116.00206	Asia/Shanghai
+Samara	Samara	RU	65	Samara Oblast	1163399	53.20767	50.13553	Europe/Samara
+Aba	Aba	NG	45	Abia State	1160000	5.10658	7.36667	Africa/Lagos
+Amritsar	Amritsar	IN	23	Punjab	1159227	31.62234	74.87534	Asia/Kolkata
+Birmingham	Birmingham	GB	ENG	England	1157603	52.48142	-1.89983	Europe/London
+Copenhagen	Copenhagen	DK	17	Capital Region	1153615	55.67594	12.56553	Europe/Copenhagen
+Sofia	Sofia	BG	42	Sofia-Capital	1152556	42.69751	23.32415	Europe/Sofia
+Anyang	Anyang	CN	09	Henan	1146839	36.096	114.38278	Asia/Shanghai
+Yerevan	Yerevan	AM	11	Yerevan	1144700	40.17765	44.5126	Asia/Yerevan
+Vijayawada	Vijayawada	IN	02	Andhra Pradesh	1143232	16.50745	80.6466	Asia/Kolkata
+Fengxiang	Fengxiang	CN	23	Shanghai	1140872	30.85841	121.46779	Asia/Shanghai
+Bijie	Bijie	CN	18	Guizhou	1137383	27.30193	105.28627	Asia/Shanghai
+Monterrey	Monterrey	MX	19	Nuevo Leon	1135512	25.68435	-100.31721	America/Monterrey
+Kigali	Kigali	RW	12	Kigali	1132686	-1.94995	30.05885	Africa/Kigali
+Rostov-on-Don	Rostov-on-Don	RU	61	Rostov	1130305	47.21997	39.70769	Europe/Moscow
+Zhuzhou	Zhuzhou	CN	11	Hunan	1129687	27.83333	113.15	Asia/Shanghai
+Rui’an	Rui'an	CN	02	Zhejiang	1125000	27.77605	120.65859	Asia/Shanghai
+Malingao	Malingao	PH	12	Soccsksargen	1121974	7.16083	124.475	Asia/Manila
+Touba	Touba	SN	03	Diourbel Region	1120824	14.86229	-15.87532	Africa/Dakar
+Ufa	Ufa	RU	08	Bashkortostan Republic	1120547	54.74306	55.96779	Asia/Yekaterinburg
+Ranchi	Ranchi	IN	38	Jharkhand	1120374	23.34316	85.3094	Asia/Kolkata
+Zoucheng	Zoucheng	CN	25	Shandong	1116692	35.40056	116.96556	Asia/Shanghai
+Shangrao	Shangrao	CN	03	Jiangxi	1116486	28.45179	117.94287	Asia/Shanghai
+Lilongwe	Lilongwe	MW	C	Central Region	1115815	-13.96692	33.78725	Africa/Blantyre
+Huaibei	Huaibei	CN	01	Anhui	1113321	33.97444	116.79167	Asia/Shanghai
+Maiduguri	Maiduguri	NG	27	Borno State	1110000	11.84692	13.15712	Africa/Lagos
+Xuhui	Xuhui	CN	23	Shanghai	1109800	31.19594	121.44709	Asia/Shanghai
+Meishan	Meishan	CN	32	Sichuan	1107742	30.04392	103.83696	Asia/Shanghai
+Mwanza	Mwanza	TZ	12	Mwanza	1104521	-2.51667	32.9	Africa/Dar_es_Salaam
+Ulsan	Ulsan	KR	21	Ulsan	1098421	35.53722	129.31667	Asia/Seoul
+Sendai	Sendai	JP	24	Miyagi	1096704	38.26667	140.86667	Asia/Tokyo
+Krasnoyarsk	Krasnoyarsk	RU	91	Krasnoyarsk Krai	1090811	56.03742	92.93136	Asia/Krasnoyarsk
+Fuzhou	Fuzhou	CN	03	Jiangxi	1089888	27.95999	116.33333	Asia/Shanghai
+Guigang	Guigang	CN	16	Guangxi	1086327	23.11603	109.59472	Asia/Shanghai
+Oslo	Oslo	NO	12	Oslo	1082575	59.91273	10.74609	Europe/Oslo
+Jabalpur	Jabalpur	IN	35	Madhya Pradesh	1081677	23.16697	79.95006	Asia/Kolkata
+Ilorin	Ilorin	NG	30	Kwara State	1080000	8.49664	4.54214	Africa/Lagos
+Aden	Aden	YE	02	Aden	1079670	12.77957	45.03852	Asia/Aden
+Bogor	Bogor	ID	30	West Java	1078351	-6.59444	106.78917	Asia/Jakarta
+Ciudad Nezahualcoyotl	Ciudad Nezahualcoyotl	MX	15	Mexico	1077208	19.40061	-99.01483	America/Mexico_City
+Hengyang	Hengyang	CN	11	Hunan	1075516	26.88946	112.61888	Asia/Shanghai
+Prayagraj	Prayagraj	IN	36	Uttar Pradesh	1073438	25.44478	81.84322	Asia/Kolkata
+Trujillo	Trujillo	PE	13	La Libertad	1067700	-8.11599	-79.02998	America/Lima
+Visakhapatnam	Visakhapatnam	IN	02	Andhra Pradesh	1063178	17.68009	83.20161	Asia/Kolkata
+Goyang-si	Goyang-si	KR	13	Gyeonggi-do	1061752	37.65639	126.835	Asia/Seoul
+Yulin	Yulin	CN	16	Guangxi	1056743	22.6305	110.14686	Asia/Shanghai
+Jodhpur	Jodhpur	IN	24	Rajasthan	1056191	26.26841	73.00594	Asia/Kolkata
+Gwalior	Gwalior	IN	35	Madhya Pradesh	1054420	26.22983	78.17337	Asia/Kolkata
+Jingzhou	Jingzhou	CN	12	Hubei	1052282	30.35028	112.19028	Asia/Shanghai
+Gqeberha	Gqeberha	ZA	05	Eastern Cape	1050078	-33.96109	25.61494	Africa/Johannesburg
+Tbilisi	Tbilisi	GE	51	Tbilisi	1049498	41.69143	44.83412	Asia/Tbilisi
+Voronezh	Voronezh	RU	86	Voronezh Oblast	1047549	51.66833	39.19204	Europe/Moscow
+Xinxiang	Xinxiang	CN	09	Henan	1047088	35.19033	113.80151	Asia/Shanghai
+Yichun	Yichun	CN	03	Jiangxi	1045952	27.83333	114.4	Asia/Shanghai
+Sokoto	Sokoto	NG	51	Sokoto	1040000	13.06269	5.24322	Africa/Lagos
+Jos	Jos	NG	49	Plateau State	1040000	9.92849	8.89212	Africa/Lagos
+Tangier	Tangier	MA	01	Tanger-Tetouan-Al Hoceima	1035141	35.76727	-5.79975	Africa/Casablanca
+Xianyang	Xianyang	CN	26	Shaanxi	1034081	34.33778	108.70261	Asia/Shanghai
+Mexicali	Mexicali	MX	02	Baja California	1032686	32.62781	-115.45446	America/Tijuana
+Pointe-Noire	Pointe-Noire	CG	15	Pointe-Noire	1032000	-4.77609	11.86352	Africa/Brazzaville
+Maceió	Maceio	BR	02	Alagoas	1031597	-9.66583	-35.73528	America/Maceio
+Campinas	Campinas	BR	27	Sao Paulo	1031554	-22.90556	-47.06083	America/Sao_Paulo
+Sanya	Sanya	CN	31	Hainan	1031396	18.25435	109.50947	Asia/Shanghai
+Rangpur	Rangpur	BD	87	Rangpur Division	1031388	25.74664	89.25166	Asia/Dhaka
+Kirkuk	Kirkuk	IQ	13	Kirkuk	1031000	35.46806	44.39222	Asia/Baghdad
+Ashgabat	Ashgabat	TM	S	Ashgabat	1030063	37.95	58.38333	Asia/Ashgabat
+Shaoguan	Shaoguan	CN	30	Guangdong	1028460	24.8	113.58333	Asia/Shanghai
+Howrah	Howrah	IN	28	West Bengal	1027672	22.57688	88.31857	Asia/Kolkata
+Raipur	Raipur	IN	37	Chhattisgarh	1027264	21.23333	81.63333	Asia/Kolkata
+Changwon	Changwon	KR	20	Gyeongsangnam-do	1025702	35.22806	128.68111	Asia/Seoul
+Longyan	Longyan	CN	07	Fujian	1025087	25.07485	117.01775	Asia/Shanghai
+Köln	Koeln	DE	07	North Rhine-Westphalia	1024621	50.93333	6.95	Europe/Berlin
+Dublin	Dublin	IE	L	Leinster	1024027	53.33306	-6.24889	Europe/Dublin
+Tiruchirappalli	Tiruchirappalli	IN	25	Tamil Nadu	1022518	10.8155	78.69651	Asia/Kolkata
+Yongzhou	Yongzhou	CN	11	Hunan	1020715	26.42389	111.61306	Asia/Shanghai
+Brussels	Brussels	BE	BRU	Brussels Capital	1019022	50.85045	4.34878	Europe/Brussels
+Zamboanga	Zamboanga	PH	09	Zamboanga Peninsula	1018849	6.91028	122.07389	Asia/Manila
+Ottawa	Ottawa	CA	08	Ontario	1017449	45.41117	-75.69812	America/Toronto
+Huzhou	Huzhou	CN	02	Zhejiang	1015937	30.8703	120.0933	Asia/Shanghai
+Xinyi	Xinyi	CN	30	Guangdong	1014577	22.37303	110.94746	Asia/Shanghai
+Volgograd	Volgograd	RU	84	Volgograd Oblast	1013533	48.71378	44.4976	Europe/Volgograd
+Khartoum North	Khartoum North	SD	29	Khartoum	1012211	15.64925	32.53458	Africa/Khartoum
+Edmonton	Edmonton	CA	01	Alberta	1010899	53.55014	-113.46871	America/Edmonton
+Odesa	Odesa	UA	17	Odesa	1010537	46.48572	30.74383	Europe/Kyiv
+Wuwei	Wuwei	CN	15	Gansu	1010295	37.92672	102.63202	Asia/Shanghai
+Jacksonville	Jacksonville	US	FL	Florida	1009833	30.33218	-81.65565	America/New_York
+Fort Worth	Fort Worth	US	TX	Texas	1008106	32.72541	-97.32085	America/Chicago
+Yishui	Yishui	CN	25	Shandong	1007100	35.78472	118.62806	Asia/Shanghai
+Hanzhong	Hanzhong	CN	26	Shaanxi	1006557	33.07507	107.02214	Asia/Shanghai
+Hezhou	Hezhou	CN	16	Guangxi	1005490	24.40357	111.56675	Asia/Shanghai
+Kota	Kota	IN	24	Rajasthan	1001694	25.18254	75.83907	Asia/Kolkata
+Zhu Cheng City	Zhu Cheng City	CN	25	Shandong	1000000	35.99502	119.40259	Asia/Shanghai
+Dongying	Dongying	CN	25	Shandong	998968	37.46271	118.49165	Asia/Shanghai
+Luzhou	Luzhou	CN	32	Sichuan	998900	28.8903	105.42575	Asia/Shanghai
+San Jose	San Jose	US	CA	California	997368	37.33939	-121.89496	America/Los_Angeles
+Sholapur	Sholapur	IN	16	Maharashtra	997281	17.67152	75.91044	Asia/Kolkata
+Marrakesh	Marrakesh	MA	07	Marrakesh-Safi	995871	31.63416	-7.99994	Africa/Casablanca
+Guatemala City	Guatemala City	GT	07	Guatemala	994938	14.64072	-90.51327	America/Guatemala
+Meizhou	Meizhou	CN	30	Guangdong	992351	24.28859	116.11768	Asia/Shanghai
+Yueyang	Yueyang	CN	11	Hunan	991465	29.37455	113.09481	Asia/Shanghai
+Laiwu	Laiwu	CN	25	Shandong	989535	36.19278	117.65694	Asia/Shanghai
+Esenyurt	Esenyurt	TR	34	Istanbul	983571	41.02697	28.67732	Europe/Istanbul
+Perm	Perm	RU	90	Perm Krai	982419	58.01046	56.25017	Asia/Yekaterinburg
+Zaria	Zaria	NG	23	Kaduna State	980000	11.11128	7.7227	Africa/Lagos
+Chiba	Chiba	JP	04	Chiba	979768	35.6	140.11667	Asia/Tokyo
+Pingdingshan	Pingdingshan	CN	09	Henan	979130	33.73091	113.31554	Asia/Shanghai
+Ciudad Guayana	Ciudad Guayana	VE	06	Bolivar	978202	8.35122	-62.64102	America/Caracas
+Sargodha	Sargodha	PK	04	Punjab	975886	32.08586	72.67418	Asia/Karachi
+Austin	Austin	US	TX	Texas	974447	30.26715	-97.74306	America/Chicago
+Managua	Managua	NI	10	Managua Department	973087	12.13282	-86.2504	America/Managua
+Bengbu	Bengbu	CN	01	Anhui	972784	32.94083	117.36083	Asia/Shanghai
+Salé	Sale	MA	04	Rabat-Sale-Kenitra	972299	34.0531	-6.79846	Africa/Casablanca
+Jerusalem	Jerusalem	IL	06	Jerusalem	971800	31.76904	35.21633	Asia/Jerusalem
+Chandigarh	Chandigarh	IN	05	Chandigarh	970602	30.73629	76.7884	Asia/Kolkata
+Dnipro	Dnipro	UA	04	Dnipropetrovsk	968502	48.46664	35.04066	Europe/Kyiv
+Feicheng	Feicheng	CN	25	Shandong	968100	36.24861	116.76583	Asia/Shanghai
+Cebu City	Cebu City	PH	07	Central Visayas	965332	10.31672	123.89071	Asia/Manila
+Sanhe	Sanhe	CN	10	Hebei	965075	39.98049	117.06887	Asia/Shanghai
+Guli	Guli	CN	02	Zhejiang	964203	28.88162	120.03308	Asia/Shanghai
+Tiruppur	Tiruppur	IN	25	Tamil Nadu	963173	11.11541	77.35456	Asia/Kolkata
+Guwahati	Guwahati	IN	03	Assam	962334	26.1844	91.7458	Asia/Kolkata
+Xiangtan	Xiangtan	CN	11	Hunan	959303	27.85	112.9	Asia/Shanghai
+Linfen	Linfen	CN	24	Shanxi	959198	36.08889	111.51889	Asia/Shanghai
+Victoria	Victoria	HK	HCW	Central and Western	956800	22.2875	114.14417	Asia/Hong_Kong
+Zhenjiang	Zhenjiang	CN	04	Jiangsu	950516	32.21086	119.45508	Asia/Shanghai
+Enugu	Enugu	NG	47	Enugu State	950000	6.44132	7.49883	Africa/Lagos
+Rosario	Rosario	AR	21	Santa Fe	948312	-32.94682	-60.63932	America/Argentina/Cordoba
+Sulţānah	Sultanah	SA	05	Medina Region	946697	24.49258	39.58572	Asia/Riyadh
+Huludao	Huludao	CN	19	Liaoning	944495	40.75243	120.83552	Asia/Shanghai
+Hubballi	Hubballi	IN	19	Karnataka	943788	15.34776	75.13378	Asia/Kolkata
+Padang	Padang	ID	24	West Sumatra	942938	-0.94924	100.35427	Asia/Jakarta
+Kitakyushu	Kitakyushu	JP	07	Fukuoka	940978	33.85181	130.85034	Asia/Tokyo
+Taiz	Taiz	YE	25	Ta'izz	940600	13.57952	44.02091	Asia/Aden
+Kingston	Kingston	JM	17	Kingston	937700	17.99702	-76.79358	America/Jamaica
+Baoshan	Baoshan	CN	29	Yunnan	935618	25.11626	99.16366	Asia/Shanghai
+Chihuahua	Chihuahua	MX	06	Chihuahua	925762	28.63528	-106.08889	America/Chihuahua
+Nay Pyi Taw	Nay Pyi Taw	MM	18	Nay Pyi Taw	925000	19.745	96.12972	Asia/Yangon
+Eskişehir	Eskisehir	TR	26	Eskisehir	921630	39.77667	30.52056	Europe/Istanbul
+Mysuru	Mysuru	IN	19	Karnataka	920550	12.29791	76.63925	Asia/Kolkata
+Chengde	Chengde	CN	10	Hebei	920395	40.9519	117.95883	Asia/Shanghai
+Salem	Salem	IN	25	Tamil Nadu	917414	11.65376	78.15538	Asia/Kolkata
+São Luís	Sao Luis	BR	13	Maranhao	917237	-2.52972	-44.30278	America/Fortaleza
+Seongnam-si	Seongnam-si	KR	13	Gyeonggi-do	914832	37.43861	127.13778	Asia/Seoul
+Cartagena	Cartagena	CO	35	Bolivar	914552	10.39817	-75.49328	America/Bogota
+Antipolo	Antipolo	PH	40	Calabarzon	913712	14.62578	121.12251	Asia/Manila
+Columbus	Columbus	US	OH	Ohio	913175	39.96118	-82.99879	America/New_York
+Sialkot	Sialkot	PK	04	Punjab	911817	32.49268	74.53134	Asia/Karachi
+Charlotte	Charlotte	US	NC	North Carolina	911311	35.22709	-80.84313	America/New_York
+Laibin	Laibin	CN	16	Guangxi	910282	23.74743	109.22222	Asia/Shanghai
+Warri	Warri	NG	36	Delta	910000	5.51737	5.75006	Africa/Lagos
+Naples	Naples	IT	04	Campania	909048	40.85216	14.26811	Europe/Rome
+Xiaogan	Xiaogan	CN	12	Hubei	908266	30.92689	113.92221	Asia/Shanghai
+Wuchuan	Wuchuan	CN	30	Guangdong	907354	21.45713	110.76591	Asia/Shanghai
+Campo Grande	Campo Grande	BR	11	Mato Grosso do Sul	906092	-20.44278	-54.64639	America/Campo_Grande
+Ziyang	Ziyang	CN	32	Sichuan	905729	30.12108	104.64811	Asia/Shanghai
+Bobo-Dioulasso	Bobo-Dioulasso	BF	09	Hauts-Bassins	904920	11.18064	-4.29489	Africa/Ouagadougou
+Bahawalpur	Bahawalpur	PK	04	Punjab	903795	29.39779	71.6752	Asia/Karachi
+Quzhou	Quzhou	CN	02	Zhejiang	902767	28.95944	118.86861	Asia/Shanghai
+Blantyre	Blantyre	MW	S	Southern Region	902588	-15.78499	35.00854	Africa/Blantyre
+Donetsk	Donetsk	UA	05	Donetsk	901645	48.023	37.80224	Europe/Kyiv
+Bishkek	Bishkek	KG	01	Bishkek	900000	42.87	74.59	Asia/Bishkek
+Abū Ghurayb	Abu Ghurayb	IQ	07	Baghdad	900000	33.30563	44.18477	Asia/Baghdad
+Qom	Qom	IR	39	Qom Province	900000	34.6401	50.8764	Asia/Tehran
+Krasnodar	Krasnodar	RU	38	Krasnodar Krai	899541	45.04534	38.98178	Europe/Moscow
+Natal	Natal	BR	22	Rio Grande do Norte	896708	-5.795	-35.20944	America/Fortaleza
+Pingxiang	Pingxiang	CN	03	Jiangxi	893550	27.61672	113.85353	Asia/Shanghai
+Malang	Malang	ID	08	East Java	889359	-7.9797	112.6304	Asia/Jakarta
+Cancún	Cancun	MX	23	Quintana Roo	888797	21.17429	-86.84656	America/Cancun
+Indianapolis	Indianapolis	US	IN	Indiana	887642	39.76838	-86.15804	America/Indiana/Indianapolis
+Gurugram	Gurugram	IN	10	Haryana	886519	28.4601	77.02635	Asia/Kolkata
+Bhubaneswar	Bhubaneswar	IN	21	Odisha	885363	20.27241	85.83385	Asia/Kolkata
+Zhoushan	Zhoushan	CN	02	Zhejiang	882932	29.98869	122.20488	Asia/Shanghai
+Qiqihar	Qiqihar	CN	08	Heilongjiang	882364	47.33922	123.96154	Asia/Shanghai
+Mulenvos	Mulenvos	AO	20	Luanda	882014	-8.86695	13.3344	Africa/Luanda
+Sulaymaniyah	Sulaymaniyah	IQ	05	Sulaymaniyah	878146	35.56496	45.4329	Asia/Baghdad
+Marseille	Marseille	FR	93	Provence-Alpes-Cote d'Azur	877215	43.29695	5.38107	Europe/Paris
+Bhiwandi	Bhiwandi	IN	16	Maharashtra	874032	19.30023	73.05881	Asia/Kolkata
+Soshanguve	Soshanguve	ZA	06	Gauteng	872309	-25.47288	28.09919	Africa/Johannesburg
+Laiyang	Laiyang	CN	25	Shandong	872000	36.97583	120.71361	Asia/Shanghai
+Daye	Daye	CN	12	Hubei	871214	30.08333	114.95	Asia/Shanghai
+Teresina	Teresina	BR	20	Piaui	871126	-5.08917	-42.80194	America/Fortaleza
+Ankang	Ankang	CN	26	Shaanxi	870126	32.68	109.01722	Asia/Shanghai
+Jalandhar	Jalandhar	IN	23	Punjab	868929	31.32556	75.57917	Asia/Kolkata
+Rotterdam	Rotterdam	NL	11	South Holland	868135	51.9225	4.47917	Europe/Amsterdam
+Langfang	Langfang	CN	10	Hebei	868066	39.52079	116.71471	Asia/Shanghai
+Lhasa	Lhasa	CN	14	Tibet	867900	29.65	91.1	Asia/Shanghai
+Duque de Caxias	Duque de Caxias	BR	21	Rio de Janeiro	866347	-22.78556	-43.31167	America/Sao_Paulo
+Viana	Viana	AO	20	Luanda	865863	-8.90553	13.37499	Africa/Luanda
+Jiaozuo	Jiaozuo	CN	09	Henan	865413	35.23925	113.23914	Asia/Shanghai
+Samarinda	Samarinda	ID	14	East Kalimantan	865306	-0.49167	117.14583	Asia/Makassar
+Benxi	Benxi	CN	19	Liaoning	865215	41.28861	123.765	Asia/Shanghai
+Wanxian	Wanxian	CN	33	Chongqing	859662	30.81601	108.37407	Asia/Shanghai
+Guang’an	Guang'an	CN	32	Sichuan	858159	30.47413	106.63696	Asia/Shanghai
+Johor Bahru	Johor Bahru	MY	01	Johor	858118	1.4655	103.7578	Asia/Kuala_Lumpur
+Arifwala	Arifwala	PK	04	Punjab	854462	30.29058	73.06574	Asia/Karachi
+Pasig City	Pasig City	PH	NCR	National Capital Region	853050	14.58691	121.0614	Asia/Manila
+Cheongju-si	Cheongju-si	KR	05	North Chungcheong	852147	36.63722	127.48972	Asia/Seoul
+Kanayannur	Kanayannur	IN	13	Kerala	851406	9.96667	76.26667	Asia/Kolkata
+Tegucigalpa	Tegucigalpa	HN	08	Francisco Morazan Department	850848	14.0818	-87.20681	America/Tegucigalpa
+Bucheon-si	Bucheon-si	KR	13	Gyeonggi-do	850731	37.49889	126.78306	Asia/Seoul
+Thanh Hóa	Thanh Hoa	VN	38	Thanh Hoa Province	850000	19.8	105.76667	Asia/Bangkok
+Turin	Turin	IT	12	Piedmont	847287	45.07049	7.68682	Europe/Rome
+Al Ain City	Al Ain City	AE	01	Abu Dhabi	846747	24.19167	55.76056	Asia/Dubai
+Libreville	Libreville	GA	01	Estuaire	846090	0.39241	9.45356	Africa/Libreville
+Saratov	Saratov	RU	67	Saratov Oblast	844858	51.54048	45.9901	Europe/Saratov
+Ulan Bator	Ulan Bator	MN	20	Ulaanbaatar	844818	47.90771	106.88324	Asia/Ulaanbaatar
+Weihai	Weihai	CN	25	Shandong	844310	37.50914	122.11356	Asia/Shanghai
+Takeo	Takeo	KH	19	Takeo	843931	10.99081	104.78498	Asia/Phnom_Penh
+Nova Iguaçu	Nova Iguacu	BR	21	Rio de Janeiro	843046	-22.75917	-43.45111	America/Sao_Paulo
+Cochabamba	Cochabamba	BO	02	Cochabamba	841276	-17.38195	-66.15995	America/La_Paz
+Ahvaz	Ahvaz	IR	15	Khuzestan	841145	31.31901	48.6842	Asia/Tehran
+Vientiane	Vientiane	LA	24	Vientiane Prefecture	840940	17.96667	102.6	Asia/Vientiane
+São Bernardo do Campo	Sao Bernardo do Campo	BR	27	Sao Paulo	840499	-23.69389	-46.565	America/Sao_Paulo
+Shangyu	Shangyu	CN	02	Zhejiang	839747	30.01556	120.87111	Asia/Shanghai
+Xinyu	Xinyu	CN	03	Jiangxi	839488	27.80429	114.93335	Asia/Shanghai
+Pietermaritzburg	Pietermaritzburg	ZA	02	KwaZulu-Natal	839327	-29.61679	30.39278	Africa/Johannesburg
+Yibin	Yibin	CN	32	Sichuan	836340	28.7593	104.63994	Asia/Shanghai
+Naucalpan de Juárez	Naucalpan de Juarez	MX	15	Mexico	834434	19.47851	-99.23963	America/Mexico_City
+Kampung Baru Subang	Kampung Baru Subang	MY	12	Selangor	833571	3.15	101.53333	Asia/Kuala_Lumpur
+Bouaké	Bouake	CI	90	Vallee du Bandama District	832371	7.69385	-5.03031	Africa/Abidjan
+Taicang	Taicang	CN	04	Jiangsu	831113	31.44778	121.09389	Asia/Shanghai
+San Francisco	San Francisco	US	CA	California	827526	37.77493	-122.41942	America/Los_Angeles
+Sakai	Sakai	JP	32	Osaka	826161	34.58216	135.46653	Asia/Tokyo
+Valencia	Valencia	ES	60	Valencia	824340	39.47391	-0.37966	Europe/Madrid
+Jinshan	Jinshan	CN	23	Shanghai	822776	30.83556	121.29373	Asia/Shanghai
+Chenzhou	Chenzhou	CN	11	Hunan	822534	25.8	113.03333	Asia/Shanghai
+João Pessoa	Joao Pessoa	BR	17	Paraiba	817511	-7.115	-34.86306	America/Fortaleza
+Bukavu	Bukavu	CD	12	South Kivu	816811	-2.49077	28.84281	Africa/Lubumbashi
+Kraków	Krakow	PL	77	Lesser Poland	816614	50.06143	19.93658	Europe/Warsaw
+Dandong	Dandong	CN	19	Liaoning	815858	40.12917	124.39472	Asia/Shanghai
+Barcelona	Barcelona	VE	02	Anzoategui	815141	10.1384	-64.68769	America/Caracas
+Bangui	Bangui	CF	18	Bangui	812407	4.36122	18.55496	Africa/Bangui
+Hermosillo	Hermosillo	MX	26	Sonora	812229	29.08874	-110.96677	America/Hermosillo
+Bhayandar	Bhayandar	IN	16	Maharashtra	809378	19.30157	72.85107	Asia/Kolkata
+Culiacán	Culiacan	MX	25	Sinaloa	808416	24.80209	-107.39421	America/Mazatlan
+Petaling Jaya	Petaling Jaya	MY	12	Selangor	807879	3.10726	101.60671	Asia/Kuala_Lumpur
+Anqing	Anqing	CN	01	Anhui	804493	30.51365	117.04723	Asia/Shanghai
+Oran	Oran	DZ	09	Oran	803329	35.69906	-0.63588	Africa/Algiers
+Freetown	Freetown	SL	04	Western Area	802639	8.48714	-13.2356	Africa/Freetown
+San Pedro Sula	San Pedro Sula	HN	06	Cortes Department	801259	15.50585	-88.02588	America/Tegucigalpa
+Narela	Narela	IN	07	Delhi	800000	28.85267	77.09288	Asia/Kolkata
+Xingtai	Xingtai	CN	10	Hebei	798770	37.06217	114.49272	Asia/Shanghai
+Niigata	Niigata	JP	29	Niigata	797591	37.92259	139.04125	Asia/Tokyo
+Muscat	Muscat	OM	06	Muscat	797000	23.58413	58.40778	Asia/Muscat
+Zarqa	Zarqa	JO	17	Zarqa	792665	32.07275	36.08796	Asia/Amman
+Çankaya	Cankaya	TR	68	Ankara	792189	39.9179	32.86268	Europe/Istanbul
+Küçükçekmece	Kuecuekcekmece	TR	34	Istanbul	792030	40.99104	28.77123	Europe/Istanbul
+Hamamatsu	Hamamatsu	JP	37	Shizuoka	791707	34.7	137.73333	Asia/Tokyo
+Kolwezi	Kolwezi	CD	22	Lualaba	790248	-10.71484	25.46674	Africa/Lubumbashi
+Vinh	Vinh	VN	40	Nghe An Province	790000	18.67337	105.69232	Asia/Bangkok
+Thiruvananthapuram	Thiruvananthapuram	IN	13	Kerala	788271	8.4855	76.94924	Asia/Kolkata
+Zhaotong	Zhaotong	CN	29	Yunnan	787845	27.31667	103.71667	Asia/Shanghai
+Panzhihua	Panzhihua	CN	32	Sichuan	787177	26.58509	101.71276	Asia/Shanghai
+Chuzhou	Chuzhou	CN	01	Anhui	782671	32.32194	118.29778	Asia/Shanghai
+Seattle	Seattle	US	WA	Washington	780995	47.60621	-122.33207	America/Los_Angeles
+Port Said	Port Said	EG	19	Port Said	780515	31.26531	32.3019	Africa/Cairo
+Cúcuta	Cucuta	CO	21	Norte de Santander Department	777106	7.90745	-72.5049	America/Bogota
+Homs	Homs	SY	11	Homs	775404	34.72405	36.72559	Asia/Damascus
+Xuancheng	Xuancheng	CN	01	Anhui	774332	30.9525	118.75528	Asia/Shanghai
+Ibb	Ibb	YE	23	Ibb Governorate	771514	13.96667	44.18333	Asia/Aden
+Tasikmalaya	Tasikmalaya	ID	30	West Java	770839	-7.3274	108.2207	Asia/Jakarta
+Nampula	Nampula	MZ	06	Nampula	770379	-15.11646	39.2666	Africa/Maputo
+Bujumbura	Bujumbura	BI	24	Bujumbura Mairie	769317	-3.38193	29.36142	Africa/Bujumbura
+Tyumen	Tyumen	RU	78	Tyumen Oblast	768358	57.15222	65.52722	Asia/Yekaterinburg
+Erzurum	Erzurum	TR	25	Erzurum	767848	39.90861	41.27694	Europe/Istanbul
+Anshun	Anshun	CN	18	Guizhou	765313	26.25	105.93333	Asia/Shanghai
+Dodoma	Dodoma	TZ	03	Dodoma	765179	-6.17221	35.73947	Africa/Dar_es_Salaam
+Rajshahi	Rajshahi	BD	83	Rajshahi Division	763580	24.374	88.60114	Asia/Dhaka
+Dera Ismail Khan	Dera Ismail Khan	PK	03	Khyber Pakhtunkhwa	763195	31.83129	70.9017	Asia/Karachi
+Sorocaba	Sorocaba	BR	27	Sao Paulo	762172	-23.50167	-47.45806	America/Sao_Paulo
+Wuzhou	Wuzhou	CN	16	Guangxi	761948	23.48054	111.28848	Asia/Shanghai
+Ipoh	Ipoh	MY	07	Perak	759952	4.5841	101.0829	Asia/Kuala_Lumpur
+Qinhuangdao	Qinhuangdao	CN	10	Hebei	759718	39.94104	119.58936	Asia/Shanghai
+Benghazi	Benghazi	LY	69	Banghazi	757490	32.11486	20.06859	Africa/Tripoli
+Uberlândia	Uberlandia	BR	15	Minas Gerais	754954	-18.91861	-48.27722	America/Sao_Paulo
+Alīgarh	Aligarh	IN	36	Uttar Pradesh	753207	27.88145	78.07464	Asia/Kolkata
+Shaoyang	Shaoyang	CN	11	Hunan	753194	27.23818	111.46214	Asia/Shanghai
+Malatya	Malatya	TR	44	Malatya	750491	38.35018	38.31667	Europe/Istanbul
+Winnipeg	Winnipeg	CA	03	Manitoba	749607	49.8844	-97.14704	America/Winnipeg
+Ōta	Ota	JP	40	Tokyo	748081	35.56126	139.71605	Asia/Tokyo
+Andijon	Andijon	UZ	01	Andijan Region	747800	40.78338	72.35067	Asia/Tashkent
+Bareilly	Bareilly	IN	36	Uttar Pradesh	745435	28.36678	79.43167	Asia/Kolkata
+Buraydah	Buraydah	SA	08	Al-Qassim Region	745353	26.32599	43.97497	Asia/Riyadh
+Hegang	Hegang	CN	08	Heilongjiang	743307	47.34727	130.29033	Asia/Shanghai
+Morelia	Morelia	MX	16	Michoacan	743275	19.70078	-101.18443	America/Mexico_City
+Riga	Riga	LV	25	Riga	742572	56.946	24.10589	Europe/Riga
+Zhuanghe	Zhuanghe	CN	19	Liaoning	742496	39.70083	122.99111	Asia/Shanghai
+Amsterdam	Amsterdam	NL	07	North Holland	741636	52.37403	4.88969	Europe/Amsterdam
+Cagayan de Oro	Cagayan de Oro	PH	10	Northern Mindanao	741617	8.48222	124.64722	Asia/Manila
+Ma’anshan	Ma'anshan	CN	01	Anhui	741531	31.68579	118.51008	Asia/Shanghai
+Shah Alam	Shah Alam	MY	12	Selangor	740750	3.08507	101.53281	Asia/Kuala_Lumpur
+Bağcılar	Bagcilar	TR	34	Istanbul	740069	41.03903	28.85671	Europe/Istanbul
+Shizuishan	Shizuishan	CN	21	Ningxia	739400	38.98082	106.3892	Asia/Shanghai
+Kumamoto	Kumamoto	JP	21	Kumamoto	738907	32.80589	130.69181	Asia/Tokyo
+Oyo	Oyo	NG	32	Oyo State	736072	7.85367	3.93235	Africa/Lagos
+Serang	Serang	ID	33	Banten	735651	-6.11528	106.15417	Asia/Jakarta
+Torreón	Torreon	MX	07	Coahuila	735340	25.54389	-103.41898	America/Monterrey
+Deyang	Deyang	CN	32	Sichuan	735070	31.13019	104.38198	Asia/Shanghai
+Abeokuta	Abeokuta	NG	16	Ogun State	735000	7.15571	3.34509	Africa/Lagos
+Al Ḩudaydah	Al Hudaydah	YE	08	Al Hudaydah	734699	14.79781	42.95452	Asia/Aden
+Yangquan	Yangquan	CN	24	Shanxi	731228	37.8575	113.56333	Asia/Shanghai
+Akure	Akure	NG	48	Ondo State	730000	7.25256	5.19312	Africa/Lagos
+Denver	Denver	US	CO	Colorado	729019	39.73915	-104.9847	America/Denver
+Osasco	Osasco	BR	27	Sao Paulo	728615	-23.5325	-46.79167	America/Sao_Paulo
+Kikolo	Kikolo	AO	20	Luanda	728205	-8.7815	13.33384	Africa/Luanda
+Maianga	Maianga	AO	20	Luanda	727681	-8.84693	13.23698	Africa/Luanda
+São José dos Campos	Sao Jose dos Campos	BR	27	Sao Paulo	727078	-23.17944	-45.88694	America/Sao_Paulo
+Aihara	Aihara	JP	19	Kanagawa	725493	35.6	139.31667	Asia/Tokyo
+Evaton	Evaton	ZA	06	Gauteng	725468	-26.53333	27.85	Africa/Johannesburg
+Valenzuela	Valenzuela	PH	NCR	National Capital Region	725173	14.7	120.9667	Asia/Manila
+Muzaffarābād	Muzaffarabad	PK	06	Azad Kashmir	725000	34.37002	73.47082	Asia/Karachi
+Okayama	Okayama	JP	31	Okayama	724691	34.65	133.93333	Asia/Tokyo
+San Luis Potosí	San Luis Potosi	MX	24	San Luis Potosi	722772	22.15234	-100.97135	America/Monterrey
+Aguascalientes	Aguascalientes	MX	01	Aguascalientes	722250	21.88262	-102.2843	America/Mexico_City
+General Santos	General Santos	PH	12	Soccsksargen	722059	6.11278	125.17167	Asia/Manila
+Zhumadian	Zhumadian	CN	09	Henan	721670	32.98385	114.02586	Asia/Shanghai
+Morādābād	Moradabad	IN	36	Uttar Pradesh	721139	28.83893	78.77684	Asia/Kolkata
+Sagamihara	Sagamihara	JP	19	Kanagawa	720780	35.56707	139.24167	Asia/Tokyo
+Mississauga	Mississauga	CA	08	Ontario	717961	43.5789	-79.6583	America/Toronto
+Lviv	Lviv	UA	15	Lviv	717273	49.83826	24.02324	Europe/Kyiv
+Namangan	Namangan	UZ	06	Namangan	713220	40.9983	71.67257	Asia/Tashkent
+Zaporizhzhya	Zaporizhzhya	UA	26	Zaporizhzhia	710052	47.85167	35.11714	Europe/Kyiv
+Zanzibar	Zanzibar	TZ	25	Zanzibar Urban/West	709809	-6.16394	39.19793	Africa/Dar_es_Salaam
+Saltillo	Saltillo	MX	07	Coahuila	709671	25.42595	-100.97963	America/Monterrey
+Latakia	Latakia	SY	02	Latakia	709000	35.53125	35.79088	Asia/Damascus
+Warangal	Warangal	IN	40	Telangana	704570	18	79.58333	Asia/Kolkata
+Paranaque City	Paranaque City	PH	NCR	National Capital Region	703245	14.48156	121.01749	Asia/Manila
+Tolyatti	Tolyatti	RU	65	Samara Oblast	702879	53.5303	49.3461	Europe/Samara
+Santo Domingo Oeste	Santo Domingo Oeste	DO	37	Santo Domingo Province	701269	18.5	-70	America/Santo_Domingo
+Santo Domingo Este	Santo Domingo Este	DO	37	Santo Domingo Province	700000	18.48511	-69.84757	America/Santo_Domingo
+Battagram	Battagram	PK	03	Khyber Pakhtunkhwa	700000	34.67719	73.02329	Asia/Karachi
+Suez	Suez	EG	15	Suez	699541	29.97371	32.52627	Africa/Cairo
+Changzhi	Changzhi	CN	24	Shanxi	699514	35.20889	111.73861	Asia/Shanghai
+Ribeirão Preto	Ribeirao Preto	BR	27	Sao Paulo	698642	-21.1775	-47.81028	America/Sao_Paulo
+Agadir	Agadir	MA	09	Souss-Massa	698310	30.42018	-9.59815	Africa/Casablanca
+Sarajevo	Sarajevo	BA	01	Federation of B&H	696731	43.84864	18.35644	Europe/Sarajevo
+Balikpapan	Balikpapan	ID	14	East Kalimantan	695287	-1.26753	116.82887	Asia/Makassar
+Changning	Changning	CN	23	Shanghai	694900	31.21739	121.42105	Asia/Shanghai
+Bauchi	Bauchi	NG	46	Bauchi	693700	10.31032	9.84388	Africa/Lagos
+Shizuoka	Shizuoka	JP	37	Shizuoka	693389	34.98333	138.38333	Asia/Tokyo
+Tunis	Tunis	TN	36	Tunis Governorate	693210	36.81897	10.16579	Africa/Tunis
+Zhangjiakou	Zhangjiakou	CN	10	Hebei	692602	40.78341	114.87139	Asia/Shanghai
+Washington	Washington	US	DC	District of Columbia	689545	38.89511	-77.03637	America/New_York
+Nashville	Nashville	US	TN	Tennessee	689447	36.16589	-86.78444	America/Chicago
+Fuxin	Fuxin	CN	19	Liaoning	689050	42.01556	121.65889	Asia/Shanghai
+Ta’if	Ta'if	SA	14	Mecca Region	688693	21.27028	40.41583	Asia/Riyadh
+Changsha	Changsha	CN	30	Guangdong	688242	22.38124	112.68492	Asia/Shanghai
+Huangshi	Huangshi	CN	12	Hubei	688090	30.24706	115.04814	Asia/Shanghai
+Liaoyang	Liaoyang	CN	19	Liaoning	687890	41.27194	123.17306	Asia/Shanghai
+Hlaingthaya	Hlaingthaya	MM	17	Yangon	687867	16.85	96.06667	Asia/Yangon
+Beira	Beira	MZ	05	Sofala	687764	-19.84361	34.83889	Africa/Maputo
+Hongkou	Hongkou	CN	23	Shanghai	687500	31.25	121.48917	Asia/Shanghai
+Zaragoza	Zaragoza	ES	52	Aragon	686986	41.65606	-0.87734	Europe/Madrid
+Sevilla	Sevilla	ES	51	Andalusia	686741	37.38283	-5.97317	Europe/Madrid
+Baise	Baise	CN	16	Guangxi	686078	23.89013	106.62684	Asia/Shanghai
+Pontianak	Pontianak	ID	11	West Kalimantan	686019	-0.03194	109.325	Asia/Pontianak
+Situbondo	Situbondo	ID	08	East Java	685967	-7.70623	114.00976	Asia/Jakarta
+Agege	Agege	NG	05	Lagos	683600	6.61563	3.33337	Africa/Lagos
+Binzhou	Binzhou	CN	25	Shandong	682717	37.36667	118.01667	Asia/Shanghai
+Oklahoma City	Oklahoma City	US	OK	Oklahoma	681054	35.46756	-97.51643	America/Chicago
+Yuncheng	Yuncheng	CN	24	Shanxi	680036	35.02306	110.99278	Asia/Shanghai
+Dezhou	Dezhou	CN	25	Shandong	679535	37.44661	116.36706	Asia/Shanghai
+Dushanbe	Dushanbe	TJ	04	Dushanbe	679400	38.53575	68.77905	Asia/Dushanbe
+Cotonou	Cotonou	BJ	14	Littoral	679012	6.36536	2.41833	Africa/Porto-Novo
+El Paso	El Paso	US	TX	Texas	678815	31.75872	-106.48693	America/Denver
+Gorakhpur	Gorakhpur	IN	36	Uttar Pradesh	674246	26.76628	83.36889	Asia/Kolkata
+Guadalupe	Guadalupe	MX	19	Nuevo Leon	673616	25.67663	-100.25907	America/Monterrey
+Wrocław	Wroclaw	PL	72	Lower Silesia	672545	51.10286	17.03006	Europe/Warsaw
+Denpasar	Denpasar	ID	02	Bali	670210	-8.65	115.21667	Asia/Makassar
+Guntur	Guntur	IN	02	Andhra Pradesh	670073	16.29974	80.45729	Asia/Kolkata
+Katsina	Katsina	NG	24	Katsina State	670000	12.99082	7.60177	Africa/Lagos
+Sanmenxia	Sanmenxia	CN	09	Henan	669307	34.78081	111.19287	Asia/Shanghai
+E’zhou	E'zhou	CN	12	Hubei	668727	30.39607	114.88655	Asia/Shanghai
+Camama	Camama	AO	20	Luanda	667094	-8.93611	13.26518	Africa/Luanda
+Tabuk	Tabuk	SA	19	Tabuk Region	667000	28.3998	36.57151	Asia/Riyadh
+Kitwe	Kitwe	ZM	08	Copperbelt	665961	-12.80243	28.21323	Africa/Lusaka
+Bulawayo	Bulawayo	ZW	09	Bulawayo	665952	-20.15	28.58333	Africa/Harare
+Mudanjiang	Mudanjiang	CN	08	Heilongjiang	665915	44.54804	129.62594	Asia/Shanghai
+Aracaju	Aracaju	BR	28	Sergipe	664908	-10.91111	-37.07167	America/Maceio
+Joinville	Joinville	BR	26	Santa Catarina	664500	-26.30444	-48.84556	America/Sao_Paulo
+Athens	Athens	GR	ESYE31	Attica	664046	37.98376	23.72784	Europe/Athens
+Zagreb	Zagreb	HR	21	Zagreb	663592	45.81444	15.97798	Europe/Zagreb
+Leshan	Leshan	CN	32	Sichuan	662814	29.56227	103.76386	Asia/Shanghai
+Santo André	Santo Andre	BR	27	Sao Paulo	662373	-23.66389	-46.53833	America/Sao_Paulo
+Vancouver	Vancouver	CA	02	British Columbia	662248	49.24966	-123.11934	America/Vancouver
+Rizhao	Rizhao	CN	25	Shandong	661943	35.41414	119.52908	Asia/Shanghai
+Helsinki	Helsinki	FI	01	Uusimaa	658864	60.16952	24.93545	Europe/Helsinki
+Cheonan	Cheonan	KR	17	Chungcheongnam-do	658831	36.8065	127.1522	Asia/Seoul
+Acapulco de Juárez	Acapulco de Juarez	MX	12	Guerrero	658609	16.84942	-99.90891	America/Mexico_City
+Dongcun	Dongcun	CN	25	Shandong	658000	36.77667	121.15972	Asia/Shanghai
+Banjarmasin	Banjarmasin	ID	12	South Kalimantan	657663	-3.31987	114.59075	Asia/Makassar
+Puducherry	Puducherry	IN	22	Puducherry	657209	11.93381	79.82979	Asia/Kolkata
+Suining	Suining	CN	32	Sichuan	656760	30.50802	105.57332	Asia/Shanghai
+Brampton	Brampton	CA	08	Ontario	656480	43.68341	-79.76633	America/Toronto
+Huangpu	Huangpu	CN	23	Shanghai	656200	31.2378	121.4781	Asia/Shanghai
+Golfe	Golfe	AO	20	Luanda	655796	-8.86639	13.26173	Africa/Luanda
+Puyang	Puyang	CN	09	Henan	655674	35.75641	115.04363	Asia/Shanghai
+Soacha	Soacha	CO	33	Cundinamarca	655025	4.57937	-74.21682	America/Bogota
+Boston	Boston	US	MA	Massachusetts	653833	42.35843	-71.05977	America/New_York
+Tlalnepantla	Tlalnepantla	MX	15	Mexico	653410	19.54005	-99.19538	America/Mexico_City
+Portland	Portland	US	OR	Oregon	652503	45.52345	-122.67621	America/Los_Angeles
+Calumbo	Calumbo	AO	19	Bengo	652270	-9.14692	13.41936	Africa/Luanda
+Tlaquepaque	Tlaquepaque	MX	14	Jalisco	650123	20.64121	-103.29342	America/Mexico_City
+Frankfurt am Main	Frankfurt am Main	DE	05	Hesse	650000	50.11552	8.68417	Europe/Berlin
+Macau	Macau	MO	02		649335	22.20056	113.54611	Asia/Macau
+Palermo	Palermo	IT	15	Sicily	648260	38.1166	13.3636	Europe/Rome
+Izhevsk	Izhevsk	RU	80	Udmurtiya Republic	648213	56.85225	53.19862	Europe/Samara
+Colombo	Colombo	LK	36	Western Province	648034	6.93548	79.84868	Asia/Colombo
+Maturín	Maturin	VE	16	Monagas	647459	9.74569	-63.18323	America/Caracas
+Amravati	Amravati	IN	16	Maharashtra	647057	20.93333	77.75	Asia/Kolkata
+Lingyuan	Lingyuan	CN	19	Liaoning	646000	41.24	119.40111	Asia/Shanghai
+Detroit	Detroit	US	MI	Michigan	645705	42.33143	-83.04575	America/Detroit
+Mingguang	Mingguang	CN	01	Anhui	645000	32.78017	117.96378	Asia/Shanghai
+Osogbo	Osogbo	NG	42	Osun State	645000	7.77104	4.55698	Africa/Lagos
+Bikaner	Bikaner	IN	24	Rajasthan	644406	28.01762	73.31495	Asia/Kolkata
+Jaboatão dos Guararapes	Jaboatao dos Guararapes	BR	30	Pernambuco	644037	-8.11278	-35.01472	America/Recife
+Hoji ya Henda	Hoji ya Henda	AO	20	Luanda	642050	-8.80523	13.2897	Africa/Luanda
+Las Vegas	Las Vegas	US	NV	Nevada	641903	36.17497	-115.13722	America/Los_Angeles
+Hwaseong-si	Hwaseong-si	KR	13	Gyeonggi-do	640890	37.20682	126.8169	Asia/Seoul
+Gold Coast	Gold Coast	AU	04	Queensland	640778	-28.00029	153.43088	Australia/Brisbane
+Łódź	Lodz	PL	74	Lodz Voivodeship	639890	51.77058	19.47395	Europe/Warsaw
+Jeonju	Jeonju	KR	03	Jeollabuk-do	638421	35.82194	127.14889	Asia/Seoul
+Chongming	Chongming	CN			637921	31.61852	121.69621	Asia/Shanghai
+Al Aḩmadī	Al Ahmadi	KW	04	Al Ahmadi	637411	29.07694	48.08389	Asia/Kuwait
+Cuenca	Cuenca	EC	02	Azuay	636996	-2.8953	-78.9963	America/Guayaquil
+Chisinau	Chisinau	MD	57	Chisinau Municipality	635994	47.00902	28.85938	Europe/Chisinau
+Likasi	Likasi	CD	14	Haut-Katanga	635768	-10.98303	26.7384	Africa/Lubumbashi
+Jambi City	Jambi City	ID	05	Jambi	635101	-1.6	103.61667	Asia/Jakarta
+Hebi	Hebi	CN	09	Henan	634721	35.73231	114.28616	Asia/Shanghai
+Comilla	Comilla	BD	84	Chittagong	634654	23.46186	91.18503	Asia/Dhaka
+Tshikapa	Tshikapa	CD	18	Kasai	634529	-6.41621	20.79995	Africa/Lubumbashi
+Chunian	Chunian	PK	04	Punjab	634236	30.96621	73.97908	Asia/Karachi
+Kochi	Kochi	IN	13	Kerala	633553	9.93988	76.26022	Asia/Kolkata
+Memphis	Memphis	US	TN	Tennessee	633104	35.14953	-90.04898	America/Chicago
+Jingmen	Jingmen	CN	12	Hubei	632954	31.03361	112.20472	Asia/Shanghai
+Barnaul	Barnaul	RU	04	Altai Krai	632372	53.36199	83.72786	Asia/Barnaul
+Piura	Piura	PE	20	Piura	630000	-5.18192	-80.65715	America/Lima
+Siping	Siping	CN	05	Jilin	627957	43.16143	124.37785	Asia/Shanghai
+Bhilai	Bhilai	IN	37	Chhattisgarh	627734	21.20919	81.4285	Asia/Kolkata
+Ndola	Ndola	ZM	08	Copperbelt	627503	-12.95867	28.63659	Africa/Lusaka
+Contagem	Contagem	BR	15	Minas Gerais	627123	-19.93167	-44.05361	America/Sao_Paulo
+Ulyanovsk	Ulyanovsk	RU	81	Ulyanovsk	626540	54.32824	48.38657	Europe/Ulyanovsk
+Djibouti	Djibouti	DJ	07	Djibouti	626512	11.58901	43.14503	Africa/Djibouti
+Glasgow	Glasgow	GB	SCT	Scotland	626410	55.86515	-4.25763	Europe/London
+Panshan	Panshan	CN	19	Liaoning	625040	41.18806	122.04944	Asia/Shanghai
+Louisville	Louisville	US	KY	Kentucky	624444	38.25424	-85.75941	America/Kentucky/Louisville
+Irkutsk	Irkutsk	RU	20	Irkutsk Oblast	623869	52.29566	104.29076	Asia/Irkutsk
+Ansan-si	Ansan-si	KR	13	Gyeonggi-do	623256	37.32361	126.82194	Asia/Seoul
+Al Mansurah	Al Mansurah	EG	01	Dakahlia	621953	31.03637	31.38069	Africa/Cairo
+Kermanshah	Kermanshah	IR	13	Kermanshah Province	621100	34.31417	47.065	Asia/Tehran
+Jiaozhou	Jiaozhou	CN	25	Shandong	619266	36.28389	120.00333	Asia/Shanghai
+Düsseldorf	Duesseldorf	DE	07	North Rhine-Westphalia	618685	51.22319	6.77927	Europe/Berlin
+Suizhou	Suizhou	CN	12	Hubei	618582	31.71111	113.36306	Asia/Shanghai
+Villa Nueva	Villa Nueva	GT	07	Guatemala	618397	14.52512	-90.58544	America/Guatemala
+Khabarovsk	Khabarovsk	RU	30	Khabarovsk	618150	48.46204	135.0971	Asia/Vladivostok
+Cuiabá	Cuiaba	BR	14	Mato Grosso	618124	-15.59611	-56.09667	America/Cuiaba
+Arusha	Arusha	TZ	26	Arusha	617631	-3.36667	36.68333	Africa/Dar_es_Salaam
+Feira de Santana	Feira de Santana	BR	05	Bahia	616272	-12.26667	-38.96667	America/Bahia
+Las Piñas	Las Pinas	PH	NCR	National Capital Region	615549	14.45056	120.98278	Asia/Manila
+Chizhou	Chizhou	CN	01	Anhui	615274	30.66134	117.47783	Asia/Shanghai
+Coyoacán	Coyoacan	MX	09	Mexico City	614447	19.3467	-99.16174	America/Mexico_City
+Stuttgart	Stuttgart	DE	01	Baden-Wurttemberg	612663	48.78232	9.17702	Europe/Berlin
+Ya'an	Ya'an	CN	32	Sichuan	612056	29.98521	102.999	Asia/Shanghai
+Cuttack	Cuttack	IN	21	Odisha	610189	20.46497	85.87927	Asia/Kolkata
+Borivli	Borivli	IN	16	Maharashtra	609617	19.23496	72.85976	Asia/Kolkata
+Chiclayo	Chiclayo	PE	14	Lambayeque	609400	-6.77008	-79.85495	America/Lima
+Yaroslavl	Yaroslavl	RU	88	Yaroslavl Oblast	608722	57.62987	39.87368	Europe/Moscow
+Gothenburg	Gothenburg	SE	28	Vaestra Goetaland	608462	57.70716	11.96679	Europe/Stockholm
+Kawaguchi	Kawaguchi	JP	34	Saitama	607373	35.80521	139.71072	Asia/Tokyo
+Bukit Rahman Putra	Bukit Rahman Putra	MY	12	Selangor	607000	3.21727	101.5608	Asia/Kuala_Lumpur
+Jhang Sadr	Jhang Sadr	PK	04	Punjab	606533	31.26981	72.31687	Asia/Karachi
+Ha'il	Ha'il	SA	13	Ha'il Region	605930	27.52188	41.69073	Asia/Riyadh
+Bhavnagar	Bhavnagar	IN	09	Gujarat	605882	21.76287	72.15331	Asia/Kolkata
+Benoni	Benoni	ZA	06	Gauteng	605344	-26.18848	28.32078	Africa/Johannesburg
+Vladivostok	Vladivostok	RU	59	Primorye	604901	43.10562	131.87353	Asia/Vladivostok
+Tuxtla	Tuxtla	MX	05	Chiapas	604147	16.75357	-93.11578	America/Merida
+Kryvyy Rih	Kryvyy Rih	UA	04	Dnipropetrovsk	603904	47.90572	33.39404	Europe/Kyiv
+Sanming	Sanming	CN	07	Fujian	602166	26.24861	117.61861	Asia/Shanghai
+Islamabad	Islamabad	PK	08	Islamabad	601600	33.72148	73.04329	Asia/Karachi
+Sāngli	Sangli	IN	16	Maharashtra	601214	16.85438	74.56417	Asia/Kolkata
+Jamnagar	Jamnagar	IN	09	Gujarat	600943	22.47292	70.06673	Asia/Kolkata
+Lubango	Lubango	AO	09	Huila	600751	-14.91717	13.4925	Africa/Luanda
+Pokhara	Pokhara	NP	4	Gandaki Pradesh	600051	28.26689	83.96851	Asia/Kathmandu
+Shuangyashan	Shuangyashan	CN	08	Heilongjiang	600000	46.67686	131.13273	Asia/Shanghai
+Borama	Borama	SO	21	Awdal	597842	9.93611	43.18278	Africa/Mogadishu
+Luancheng	Luancheng	CN	10	Hebei	597130	37.88452	114.64629	Asia/Shanghai
+Makhachkala	Makhachkala	RU	17	Dagestan	596356	42.97782	47.50027	Europe/Moscow
+Anyang-si	Anyang-si	KR	13	Gyeonggi-do	595644	37.3925	126.92694	Asia/Seoul
+Huambo	Huambo	AO	08	Huambo	595304	-12.77611	15.73917	Africa/Luanda
+Samarkand	Samarkand	UZ	10	Samarqand Region	595200	39.65456	66.96445	Asia/Samarkand
+Mengzi	Mengzi	CN	29	Yunnan	595100	23.36779	103.38212	Asia/Shanghai
+Kagoshima	Kagoshima	JP	18	Kagoshima	595049	31.56667	130.55	Asia/Tokyo
+Mukalla	Mukalla	YE	04	Muhafazat Hadramaout	594951	14.54248	49.12424	Asia/Aden
+Rasht	Rasht	IR	08	Gilan Province	594590	37.27611	49.58862	Asia/Tehran
+Mar del Plata	Mar del Plata	AR	01	Buenos Aires	593337	-38.00042	-57.5562	America/Argentina/Buenos_Aires
+Essen	Essen	DE	07	North Rhine-Westphalia	593085	51.45657	7.01228	Europe/Berlin
+Al Maḩallah al Kubrá	Al Mahallah al Kubra	EG	05	Gharbia	592573	30.97063	31.1669	Africa/Cairo
+Málaga	Malaga	ES	51	Andalusia	592346	36.72016	-4.42034	Europe/Madrid
+Shekhupura	Shekhupura	PK	04	Punjab	591424	31.71287	73.98556	Asia/Karachi
+Yingkou	Yingkou	CN	19	Liaoning	591159	40.66472	122.23176	Asia/Shanghai
+Zhangzhou	Zhangzhou	CN	07	Fujian	589831	24.51333	117.65556	Asia/Shanghai
+Reynosa	Reynosa	MX	28	Tamaulipas	589466	26.08005	-98.28456	America/Matamoros
+Thuận An	Thuan An	VN	79	Ho Chi Minh City (HCMC)	588616	10.9239	106.71428	Asia/Ho_Chi_Minh
+Dortmund	Dortmund	DE	07	North Rhine-Westphalia	588462	51.51494	7.466	Europe/Berlin
+Baltimore	Baltimore	US	MD	Maryland	585708	39.29038	-76.61219	America/New_York
+Pelentong	Pelentong	MY	01	Johor	583640	1.5243	103.824	Asia/Kuala_Lumpur
+Cimahi	Cimahi	ID	30	West Java	581994	-6.87222	107.5425	Asia/Jakarta
+Londrina	Londrina	BR	18	Parana	581382	-23.31028	-51.16278	America/Sao_Paulo
+Bucaramanga	Bucaramanga	CO	26	Santander Department	581130	7.125	-73.11895	America/Bogota
+Genoa	Genoa	IT	08	Liguria	580097	44.40478	8.94439	Europe/Rome
+Hachiōji	Hachioji	JP	40	Tokyo	579355	35.65583	139.32389	Asia/Tokyo
+Malacca	Malacca	MY	04	Melaka	579000	2.196	102.2405	Asia/Kuala_Lumpur
+Nha Trang	Nha Trang	VN	56	Khanh Hoa	579000	12.24507	109.19432	Asia/Ho_Chi_Minh
+Kerman	Kerman	IR	29	Kerman	577514	30.28321	57.07879	Asia/Tehran
+Orūmīyeh	Orumiyeh	IR	01	West Azerbaijan	577307	37.55274	45.07605	Asia/Tehran
+Bahçelievler	Bahcelievler	TR	34	Istanbul	576799	41.00231	28.8598	Europe/Istanbul
+Tanta	Tanta	EG	05	Gharbia	576648	30.78847	31.00192	Africa/Cairo
+Jammu	Jammu	IN	12	Jammu and Kashmir	576198	32.73528	74.86167	Asia/Kolkata
+Iskandar Puteri	Iskandar Puteri	MY	01	Johor	575977	1.39324	103.62322	Asia/Kuala_Lumpur
+Calamba	Calamba	PH	40	Calabarzon	575046	14.21167	121.16528	Asia/Manila
+Tlalpan	Tlalpan	MX	09	Mexico City	574577	19.29513	-99.16206	America/Mexico_City
+Herāt	Herat	AF	11	Herat	574300	34.34817	62.19967	Asia/Kabul
+Dongsheng	Dongsheng	CN	20	Inner Mongolia	574242	39.81609	109.97763	Asia/Shanghai
+Gujrat	Gujrat	PK	04	Punjab	574240	32.5742	74.07542	Asia/Karachi
+Tomsk	Tomsk	RU	75	Tomsk Oblast	574002	56.50049	84.98216	Asia/Tomsk
+Ümraniye	UEmraniye	TR	34	Istanbul	573265	41.01643	29.12476	Europe/Istanbul
+Shihezi	Shihezi	CN	13	Xinjiang	572772	44.3023	86.03694	Asia/Urumqi
+Nakuru	Nakuru	KE	39	Nakuru County	570674	-0.30719	36.07225	Africa/Nairobi
+Hamilton	Hamilton	CA	08	Ontario	569353	43.25011	-79.84963	America/Toronto
+Irbid	Irbid	JO	18	Irbid	569068	32.55556	35.85	Asia/Amman
+Manchester	Manchester	GB	ENG	England	568996	53.48095	-2.23743	Europe/London
+Kota Bharu	Kota Bharu	MY	03	Kelantan	568900	6.12361	102.24333	Asia/Kuala_Lumpur
+Surrey	Surrey	CA	02	British Columbia	568322	49.10635	-122.82509	America/Vancouver
+Meknes	Meknes	MA	03	Fes-Meknes	568295	33.89352	-5.54727	Africa/Casablanca
+Puente Alto	Puente Alto	CL	12	Santiago Metropolitan	568106	-33.61169	-70.57577	America/Santiago
+Nyala	Nyala	SD	49	Southern Darfur	565734	12.04888	24.88069	Africa/Khartoum
+Xinmin	Xinmin	CN	19	Liaoning	565634	41.99083	122.82528	Asia/Shanghai
+Dresden	Dresden	DE	13	Saxony	564904	51.05089	13.73832	Europe/Berlin
+Orenburg	Orenburg	RU	55	Orenburg Oblast	564773	51.76712	55.09883	Asia/Yekaterinburg
+Albuquerque	Albuquerque	US	NM	New Mexico	564559	35.08449	-106.65114	America/Denver
+Bokāro	Bokaro	IN	38	Jharkhand	564319	23.66934	86.15161	Asia/Kolkata
+Asmara	Asmara	ER	05	Maekel	563930	15.33805	38.93184	Africa/Asmara
+Sukkur	Sukkur	PK	05	Sindh	563851	27.70323	68.85889	Asia/Karachi
+Milwaukee	Milwaukee	US	WI	Wisconsin	563531	43.0389	-87.90647	America/Chicago
+Wenchang	Wenchang	CN	31	Hainan	560894	19.55158	110.80279	Asia/Shanghai
+Ile-Ife	Ile-Ife	NG	42	Osun State	560000	7.4824	4.56032	Africa/Lagos
+Gombe	Gombe	NG	55	Gombe State	560000	10.28969	11.16729	Africa/Lagos
+Hamhŭng	Hamhung	KP	03	South Hamgyong	559056	39.91833	127.53639	Asia/Pyongyang
+Kemerovo	Kemerovo	RU	29	Kuzbass	558973	55.35417	86.10435	Asia/Novokuznetsk
+Nasiriyah	Nasiriyah	IQ	09	Dhi Qar	558400	31.05799	46.25726	Asia/Baghdad
+Bloemfontein	Bloemfontein	ZA	03	Free State	556637	-29.12107	26.214	Africa/Johannesburg
+Sheffield	Sheffield	GB	ENG	England	556500	53.38297	-1.4659	Europe/London
+Santiago de Cuba	Santiago de Cuba	CU	15	Santiago de Cuba Province	555865	20.02287	-75.82171	America/Havana
+Cuautitlán Izcalli	Cuautitlan Izcalli	MX	15	Mexico	555163	19.64388	-99.21598	America/Mexico_City
+Benguela	Benguela	AO	01	Benguela	555124	-12.57674	13.40268	Africa/Luanda
+Chuxiong	Chuxiong	CN	29	Yunnan	555081	25.03639	101.54556	Asia/Shanghai
+Balbala	Balbala	DJ	07	Djibouti	554350	11.56194	43.10666	Africa/Djibouti
+Huaihua	Huaihua	CN	11	Hunan	552622	27.56337	110.00404	Asia/Shanghai
+Sishui	Sishui	CN	25	Shandong	552300	35.64889	117.27583	Asia/Shanghai
+Muntinlupa	Muntinlupa	PH	40	Calabarzon	552225	14.39028	121.0475	Asia/Manila
+Zahedan	Zahedan	IR	04	Sistan and Baluchestan	551980	29.4963	60.8629	Asia/Tehran
+Banqiao	Banqiao	TW	03	Taipei	551221	25.01427	121.46719	Asia/Taipei
+Nanded	Nanded	IN	16	Maharashtra	550564	19.16023	77.31497	Asia/Kolkata
+Kozhikode	Kozhikode	IN	13	Kerala	550440	11.24802	75.7804	Asia/Kolkata
+Ulanqab	Ulanqab	CN	20	Inner Mongolia	550231	40.993	113.133	Asia/Shanghai
+Pristina	Pristina	XK	10097360	Pristina	550000	42.67272	21.16688	Europe/Belgrade
+Cabinda	Cabinda	AO	03	Cabinda	550000	-5.56198	12.19476	Africa/Luanda
+Ajegunle	Ajegunle	NG	05	Lagos	550000	6.45197	3.33115	Africa/Lagos
+Jiamusi	Jiamusi	CN	08	Heilongjiang	549549	46.79711	130.31118	Asia/Shanghai
+Korla	Korla	CN	13	Xinjiang	549324	41.76055	86.15231	Asia/Urumqi
+Kolhāpur	Kolhapur	IN	16	Maharashtra	549236	16.69563	74.23167	Asia/Kolkata
+Porto Velho	Porto Velho	BR	24	Rondonia	548952	-8.76194	-63.90389	America/Porto_Velho
+San Miguel de Tucumán	San Miguel de Tucuman	AR	24	Tucuman	548866	-26.81601	-65.21051	America/Argentina/Tucuman
+Kuantan	Kuantan	MY	06	Pahang	548014	3.8077	103.326	Asia/Kuala_Lumpur
+Sevastopol	Sevastopol	UA	20	Sevastopol City	547820	44.60795	33.52134	Europe/Simferopol
+Nellore	Nellore	IN	02	Andhra Pradesh	547621	14.44992	79.98697	Asia/Kolkata
+Bremen	Bremen	DE	03	Bremen	546501	53.07582	8.80717	Europe/Berlin
+Wanning	Wanning	CN	31	Hainan	545992	18.79931	110.3841	Asia/Shanghai
+Owerri	Owerri	NG	28	Imo State	545000	5.48363	7.03325	Africa/Lagos
+Kota Kuala Muda	Kota Kuala Muda	MY	02	Kedah	544984	5.58822	100.37085	Asia/Kuala_Lumpur
+Sungai Petani	Sungai Petani	MY	02	Kedah	544851	5.647	100.48772	Asia/Kuala_Lumpur
+Xinzhou	Xinzhou	CN	24	Shanxi	544683	38.40917	112.73333	Asia/Shanghai
+Kotō	Koto	JP	21	Kumamoto	543730	32.77856	130.74537	Asia/Tokyo
+Kalaburagi	Kalaburagi	IN	19	Karnataka	543147	17.33583	76.83757	Asia/Kolkata
+Tucson	Tucson	US	AZ	Arizona	542629	32.22174	-110.92648	America/Phoenix
+Selayang Baru Utara	Selayang Baru Utara	MY	12	Selangor	542409	3.2549	101.6668	Asia/Kuala_Lumpur
+Vilnius	Vilnius	LT	65	Vilnius	542366	54.68916	25.2798	Europe/Vilnius
+Ajmer	Ajmer	IN	24	Rajasthan	542321	26.4521	74.63867	Asia/Kolkata
+Pingdu	Pingdu	CN	25	Shandong	542234	36.78444	119.94639	Asia/Shanghai
+Fresno	Fresno	US	CA	California	542107	36.74773	-119.77237	America/Los_Angeles
+Mbeya	Mbeya	TZ	09	Mbeya	541603	-8.9	33.45	Africa/Dar_es_Salaam
+Juiz de Fora	Juiz de Fora	BR	15	Minas Gerais	540756	-21.76417	-43.35028	America/Sao_Paulo
+Calabar	Calabar	NG	22	Cross River State	540000	4.95893	8.32695	Africa/Lagos
+Oujda	Oujda	MA	02	Oriental	539711	34.68139	-1.90858	Africa/Casablanca
+Novokuznetsk	Novokuznetsk	RU	29	Kuzbass	539616	53.75752	87.13599	Asia/Novokuznetsk
+Ryazan’	Ryazan'	RU	62	Ryazan Oblast	538962	54.62696	39.70415	Europe/Moscow
+Ji’an	Ji'an	CN	03	Jiangxi	538699	27.11716	114.97927	Asia/Shanghai
+Sahiwal	Sahiwal	PK	04	Punjab	538344	31.97386	72.33109	Asia/Karachi
+Sahiwal	Sahiwal	PK	04	Punjab	538344	30.66595	73.10186	Asia/Karachi
+Mersin	Mersin	TR	32	Mersin	537842	36.81196	34.63886	Europe/Istanbul
+Nilüfer	Niluefer	TR	16	Bursa Province	536365	40.21401	28.91567	Europe/Istanbul
+Leeds	Leeds	GB	ENG	England	536280	53.79648	-1.54785	Europe/London
+Poznań	Poznan	PL	86	Greater Poland	536151	52.40692	16.92993	Europe/Warsaw
+Aqsu	Aqsu	CN	13	Xinjiang	535657	41.18418	80.27921	Asia/Urumqi
+Ebute Ikorodu	Ebute Ikorodu	NG	05	Lagos	535619	6.60086	3.48818	Africa/Lagos
+Ananindeua	Ananindeua	BR	16	Para	535547	-1.36556	-48.37222	America/Belem
+Tanggu	Tanggu	CN	28	Tianjin	535298	39.02111	117.64694	Asia/Shanghai
+Pasir Gudang	Pasir Gudang	MY	01	Johor	534659	1.462	103.9053	Asia/Kuala_Lumpur
+Astrakhan	Astrakhan	RU	07	Astrakhan Oblast	533925	46.34968	48.04076	Europe/Astrakhan
+Okara	Okara	PK	04	Punjab	533693	30.81029	73.45155	Asia/Karachi
+Nansana	Nansana	UG	C	Central Region	532800	0.36389	32.52861	Africa/Kampala
+Kimhae	Kimhae	KR	20	Gyeongsangnam-do	531966	35.23417	128.88111	Asia/Seoul
+Ar Raqqah	Ar Raqqah	SY	04	Raqqa	531952	35.95283	39.00788	Asia/Damascus
+Québec	Quebec	CA	10	Quebec	531902	46.81228	-71.21454	America/Toronto
+Cuauhtémoc	Cuauhtemoc	MX	09	Mexico City	531831	19.44506	-99.14612	America/Mexico_City
+Shangluo	Shangluo	CN	26	Shaanxi	531696	33.86667	109.93056	Asia/Shanghai
+Himeji	Himeji	JP	13	Hyogo	530495	34.81667	134.7	Asia/Tokyo
+Ibagué	Ibague	CO	28	Tolima Department	529635	4.43573	-75.20289	America/Bogota
+Antwerp	Antwerp	BE	VLG	Flanders	529247	51.22047	4.40026	Europe/Brussels
+Assiut	Assiut	EG	17	Asyut	528669	27.18096	31.18368	Africa/Cairo
+Hamadān	Hamadan	IR	09	Hamadan Province	528256	34.79922	48.51456	Asia/Tehran
+Qionghai	Qionghai	CN	31	Hainan	528238	19.2425	110.46417	Asia/Shanghai
+Aparecida de Goiânia	Aparecida de Goiania	BR	29	Goias	527796	-16.82333	-49.24389	America/Sao_Paulo
+Cangzhou	Cangzhou	CN	10	Hebei	527681	38.31124	116.85334	Asia/Shanghai
+Mohammadpur	Mohammadpur	BD	83	Rajshahi Division	527571	24.89843	88.52844	Asia/Dhaka
+Surakarta	Surakarta	ID	07	Central Java	526870	-7.55611	110.83167	Asia/Jakarta
+Yuanping	Yuanping	CN	24	Shanxi	526000	38.71528	112.7575	Asia/Shanghai
+San Salvador	San Salvador	SV	10	San Salvador Department	525990	13.68935	-89.18718	America/El_Salvador
+Beihai	Beihai	CN	16	Guangxi	525329	21.48349	109.11549	Asia/Shanghai
+Van	Van	TR	65	Van	525016	38.49457	43.38323	Europe/Istanbul
+Sacramento	Sacramento	US	CA	California	524943	38.58157	-121.4944	America/Los_Angeles
+Thủ Đức	Thu GJuc	VN	79	Ho Chi Minh City (HCMC)	524670	10.84863	106.77209	Asia/Ho_Chi_Minh
+Üsküdar	UEskuedar	TR	34	Istanbul	524452	41.02274	29.01366	Europe/Istanbul
+Penza	Penza	RU	57	Penza Oblast	523553	53.19568	45.01075	Europe/Moscow
+Mazār-e Sharīf	Mazar-e Sharif	AF	30	Balkh	523300	36.70904	67.11087	Asia/Kabul
+Kandahār	Kandahar	AF	23	Kandahar	523300	31.61332	65.71013	Asia/Kabul
+Hengshui	Hengshui	CN	10	Hebei	522147	37.73908	115.68348	Asia/Shanghai
+Dehradun	Dehradun	IN	39	Uttarakhand	522081	30.32443	78.03392	Asia/Kolkata
+Erode	Erode	IN	25	Tamil Nadu	521891	11.3428	77.72741	Asia/Kolkata
+Lyon	Lyon	FR	84	Auvergne-Rhone-Alpes	520774	45.74906	4.84789	Europe/Paris
+Salta	Salta	AR	17	Salta	520683	-24.80645	-65.41999	America/Argentina/Salta
+Serra	Serra	BR	08	Espirito Santo	520653	-20.12861	-40.30778	America/Sao_Paulo
+Esenler	Esenler	TR	34	Istanbul	520235	41.0435	28.87619	Europe/Istanbul
+Daxing’anling	Daxing'anling	CN	08	Heilongjiang	520000	52.33385	124.71242	Asia/Shanghai
+Qui Nhon	Qui Nhon	VN	52	Gia Lai	519208	13.77648	109.22367	Asia/Ho_Chi_Minh
+Al Fayyum	Al Fayyum	EG	04	Faiyum	519047	29.30995	30.8418	Africa/Cairo
+Durgapur	Durgapur	IN	28	West Bengal	518872	23.51583	87.30801	Asia/Kolkata
+Utsunomiya	Utsunomiya	JP	38	Tochigi	518757	36.56667	139.88333	Asia/Tokyo
+Victoria de Durango	Victoria de Durango	MX	10	Durango	518709	24.02032	-104.65756	America/Monterrey
+Belford Roxo	Belford Roxo	BR	21	Rio de Janeiro	518384	-22.76417	-43.39944	America/Sao_Paulo
+Lisbon	Lisbon	PT	14	Lisbon	517802	38.72509	-9.1498	Europe/Lisbon
+Rahim Yar Khan	Rahim Yar Khan	PK	04	Punjab	517000	28.41987	70.30345	Asia/Karachi
+Ulhasnagar	Ulhasnagar	IN	16	Maharashtra	516584	19.21667	73.15	Asia/Kolkata
+Guangyuan	Guangyuan	CN	32	Sichuan	516424	32.44201	105.823	Asia/Shanghai
+Loni	Loni	IN	36	Uttar Pradesh	516082	28.75143	77.29023	Asia/Kolkata
+Siliguri	Siliguri	IN	28	West Bengal	515574	26.71004	88.42851	Asia/Kolkata
+Nuremberg	Nuremberg	DE	02	Bavaria	515543	49.45421	11.07752	Europe/Berlin
+Niterói	Niteroi	BR	21	Rio de Janeiro	515317	-22.88333	-43.10361	America/Sao_Paulo
+Ujjain	Ujjain	IN	35	Madhya Pradesh	515215	23.18239	75.77643	Asia/Kolkata
+Hannover	Hannover	DE	06	Lower Saxony	515140	52.37052	9.73322	Europe/Berlin
+Edinburgh	Edinburgh	GB	SCT	Scotland	514990	55.95206	-3.19648	Europe/London
+Macapá	Macapa	BR	03	Amapa	512902	0.03889	-51.06639	America/Belem
+Xianning	Xianning	CN	12	Hubei	512517	29.84347	114.32201	Asia/Shanghai
+Toulouse	Toulouse	FR	76	Occitanie	511684	43.60426	1.44367	Europe/Paris
+Thembisa	Thembisa	ZA	06	Gauteng	511655	-25.99636	28.2268	Africa/Johannesburg
+Carrefour	Carrefour	HT	11	Ouest	511345	18.53333	-72.4	America/Port-au-Prince
+Matsuyama	Matsuyama	JP	05	Ehime	511192	33.83916	132.76574	Asia/Tokyo
+Bilimora	Bilimora	IN	09	Gujarat	510879	20.76957	72.96134	Asia/Kolkata
+Kasur	Kasur	PK	04	Punjab	510875	31.11866	74.45025	Asia/Karachi
+Atlanta	Atlanta	US	GA	Georgia	510823	33.749	-84.38798	America/New_York
+Heroica Matamoros	Heroica Matamoros	MX	28	Tamaulipas	510739	25.87972	-97.50417	America/Matamoros
+Makati City	Makati City	PH	NCR	National Capital Region	510383	14.55027	121.03269	Asia/Manila
+Tonghua	Tonghua	CN	05	Jilin	510000	41.71972	125.92639	Asia/Shanghai
+Naberezhnyye Chelny	Naberezhnyye Chelny	RU	73	Tatarstan Republic	509870	55.73718	52.41961	Europe/Moscow
+Lipetsk	Lipetsk	RU	43	Lipetsk Oblast	509735	52.5876	39.55151	Europe/Moscow
+Kikwit	Kikwit	CD	20	Kwilu	509367	-5.04098	18.81619	Africa/Kinshasa
+Florianópolis	Florianopolis	BR	26	Santa Catarina	508826	-27.59667	-48.54917	America/Sao_Paulo
+Banan	Banan	CN	33	Chongqing	508703	29.37861	106.54	Asia/Shanghai
+Newcastle	Newcastle	AU	02	New South Wales	508437	-32.92953	151.7801	Australia/Sydney
+Tuen Mun	Tuen Mun	HK	NTM	Tuen Mun	507900	22.39175	113.97157	Asia/Hong_Kong
+Zhangye	Zhangye	CN	15	Gansu	507433	38.93417	100.45167	Asia/Shanghai
+Kirov	Kirov	RU	33	Kirov Oblast	507155	58.59809	49.65783	Europe/Kirov
+Kashgar	Kashgar	CN	13	Xinjiang	506640	39.46718	75.98675	Asia/Urumqi
+Mukim Pulai	Mukim Pulai	MY	01	Johor	505661	1.53333	103.66667	Asia/Kuala_Lumpur
+Najrān	Najran	SA	16	Najran Region	505652	17.49326	44.12766	Asia/Riyadh
+Zhoukou	Zhoukou	CN	09	Henan	505171	33.63333	114.63333	Asia/Shanghai
+Leipzig	Leipzig	DE	13	Saxony	504971	51.33962	12.37129	Europe/Berlin
+Pingliang	Pingliang	CN	15	Gansu	504848	35.53917	106.68611	Asia/Shanghai
+Duisburg	Duisburg	DE	07	North Rhine-Westphalia	504358	51.43247	6.76516	Europe/Berlin
+Āsansol	Asansol	IN	28	West Bengal	504271	23.68333	86.98333	Asia/Kolkata
+Arāk	Arak	IR	34	Markazi	503647	34.09493	49.69809	Asia/Tehran
+Maipú	Maipu	CL	12	Santiago Metropolitan	503635	-33.51421	-70.7651	America/Santiago
+Homyel'	Homyel'	BY	02	Homyel' Voblasc'	501193	52.4345	30.9754	Europe/Minsk
+Aktobe	Aktobe	KZ	04	Aktobe	500757	50.27969	57.20718	Asia/Aqtobe
+Kota Kinabalu	Kota Kinabalu	MY	16	Sabah	500421	5.9749	116.0724	Asia/Kuching
+Talatona	Talatona	AO	20	Luanda	500000	-8.91783	13.18562	Africa/Luanda
+Kampung Larkin Lama	Kampung Larkin Lama	MY	01	Johor	500000	1.5024	103.744	Asia/Kuala_Lumpur
+Kota Damansara	Kota Damansara	MY	12	Selangor	500000	3.15454	101.58022	Asia/Kuala_Lumpur
+Jalalpur Pirwala	Jalalpur Pirwala	PK	04	Punjab	500000	29.5051	71.22202	Asia/Karachi
+Skopje	Skopje	MK	F6	Grad Skopje	474889	41.99646	21.43141	Europe/Skopje
+Juba	Juba	SS	01	Central Equatoria	450000	4.85165	31.58247	Africa/Juba
+Bissau	Bissau	GW	11	Bissau	439704	11.86357	-15.59767	Africa/Bissau
+Bratislava	Bratislava	SK	02	Bratislava Region	423737	48.14816	17.10674	Europe/Bratislava
+Tirana	Tirana	AL	50	Tirana	418495	41.32744	19.81866	Europe/Tirane
+San Juan	San Juan	PR	127	San Juan	418140	18.46633	-66.10572	America/Puerto_Rico
+Panama City	Panama City	PA	08	Panama	408168	8.9936	-79.51973	America/Panama
+Tallinn	Tallinn	EE	01	Harjumaa	394024	59.43696	24.75353	Europe/Tallinn
+Windhoek	Windhoek	NA	21	Khomas Region	386219	-22.55941	17.08323	Africa/Windhoek
+Wellington	Wellington	NZ	G2	Wellington Region	381900	-41.28664	174.77557	Pacific/Auckland
+Canberra	Canberra	AU	01	Australian Capital Territory	367752	-35.28346	149.12807	Australia/Sydney
+Maseru	Maseru	LS	14	Maseru District	359753	-29.31667	27.48333	Africa/Maseru
+Doha	Doha	QA	01	Baladiyat ad Dawhah	344939	25.28545	51.53096	Asia/Qatar
+San José	San Jose	CR	08	San Jose	335007	9.93388	-84.08489	America/Costa_Rica
+New Delhi	New Delhi	IN	07	Delhi	317797	28.62137	77.2148	Asia/Kolkata
+Port Moresby	Port Moresby	PG	20	National Capital	283733	-9.47723	147.15089	Pacific/Port_Moresby
+Yamoussoukro	Yamoussoukro	CI	81	Lacs District	275686	6.82055	-5.27674	Africa/Abidjan
+Ljubljana	Ljubljana	SI	61	Ljubljana	272220	46.05108	14.50513	Europe/Ljubljana
+Porto-Novo	Porto-Novo	BJ	16	Oueme	264320	6.49646	2.60359	Africa/Porto-Novo
+Gaborone	Gaborone	BW	14	Gaborone	246325	-24.65451	25.90859	Africa/Gaborone
+Podgorica	Podgorica	ME	16	Podgorica	236852	42.44124	19.26309	Europe/Podgorica
+Georgetown	Georgetown	GY	12	Demerara-Mahaica	235017	6.80448	-58.15527	America/Guyana
+Nassau	Nassau	BS	23	New Providence	227940	25.05823	-77.34306	America/Nassau
+Sucre	Sucre	BO	01	Chuquisaca Department	224838	-19.03332	-65.26274	America/La_Paz
+Paramaribo	Paramaribo	SR	16	Paramaribo District	223757	5.86638	-55.16682	America/Paramaribo
+Nicosia	Nicosia	CY	04	Nicosia	200452	35.17284	33.35397	Asia/Nicosia
+Port Louis	Port Louis	MU	18	Port Louis	155226	-20.16194	57.49889	Indian/Mauritius
+Saint-Denis	Saint-Denis	RE	RE	Reunion	154765	-20.88231	55.4504	Indian/Reunion
+Dili	Dili	TL	DI	Dili Municipality	150000	-8.55861	125.57361	Asia/Dili
+Manama	Manama	BH	16	Manama	147074	26.22787	50.58565	Asia/Bahrain
+Praia	Praia	CV	14	Praia	137868	14.93152	-23.51254	Atlantic/Cape_Verde
+Willemstad	Willemstad	CW			125000	12.12246	-68.88641	America/Curacao
+Bern	Bern	CH	BE	Bern	121631	46.94809	7.44744	Europe/Zurich
+Reykjavík	Reykjavik	IS	39	Capital Region	118918	64.13548	-21.89541	Atlantic/Reykjavik
+Male	Male	MV	38	Kaafu Atoll	103693	4.17521	73.50916	Indian/Maldives
+Thimphu	Thimphu	BT	20	Thimphu District	98676	27.46609	89.64191	Asia/Thimphu
+Bridgetown	Bridgetown	BB	08	Saint Michael	98511	13.10732	-59.62021	America/Barbados
+Nouméa	Noumea	NC	02	South Province	93060	-22.27407	166.44884	Pacific/Noumea
+Fort-de-France	Fort-de-France	MQ	MQ	Martinique	89995	14.60365	-61.07418	America/Martinique
+Suva	Suva	FJ	01	Central	77366	-18.13683	178.42531	Pacific/Fiji
+Luxembourg	Luxembourg	LU	LU	Luxembourg	76684	49.60982	6.13268	Europe/Luxembourg
+Mbabane	Mbabane	SZ	01	Hhohho Region	76218	-26.31667	31.13333	Africa/Mbabane
+Moroni	Moroni	KM	02	Grande Comore	74749	-11.70216	43.25506	Indian/Comoro
+Gitega	Gitega	BI	13	Gitega	64904	-3.42708	29.92463	Africa/Bujumbura
+Bandar Seri Begawan	Bandar Seri Begawan	BN	02	Brunei-Muara District	64409	4.89035	114.94006	Asia/Brunei
+Cayenne	Cayenne	GF	GF	Guyane	61550	4.9381	-52.33455	America/Cayenne
+Kuwait City	Kuwait City	KW	02	Al Asimah	60064	29.367	47.97429	Asia/Kuwait
+Honiara	Honiara	SB	14	Honiara	56298	-9.43333	159.95	Pacific/Guadalcanal
+Mamoudzou	Mamoudzou	YT	97611	Mamoudzou	54831	-12.78234	45.22878	Indian/Mayotte
+São Tomé	Sao Tome	ST	02	Sao Tome Island	53300	0.33756	6.7299	Africa/Sao_Tome
+Saint John’s	Saint John's	AG	04	Saint John Parish	51737	17.12096	-61.84329	America/Antigua
+Port of Spain	Port of Spain	TT	05	Port of Spain	49031	10.66668	-61.51889	America/Port_of_Spain
+Saipan	Saipan	MP	110	Saipan	48220	15.21233	145.7545	Pacific/Saipan
+Apia	Apia	WS	10	Tuamasaga	40407	-13.83333	-171.76666	Pacific/Apia
+Tarawa	Tarawa	KI	01	Gilbert Islands	40311	1.3278	172.97696	Pacific/Tarawa
+Banjul	Banjul	GM	01	Banjul	37274	13.45274	-16.57803	Africa/Banjul
+Port-Vila	Port-Vila	VU	18	Shefa	35901	-17.73648	168.31366	Pacific/Efate
+Monaco	Monaco	MC	00	Municipality of Monaco	32965	43.73718	7.42145	Europe/Monaco
+Oranjestad	Oranjestad	AW	00		29998	12.52398	-70.02703	America/Aruba
+George Town	George Town	KY	10346796	George Town	29370	19.2866	-81.37436	America/Cayman
+Saint Helier	Saint Helier	JE	3237864	St Helier	28000	49.18804	-2.10491	Europe/Jersey
+Gibraltar	Gibraltar	GI	00		26544	36.14474	-5.35257	Europe/Gibraltar
+Papeete	Papeete	PF	01	Iles du Vent	26357	-17.5347	-149.56843	Pacific/Tahiti
+Douglas	Douglas	IM	9782170	Douglas	26218	54.15	-4.48333	Europe/Isle_of_Man
+Majuro	Majuro	MH	190	Majuro Atoll	25400	7.08971	171.38027	Pacific/Majuro
+Kingstown	Kingstown	VC	04	Saint George Parish	24518	13.15527	-61.22742	America/St_Vincent
+Victoria	Victoria	SC	26	La Riviere Anglaise	22881	-4.62001	55.45501	Indian/Mahe
+Nuku‘alofa	Nuku'alofa	TO	02	Tongatapu	22400	-21.13683	-175.20114	Pacific/Tongatapu
+Andorra la Vella	Andorra la Vella	AD	07	Andorra la Vella	20430	42.50779	1.52109	Europe/Andorra
+Castries	Castries	LC	03	Castries	20000	13.9957	-61.00614	America/St_Lucia
+Charlotte Amalie	Charlotte Amalie	VI	030	Saint Thomas Island	20000	18.3419	-64.9307	America/St_Thomas
+Roseau	Roseau	DM	04	Saint George Parish	16571	15.30174	-61.38808	America/Dominica
+Saint Peter Port	Saint Peter Port	GG	6417228	St Peter Port	16488	49.45981	-2.53527	Europe/Guernsey
+Nuuk	Nuuk	GL	07	Sermersooq	14798	64.18347	-51.72157	America/Nuuk
+Belmopan	Belmopan	BZ	02	Cayo District	13381	17.25376	-88.76401	America/Belize
+Avarua	Avarua	CK	11695425	Rarotonga	13373	-21.2075	-159.77546	Pacific/Rarotonga
+Tórshavn	Torshavn	FO	ST	Streymoy	13200	62.00973	-6.77164	Atlantic/Faroe
+Basseterre	Basseterre	KN	03	Saint George Basseterre	12920	17.2955	-62.72499	America/St_Kitts
+Pago Pago	Pago Pago	AS	010	Eastern District	11500	-14.27806	-170.7025	Pacific/Pago_Pago
+Basse-Terre	Basse-Terre	GP	GP	Guadeloupe	11472	15.99714	-61.73214	America/Guadeloupe
+Mariehamn	Mariehamn	AX	211	Mariehamn	10682	60.09726	19.93481	Europe/Mariehamn
+Kralendijk	Kralendijk	BQ	BO	Bonaire	10620	12.15	-68.26667	America/Kralendijk
+Road Town	Road Town	VG	00		8449	18.42693	-64.62079	America/Tortola
+Saint George's	Saint George's	GD	03	Saint George Parish	7500	12.05288	-61.75226	America/Grenada
+Palikir	Palikir	FM	02	Pohnpei State	6942	6.92477	158.16109	Pacific/Pohnpei
+Valletta	Valletta	MT	60	Valletta	6794	35.89968	14.5148	Europe/Malta
+Funafuti	Funafuti	TV	FUN	Funafuti	6320	-8.52425	179.19417	Pacific/Funafuti
+Saint-Pierre	Saint-Pierre	PM	97502	Saint-Pierre	6200	46.77914	-56.1773	America/Miquelon
+Gustavia	Gustavia	BL	00		5988	17.89618	-62.84978	America/St_Barthelemy
+Marigot	Marigot	MF	00		5700	18.06819	-63.08302	America/Marigot
+Vaduz	Vaduz	LI	11	Vaduz	5197	47.14151	9.52154	Europe/Vaduz
+San Marino	San Marino	SM	07	San Marino	4500	43.93667	12.44639	Europe/San_Marino
+Cockburn Town	Cockburn Town	TC	00		3720	21.46122	-71.14188	America/Grand_Turk
+Longyearbyen	Longyearbyen	SJ	21	Svalbard	2368	78.22334	15.64689	Arctic/Longyearbyen
+Stanley	Stanley	FK	00		2213	-51.69382	-57.85701	Atlantic/Stanley
+The Valley	The Valley	AI	11205396	The Valley	2035	18.21704	-63.05783	America/Anguilla
+Ciudad de la Paz	Ciudad de la Paz	GQ	10	Djibloho	2000	1.5925	10.82361	Africa/Malabo
+Philipsburg	Philipsburg	SX			1400	18.026	-63.04582	America/Lower_Princes
+Flying Fish Cove	Flying Fish Cove	CX	00		1355	-10.42172	105.67912	Indian/Christmas
+Mata-Utu	Mata-Utu	WF	98613	Uvea	1200	-13.28163	-176.17453	Pacific/Wallis
+Yaren	Yaren	NR	14	Yaren District	1100	-0.55085	166.9252	Pacific/Nauru
+Hagåtña	Hagatna	GU	AN	Hagatna	1051	13.47567	144.74886	Pacific/Guam
+Hamilton	Hamilton	BM	03	Hamilton city	902	32.2949	-64.78303	Atlantic/Bermuda
+Kingston	Kingston	NF	00		880	-29.05459	167.96628	Pacific/Norfolk
+Vatican City	Vatican City	VA			829	41.90268	12.45414	Europe/Vatican
+Jamestown	Jamestown	SH	02	Saint Helena	637	-15.92488	-5.71816	Atlantic/St_Helena
+Alofi	Alofi	NU	00		624	-19.05294	-169.91957	Pacific/Niue
+West Island	West Island	CC			120	-12.15681	96.82251	Indian/Cocos
+Adamstown	Adamstown	PN			46	-25.06597	-130.10147	Pacific/Pitcairn
+Port-aux-Français	Port-aux-Francais	TF	03	Kerguelen	45	-49.34916	70.21937	Indian/Kerguelen
+Grytviken	Grytviken	GS	00		2	-54.28111	-36.5092	Atlantic/South_Georgia
+Plymouth	Plymouth	MS	01	Saint Anthony	0	16.70555	-62.21292	America/Montserrat
+Ngerulmud	Ngerulmud	PW	07	Melekeok	0	7.50077	134.6238	Pacific/Palau

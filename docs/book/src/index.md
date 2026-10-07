@@ -85,6 +85,7 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 | [time.calendar_math](time/calendar_math.md) | periods, weekdays, business days, week numbers, month grids, cron schedules; weeks start Monday |
 | [time.zones](time/zones.md) | the same moment in UTC, local time, any IANA zone or a city; world clocks |
 | [time.sky](time/sky.md) | sunrise, sunset, day length and moon phase for a place and date; good to about a minute |
+| [geo](geo.md) | countries and cities: lookups, distance, bearing, nearest city; place names work as time zones and currencies |
 | [dev](dev.md) | developer tools: JWTs, UUIDs, URLs, semver, file permissions, IP addresses and subnets, raw bytes, colors, check digits and lookups |
 | [dev.net](dev/net.md) | IP addresses, CIDR blocks, subnets |
 | [dev.binary](dev/binary.md) | hex dumps and entropy of strings and byte lists |
