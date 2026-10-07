@@ -1,15 +1,22 @@
-# Data conversion demo: CSV in, JSON out
-let csv = "name,age,city\nann,30,Oslo\nbob,17,Rome\ncy,42,Oslo\n"
+# Run: zil examples/demo.zil
 
-let adults = parse_csv(csv)
-  |> map(\r -> {name: r.name, age: int(r.age), city: r.city})
-  |> filter(\r -> r.age >= 18)
+# Units
+trip = 42 km
+print("trip: {trip to mi}, at 60 mph takes {trip / 60 mph to min}")
+print("oven: {350 F to C}")
+print("download: {4.7 GB / 50 Mbps to min}")
 
-let by_city = {}
-for r in adults {
-  if by_city[r.city] == nil { by_city[r.city] = [] }
-  by_city[r.city].push(r.name)
-}
+# Bases
+mask = 0xff00 to bin
+print("mask: {mask}, low byte: {0xab to dec}")
 
-print(to_json(by_city, true))
-print("total age:", adults.map(\r -> r.age).reduce(0, \a, x -> a + x))
+# Strings
+title = "the quick brown fox"
+print(title.split.map(\w -> w.capitalize).join(" "))
+print("digits in 'a1b22c333': {"a1b22c333".find_all(r"\d+")}")
+print("slug: {title.replace(r"\s+", "-")}")
+print("sha256: {"hello".sha256[..12]}...")
+
+# Dates
+days = date("2026-12-25") - now
+print("days until Christmas: {round(days to d)}")

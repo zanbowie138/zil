@@ -1,6 +1,6 @@
-use crate::ast::{BinOp, Expr, ExprKind, FnDef, UnOp};
-use crate::lexer::{Span, Tok};
 use crate::Error;
+use crate::ast::{BinOp, Expr, ExprKind, FnDef, Radix, Target, UnOp, UnitSpec};
+use crate::lexer::{Span, Tok, lex_at};
 use std::rc::Rc;
 
 type PResult<T> = Result<T, Error>;
@@ -25,22 +25,33 @@ struct Parser {
     prev_end: usize,
 }
 
+fn base(base: u32) -> Target {
+    Target::Base(Radix { base, width: 0 })
+}
+
 /// (left, right) binding power of infix operators; higher binds tighter.
 fn infix_bp(t: &Tok) -> Option<(u8, u8)> {
     Some(match t {
         Tok::Assign => (2, 1),
-        Tok::Pipe => (3, 4),
-        Tok::Or => (5, 6),
-        Tok::And => (7, 8),
-        Tok::Eq | Tok::Ne => (9, 10),
-        Tok::Lt | Tok::Le | Tok::Gt | Tok::Ge => (11, 12),
-        Tok::Plus | Tok::Minus => (13, 14),
-        Tok::Star | Tok::Slash | Tok::Percent => (15, 16),
+        Tok::Pipe => (4, 5),
+        Tok::Or => (6, 7),
+        Tok::And => (8, 9),
+        Tok::Eq | Tok::Ne => (10, 11),
+        Tok::Lt | Tok::Le | Tok::Gt | Tok::Ge => (12, 13),
+        Tok::DotDot => (14, 15),
+        Tok::Bar => (16, 17),
+        Tok::Caret => (18, 19),
+        Tok::Amp => (20, 21),
+        Tok::Shl | Tok::Shr => (22, 23),
+        Tok::Plus | Tok::Minus => (24, 25),
+        Tok::Star | Tok::Slash | Tok::SlashSlash | Tok::Percent => (26, 27),
+        Tok::StarStar => (30, 29),
         _ => return None,
     })
 }
-const PREFIX_BP: u8 = 17;
-const POSTFIX_BP: u8 = 19;
+const TO_BP: u8 = 3;
+const PREFIX_BP: u8 = 28;
+const POSTFIX_BP: u8 = 32;
 
 fn binop(t: &Tok) -> BinOp {
     match t {
@@ -52,11 +63,19 @@ fn binop(t: &Tok) -> BinOp {
         Tok::Le => BinOp::Le,
         Tok::Gt => BinOp::Gt,
         Tok::Ge => BinOp::Ge,
+        Tok::DotDot => BinOp::Range,
         Tok::Plus => BinOp::Add,
         Tok::Minus => BinOp::Sub,
         Tok::Star => BinOp::Mul,
         Tok::Slash => BinOp::Div,
+        Tok::SlashSlash => BinOp::IntDiv,
         Tok::Percent => BinOp::Rem,
+        Tok::StarStar => BinOp::Pow,
+        Tok::Caret => BinOp::BitXor,
+        Tok::Amp => BinOp::BitAnd,
+        Tok::Bar => BinOp::BitOr,
+        Tok::Shl => BinOp::Shl,
+        Tok::Shr => BinOp::Shr,
         _ => unreachable!(),
     }
 }
@@ -64,6 +83,10 @@ fn binop(t: &Tok) -> BinOp {
 impl Parser {
     fn peek(&self) -> &Tok {
         &self.toks[self.pos].0
+    }
+
+    fn peek_at(&self, n: usize) -> &Tok {
+        &self.toks[(self.pos + n).min(self.toks.len() - 1)].0
     }
 
     fn span(&self) -> Span {
@@ -79,6 +102,11 @@ impl Parser {
         t
     }
 
+    /// No whitespace between the previous token and the current one.
+    fn touching(&self) -> bool {
+        self.pos > 0 && self.toks[self.pos - 1].1.end == self.toks[self.pos].1.start
+    }
+
     fn expect(&mut self, t: Tok, what: &str) -> PResult<()> {
         if *self.peek() == t {
             self.bump();
@@ -89,9 +117,10 @@ impl Parser {
     }
 
     fn ident(&mut self) -> PResult<String> {
+        let span = self.span();
         match self.bump() {
             Tok::Ident(s) => Ok(s),
-            t => Err(Error::new(format!("expected identifier, found {t:?}"), self.toks[self.pos - 1].1.clone())),
+            t => Err(Error::new(format!("expected identifier, found {t:?}"), span)),
         }
     }
 
@@ -129,16 +158,19 @@ impl Parser {
                 self.bump();
                 let kind = match t {
                     Tok::LParen => ExprKind::Call(Box::new(lhs), self.list(Tok::RParen)?),
-                    Tok::LBracket => {
-                        self.skip_nl();
-                        let idx = self.expr(0)?;
-                        self.skip_nl();
-                        self.expect(Tok::RBracket, "`]`")?;
-                        ExprKind::Index(Box::new(lhs), Box::new(idx))
-                    }
+                    Tok::LBracket => self.index(lhs)?,
                     _ => ExprKind::Field(Box::new(lhs), self.ident()?),
                 };
                 lhs = self.mk(kind, start);
+                continue;
+            }
+            if t == Tok::To {
+                if TO_BP < min_bp {
+                    break;
+                }
+                self.bump();
+                let target = self.target()?;
+                lhs = self.mk(ExprKind::To(Box::new(lhs), target), start);
                 continue;
             }
             let Some((lbp, rbp)) = infix_bp(&t) else { break };
@@ -177,9 +209,30 @@ impl Parser {
             Tok::Nil => ExprKind::Nil,
             Tok::True => ExprKind::Bool(true),
             Tok::False => ExprKind::Bool(false),
-            Tok::Int(n) => ExprKind::Int(n),
-            Tok::Float(n) => ExprKind::Float(n),
-            Tok::Str(s) => ExprKind::Str(s.into()),
+            t @ (Tok::Int(_) | Tok::Based(_) | Tok::Float(_)) => {
+                let kind = match t {
+                    Tok::Int(n) => ExprKind::Int(n, 10),
+                    Tok::Based((n, b)) => ExprKind::Int(n, b),
+                    Tok::Float(n) => ExprKind::Float(n),
+                    _ => unreachable!(),
+                };
+                if matches!(self.peek(), Tok::Ident(_) | Tok::In) {
+                    let num = self.mk(kind, start);
+                    ExprKind::Qty(Box::new(num), self.unit_spec(true)?)
+                } else {
+                    kind
+                }
+            }
+            Tok::Str(raw) => self.string(&raw, tok_span.start + 1)?,
+            Tok::Regex(src) => match regex::Regex::new(&src) {
+                Ok(re) => ExprKind::Regex(Rc::new(re)),
+                Err(e) => return Err(Error::new(format!("bad regex: {e}"), tok_span)),
+            },
+            // `a m`: a variable holding a number, given a unit.
+            Tok::Ident(s) if matches!(self.peek(), Tok::Ident(_) | Tok::In) => {
+                let var = self.mk(ExprKind::Ident(s), start);
+                ExprKind::Qty(Box::new(var), self.unit_spec(true)?)
+            }
             Tok::Ident(s) => ExprKind::Ident(s),
             Tok::LParen => {
                 self.skip_nl();
@@ -192,29 +245,16 @@ impl Parser {
             Tok::LBrace => ExprKind::Map(self.map_body()?),
             Tok::Minus => ExprKind::Unary(UnOp::Neg, Box::new(self.expr(PREFIX_BP)?)),
             Tok::Bang => ExprKind::Unary(UnOp::Not, Box::new(self.expr(PREFIX_BP)?)),
+            Tok::Tilde => ExprKind::Unary(UnOp::BitNot, Box::new(self.expr(PREFIX_BP)?)),
             Tok::Backslash => {
-                let mut params = Vec::new();
-                while *self.peek() != Tok::Arrow {
-                    params.push(self.ident()?);
-                    if *self.peek() != Tok::Comma {
-                        break;
-                    }
-                    self.bump();
-                }
+                let params = self.params(Tok::Arrow)?;
                 self.expect(Tok::Arrow, "`->`")?;
                 let body = self.expr(0)?;
                 ExprKind::Fn(Rc::new(FnDef { params, body }))
             }
             Tok::Fn => {
                 self.expect(Tok::LParen, "`(`")?;
-                let mut params = Vec::new();
-                while *self.peek() != Tok::RParen {
-                    params.push(self.ident()?);
-                    if *self.peek() != Tok::Comma {
-                        break;
-                    }
-                    self.bump();
-                }
+                let params = self.params(Tok::RParen)?;
                 self.expect(Tok::RParen, "`)`")?;
                 let body = self.block()?;
                 ExprKind::Fn(Rc::new(FnDef { params, body }))
@@ -241,12 +281,6 @@ impl Parser {
                 let iter = self.expr(0)?;
                 ExprKind::For(name, Box::new(iter), Box::new(self.block()?))
             }
-            Tok::Let => {
-                let name = self.ident()?;
-                self.expect(Tok::Assign, "`=`")?;
-                self.skip_nl();
-                ExprKind::Let(name, Box::new(self.expr(0)?))
-            }
             Tok::Return => {
                 let val = match self.peek() {
                     Tok::Newline | Tok::RBrace | Tok::RParen | Tok::Eof => None,
@@ -257,6 +291,195 @@ impl Parser {
             t => return Err(Error::new(format!("unexpected {t:?}"), tok_span)),
         };
         Ok(self.mk(kind, start))
+    }
+
+    fn params(&mut self, close: Tok) -> PResult<Vec<String>> {
+        let mut params = Vec::new();
+        while *self.peek() != close {
+            params.push(self.ident()?);
+            if *self.peek() != Tok::Comma {
+                break;
+            }
+            self.bump();
+        }
+        Ok(params)
+    }
+
+    /// After `[`: `x[i]`, `x[a..b]`, `x[a..]`, `x[..b]`.
+    fn index(&mut self, lhs: Expr) -> PResult<ExprKind> {
+        let bound = |p: &mut Self| -> PResult<Option<Box<Expr>>> {
+            Ok(match p.peek() {
+                Tok::DotDot | Tok::RBracket => None,
+                _ => Some(Box::new(p.expr(15)?)),
+            })
+        };
+        let from = bound(self)?;
+        let kind = if *self.peek() == Tok::DotDot {
+            self.bump();
+            ExprKind::Slice(Box::new(lhs), from, bound(self)?)
+        } else {
+            let idx = from.ok_or_else(|| Error::new("expected index", self.span()))?;
+            ExprKind::Index(Box::new(lhs), idx)
+        };
+        self.expect(Tok::RBracket, "`]`")?;
+        Ok(kind)
+    }
+
+    /// Units after a number (`touching`: `/`, `*`, `^` only continue the unit without spaces,
+    /// so `60 km/h` is a unit but `60 km / h` divides) or after `to` (spaces allowed).
+    fn unit_spec(&mut self, touching: bool) -> PResult<UnitSpec> {
+        let mut spec = vec![self.unit_term(touching, 1)?];
+        loop {
+            let sign = match self.peek() {
+                Tok::Star => 1,
+                Tok::Slash => -1,
+                _ => break,
+            };
+            let unit_next = matches!(self.peek_at(1), Tok::Ident(_) | Tok::In);
+            if !unit_next || (touching && !(self.touching() && self.toks[self.pos].1.end == self.toks[self.pos + 1].1.start)) {
+                break;
+            }
+            self.bump();
+            spec.push(self.unit_term(touching, sign)?);
+        }
+        Ok(spec)
+    }
+
+    fn unit_term(&mut self, touching: bool, sign: i8) -> PResult<(String, i8)> {
+        let span = self.span();
+        let name = match self.bump() {
+            Tok::Ident(s) => s,
+            Tok::In => "in".into(),
+            t => return Err(Error::new(format!("expected unit, found {t:?}"), span)),
+        };
+        let mut pow = 1;
+        if *self.peek() == Tok::Caret && (!touching || self.touching()) {
+            self.bump();
+            let neg = *self.peek() == Tok::Minus;
+            if neg {
+                self.bump();
+            }
+            let span = self.span();
+            pow = match self.bump() {
+                Tok::Int(n) if (1..=9).contains(&n) => n as i8,
+                _ => return Err(Error::new("expected unit power 1-9", span)),
+            };
+            if neg {
+                pow = -pow;
+            }
+        }
+        Ok((name, pow * sign))
+    }
+
+    fn target(&mut self) -> PResult<Target> {
+        let span = self.span();
+        let fixed = match self.peek() {
+            Tok::Ident(s) => match s.as_str() {
+                "hex" => Some(base(16)),
+                "bin" => Some(base(2)),
+                "oct" => Some(base(8)),
+                "dec" => Some(base(10)),
+                "unix" => Some(Target::Unix),
+                "str" | "int" | "float" | "list" | "bool" | "base64" => Some(Target::Type(s.clone())),
+                "UTC" | "utc" => Some(Target::Tz("UTC".into())),
+                "local" => Some(Target::Tz("local".into())),
+                "base" if *self.peek_at(1) == Tok::LParen => {
+                    self.bump();
+                    self.bump();
+                    let n = match self.bump() {
+                        Tok::Int(n) if (2..=36).contains(&n) => n as u32,
+                        _ => return Err(Error::new("base must be 2-36", span.start..self.prev_end)),
+                    };
+                    self.expect(Tok::RParen, "`)`")?;
+                    return Ok(base(n));
+                }
+                _ => None,
+            },
+            Tok::Str(s) => Some(Target::Tz(s.clone())),
+            _ => None,
+        };
+        match fixed {
+            // `hex(32)`: a bit width, shown as two's complement.
+            Some(Target::Base(mut r)) if *self.peek_at(1) == Tok::LParen => {
+                self.bump();
+                self.bump();
+                r.width = match self.bump() {
+                    Tok::Int(n) if (1..=64).contains(&n) => n as u32,
+                    _ => return Err(Error::new("width must be 1-64 bits", span.start..self.prev_end)),
+                };
+                self.expect(Tok::RParen, "`)`")?;
+                Ok(Target::Base(r))
+            }
+            Some(t) => {
+                self.bump();
+                Ok(t)
+            }
+            None => {
+                let mut specs = vec![self.unit_spec(false)?];
+                while matches!(self.peek(), Tok::Ident(_) | Tok::In) {
+                    specs.push(self.unit_spec(false)?);
+                }
+                Ok(if specs.len() == 1 { Target::Unit(specs.pop().unwrap()) } else { Target::Units(specs) })
+            }
+        }
+    }
+
+    /// `raw` is the text between the quotes, starting at byte `start` of the source.
+    fn string(&self, raw: &str, start: usize) -> PResult<ExprKind> {
+        let span = start - 1..start + raw.len() + 1;
+        let lit_expr = |s: &mut String| Expr { kind: ExprKind::Str(std::mem::take(s).into()), span: span.clone() };
+        let mut parts: Vec<Expr> = Vec::new();
+        let mut lit = String::new();
+        let mut chars = raw.char_indices();
+        while let Some((i, c)) = chars.next() {
+            match c {
+                '\\' => {
+                    let (_, e) = chars.next().expect("lexer guarantees escape target");
+                    lit.push(match e {
+                        'n' => '\n',
+                        't' => '\t',
+                        'r' => '\r',
+                        '0' => '\0',
+                        '\\' | '"' | '{' | '}' => e,
+                        _ => {
+                            let at = start + i;
+                            return Err(Error::new(format!("unknown escape `\\{e}`"), at..at + 1 + e.len_utf8()));
+                        }
+                    });
+                }
+                '{' => {
+                    let end = close_brace(raw, i + 1)
+                        .ok_or_else(|| Error::new("unclosed `{` in string (use `\\{` for a literal brace)", start + i..start + i + 1))?;
+                    let inner_toks = lex_at(&raw[i + 1..end], start + i + 1)?;
+                    let mut p = Parser { toks: inner_toks, pos: 0, prev_end: 0 };
+                    p.skip_nl();
+                    let e = p.expr(0)?;
+                    p.skip_nl();
+                    p.expect(Tok::Eof, "`}`")?;
+                    if !lit.is_empty() || parts.is_empty() {
+                        parts.push(lit_expr(&mut lit));
+                    }
+                    parts.push(e);
+                    while chars.as_str().len() > raw.len() - end - 1 {
+                        chars.next();
+                    }
+                }
+                _ => lit.push(c),
+            }
+        }
+        if parts.is_empty() {
+            return Ok(ExprKind::Str(lit.into()));
+        }
+        if !lit.is_empty() {
+            parts.push(lit_expr(&mut lit));
+        }
+        // Leading Str part makes `+` concatenate everything.
+        let mut it = parts.into_iter();
+        let mut acc = it.next().unwrap();
+        for p in it {
+            acc = Expr { kind: ExprKind::Binary(BinOp::Add, Box::new(acc), Box::new(p)), span: span.clone() };
+        }
+        Ok(acc.kind)
     }
 
     /// Comma-separated exprs up to `close`; newlines and a trailing comma allowed.
@@ -281,9 +504,11 @@ impl Parser {
         let mut entries = Vec::new();
         self.skip_nl();
         while *self.peek() != Tok::RBrace {
+            let span = self.span();
             let key = match self.bump() {
-                Tok::Ident(s) | Tok::Str(s) => s,
-                t => return Err(Error::new(format!("expected map key, found {t:?}"), self.toks[self.pos - 1].1.clone())),
+                Tok::Ident(s) => s,
+                Tok::Str(s) if !s.contains(['\\', '{']) => s,
+                t => return Err(Error::new(format!("expected map key, found {t:?}"), span)),
             };
             self.expect(Tok::Colon, "`:`")?;
             self.skip_nl();
@@ -314,6 +539,34 @@ impl Parser {
     }
 }
 
+/// Byte index of the `}` closing an interpolation that starts at `from`, skipping nested braces and strings.
+fn close_brace(s: &str, from: usize) -> Option<usize> {
+    let (mut depth, mut in_str, mut esc) = (1, false, false);
+    for (i, c) in s[from..].char_indices() {
+        if in_str {
+            match (esc, c) {
+                (true, _) => esc = false,
+                (_, '\\') => esc = true,
+                (_, '"') => in_str = false,
+                _ => {}
+            }
+            continue;
+        }
+        match c {
+            '"' => in_str = true,
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(from + i);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use crate::lexer::lex;
@@ -325,19 +578,37 @@ mod tests {
 
     #[test]
     fn precedence() {
-        let s = sexp("1 + 2 * 3");
-        assert!(s.starts_with("Binary(Add"), "{s}");
+        assert!(sexp("1 + 2 * 3").starts_with("Binary(Add"));
+        assert!(sexp("-2 ** 2").starts_with("Unary(Neg"));
+        assert!(sexp("x = 5 km to mi").starts_with("Assign"));
+    }
+
+    #[test]
+    fn units_touching_vs_spaced() {
+        assert!(sexp("60 km/h").contains(r#"[("km", 1), ("h", -1)]"#));
+        assert!(sexp("60 km / h").starts_with("Binary(Div"));
+        assert!(sexp("a m to km").starts_with("To(Expr { kind: Qty(Expr { kind: Ident"));
+        assert!(sexp("5 cm to in").contains(r#"Unit([("in", 1)])"#));
+        assert!(sexp("1 kg*m/s^2").contains(r#"("s", -2)"#));
+    }
+
+    #[test]
+    fn interpolation_and_slices() {
+        assert!(sexp(r#""a{1 + 2}b""#).starts_with("Binary(Add"));
+        assert!(sexp(r#""no \{brace\}""#).starts_with("Str(\"no {brace}\")"));
+        assert!(sexp("s[-3..]").starts_with("Slice("));
     }
 
     #[test]
     fn pipe_desugars_to_call() {
         let s = sexp("xs\n  |> map(f)\n  |> len");
         assert!(s.starts_with("Call(Expr { kind: Ident(\"len\")"), "{s}");
-        assert!(s.contains("Ident(\"map\")"), "{s}");
     }
 
     #[test]
-    fn rejects_bad_assign() {
-        assert!(super::parse(lex("1 = 2").unwrap()).is_err());
+    fn rejects_bad_input() {
+        for src in ["1 = 2", r#""{1""#, "r\"(\"", "5 to base(99)"] {
+            assert!(lex(src).and_then(super::parse).is_err(), "{src}");
+        }
     }
 }
