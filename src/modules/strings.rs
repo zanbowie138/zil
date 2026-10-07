@@ -231,11 +231,7 @@ fn url_decode(s: &str) -> Option<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::interp::tests::{eval, try_eval};
-
-    fn show(src: &str) -> String {
-        eval(src).to_string()
-    }
+    use crate::interp::tests::{show, try_eval};
 
     #[test]
     fn strings() {

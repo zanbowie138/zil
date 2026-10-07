@@ -563,6 +563,7 @@ pub fn calendar(year: i64, month: i64) -> R<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::interp::tests::{show, try_eval};
 
     /// Tuesday 2026-10-06 14:30 UTC.
     fn now() -> Zoned {
@@ -634,5 +635,28 @@ mod tests {
         assert_eq!(with(&z, &[("day".into(), 1)]).unwrap().date().to_string(), "2026-10-01");
         assert!(with(&z, &[("month".into(), 13)]).is_err());
         assert!(calendar(2026, 10).unwrap().ends_with("26 27 28 29 30 31"));
+    }
+
+    #[test]
+    fn end_to_end() {
+        assert_eq!(show(r#"date("2026-01-31") + 1 mo"#)[..10], *"2026-02-28");
+        assert_eq!(show(r#"date("2026-12-25") - date("2026-12-20")"#), "5 d");
+        assert_eq!(show(r#"date("2026-03-01T12:00") + 90 min"#)[..16], *"2026-03-01 13:30");
+        assert_eq!(show(r#"date(0) to "UTC""#), "1970-01-01 00:00:00 +00:00");
+        assert_eq!(show(r#"date(0) to unix"#), "0");
+        assert_eq!(show(r#"(date(0) to UTC).year"#), "1970");
+        assert_eq!(show(r#"date("2026-12-25")"#), "2026-12-25");
+        assert_eq!(show("date(2026, 12, 25, 18, 30)")[..16], *"2026-12-25 18:30");
+        assert_eq!(show("tomorrow - today"), "1 d");
+        assert_eq!(show("today == now.start_of(\"day\")"), "true");
+        assert_eq!(show(r#"date("2026-11-01").nth_weekday(4, "thursday")"#), "2026-11-26");
+        assert_eq!(show(r#"date("2026-10-06").next("fri").weekday"#), "Friday");
+        assert_eq!(show(r#"(date("2026-12-25T00:00Z") - date("2026-10-06T14:24Z")) to d h min"#), "79 d 9 h 36 min");
+        assert_eq!(show("5.5 ft to ft in"), "5 ft 6 in");
+        assert_eq!(show("-90 s to min s"), "-1 min 30 s");
+        assert_eq!(show("5000 s.parts"), "1 h 23 min 20 s");
+        assert_eq!(show("0.5 d.parts"), "12 h");
+        assert!(try_eval("5 km to h min").is_err());
+        assert!(try_eval(r#"now.start_of("fortnight")"#).is_err());
     }
 }

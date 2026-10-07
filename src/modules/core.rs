@@ -186,11 +186,7 @@ fn parse_literal(s: &str) -> Result<Value, String> {
 
 #[cfg(test)]
 mod tests {
-    use crate::interp::tests::{eval, try_eval};
-
-    fn show(src: &str) -> String {
-        eval(src).to_string()
-    }
+    use crate::interp::tests::{show, try_eval};
 
     #[test]
     fn conversions() {
@@ -215,5 +211,72 @@ str(x).parse == x"#
         for bad in [r#""read_file(\"x\")".parse"#, r#""[x]".parse"#, r#""1 + 2".parse"#, r#""".parse"#] {
             assert!(try_eval(bad).is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn type_conversions() {
+        assert_eq!(show(r#""ab" to list"#), r#"["a", "b"]"#);
+        assert_eq!(show(r#""0xff" to int"#), "0xff");
+        assert_eq!(show(r#""2.5" to float * 2"#), "5");
+        assert_eq!(show("[1, 2] to str"), "[1, 2]");
+        assert_eq!(show("0 to bool"), "true");
+        assert_eq!(show("nil to bool"), "false");
+        assert_eq!(show("5 km to float"), "5");
+        assert!(try_eval("5 to list").is_err());
+        assert_eq!(show(r#""hi there" to base64"#), "aGkgdGhlcmU=");
+        assert_eq!(show(r#"base64("hi there")"#), "aGkgdGhlcmU=");
+        assert_eq!(show("hex(255)"), "0xff");
+        assert_eq!(show("255.bin"), "0b11111111");
+        assert_eq!(show("bin(5, 8)"), "0b00000101");
+        assert_eq!(show("oct(8)"), "0o10");
+        assert_eq!(show("dec(0xff)"), "255");
+        assert_eq!(show("base(35, 36)"), "36#z");
+        assert_eq!(show(r#"hex("hi")"#), "6869");
+        assert_eq!(
+            show(
+                "hex = 3
+hex + 1"
+            ),
+            "4"
+        );
+        assert!(try_eval("hex(256, 8)").is_err());
+        assert!(try_eval("base(1, 99)").is_err());
+    }
+
+    #[test]
+    fn bases() {
+        assert_eq!(show("255 to hex"), "0xff");
+        assert_eq!(show("x = 255 to hex\nx + 1"), "0x100");
+        assert_eq!(show("0xff to dec"), "255");
+        assert_eq!(show("0b1010 + 1"), "0b1011");
+        assert_eq!(show("10 to bin"), "0b1010");
+        assert_eq!(show("35 to base(36)"), "36#z");
+        assert_eq!(
+            show(
+                "x = 36#z
+x + 1"
+            ),
+            "36#10"
+        );
+        assert_eq!(
+            show(
+                "x = 0b1010
+x + 1"
+            ),
+            "0b1011"
+        );
+        assert_eq!(show("2#1010"), "0b1010");
+        assert_eq!(show("-3#12 to dec"), "-5");
+        assert!(try_eval("37#1").is_err());
+        assert!(try_eval("2#12").is_err());
+        assert_eq!(show("-1 to hex(32)"), "0xffffffff");
+        assert_eq!(show("5 to bin(8)"), "0b00000101");
+        assert_eq!(show("-1 to dec(8)"), "255");
+        assert_eq!(show("~0x0f to hex(8)"), "0xf0");
+        assert_eq!(show("-5 to hex"), "-0x5");
+        assert!(try_eval("256 to hex(8)").is_err());
+        assert!(try_eval("5 to base(99)").is_err());
+        assert!(try_eval("5 to hex(65)").is_err());
+        assert_eq!(show(r#""hi" to hex"#), "6869");
     }
 }

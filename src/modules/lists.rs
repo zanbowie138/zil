@@ -181,11 +181,7 @@ fn sort_keyed(keyed: &mut [(Value, Value)]) -> Result<Value, String> {
 
 #[cfg(test)]
 mod tests {
-    use crate::interp::tests::eval;
-
-    fn show(src: &str) -> String {
-        eval(src).to_string()
-    }
+    use crate::interp::tests::show;
 
     #[test]
     fn lists() {

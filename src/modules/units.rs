@@ -465,6 +465,7 @@ fn load_rates() -> Result<Vec<(String, f64)>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::interp::tests::{show, try_eval};
 
     fn close(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-9 * b.abs().max(1.0)
@@ -486,5 +487,23 @@ mod tests {
         let m2 = unit("m").unwrap().mul(&unit("m").unwrap(), 1);
         assert_eq!(m2.to_string(), "m^2");
         assert!(unit("m").unwrap().mul(&unit("m").unwrap(), -1).0.is_empty());
+    }
+
+    #[test]
+    fn end_to_end() {
+        assert_eq!(show("5 km to mi"), "3.10686 mi");
+        assert_eq!(show("72 F to C"), "22.2222 C");
+        assert_eq!(show("-40 C to F"), "-40 F");
+        assert_eq!(show("3 km / 20 min to kph"), "9 kph");
+        assert_eq!(show("1.5 GB to MiB"), "1430.51 MiB");
+        assert_eq!(show("2 m + 30 cm"), "2.3 m");
+        assert_eq!(show("60 km/h to m/s"), "16.6667 m/s");
+        assert_eq!(show("2 m * 3 m"), "6 m^2");
+        assert_eq!(show("1 kWh / 1 J"), "3600000");
+        assert_eq!(show("d = 5\nd * km to mi"), "3.10686 mi");
+        assert_eq!(show("m = 3\n5 m to ft"), "16.4042 ft");
+        assert_eq!(show("1 m > 50 cm"), "true");
+        assert!(try_eval("5 km + 1 kg").is_err());
+        assert!(try_eval("5 km to kg").is_err());
     }
 }

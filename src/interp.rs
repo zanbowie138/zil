@@ -447,7 +447,7 @@ pub mod tests {
         Interp::new().run(&ast)
     }
 
-    fn show(src: &str) -> String {
+    pub fn show(src: &str) -> String {
         eval(src).to_string()
     }
 
@@ -465,91 +465,6 @@ pub mod tests {
         assert_eq!(show("1e20"), "1e20");
         assert_eq!(show(r#""ab" * 3"#), "ababab");
         assert!(try_eval("1 / 0").is_err());
-    }
-
-    #[test]
-    fn units() {
-        assert_eq!(show("5 km to mi"), "3.10686 mi");
-        assert_eq!(show("72 F to C"), "22.2222 C");
-        assert_eq!(show("-40 C to F"), "-40 F");
-        assert_eq!(show("3 km / 20 min to kph"), "9 kph");
-        assert_eq!(show("1.5 GB to MiB"), "1430.51 MiB");
-        assert_eq!(show("2 m + 30 cm"), "2.3 m");
-        assert_eq!(show("60 km/h to m/s"), "16.6667 m/s");
-        assert_eq!(show("2 m * 3 m"), "6 m^2");
-        assert_eq!(show("1 kWh / 1 J"), "3600000");
-        assert_eq!(show("d = 5\nd * km to mi"), "3.10686 mi");
-        assert_eq!(show("m = 3\n5 m to ft"), "16.4042 ft");
-        assert_eq!(show("1 m > 50 cm"), "true");
-        assert!(try_eval("5 km + 1 kg").is_err());
-        assert!(try_eval("5 km to kg").is_err());
-    }
-
-    #[test]
-    fn bases() {
-        assert_eq!(show("255 to hex"), "0xff");
-        assert_eq!(show("x = 255 to hex\nx + 1"), "0x100");
-        assert_eq!(show("0xff to dec"), "255");
-        assert_eq!(show("0b1010 + 1"), "0b1011");
-        assert_eq!(show("10 to bin"), "0b1010");
-        assert_eq!(show("35 to base(36)"), "36#z");
-        assert_eq!(
-            show(
-                "x = 36#z
-x + 1"
-            ),
-            "36#10"
-        );
-        assert_eq!(
-            show(
-                "x = 0b1010
-x + 1"
-            ),
-            "0b1011"
-        );
-        assert_eq!(show("2#1010"), "0b1010");
-        assert_eq!(show("-3#12 to dec"), "-5");
-        assert!(try_eval("37#1").is_err());
-        assert!(try_eval("2#12").is_err());
-        assert_eq!(show("-1 to hex(32)"), "0xffffffff");
-        assert_eq!(show("5 to bin(8)"), "0b00000101");
-        assert_eq!(show("-1 to dec(8)"), "255");
-        assert_eq!(show("~0x0f to hex(8)"), "0xf0");
-        assert_eq!(show("-5 to hex"), "-0x5");
-        assert!(try_eval("256 to hex(8)").is_err());
-        assert!(try_eval("5 to base(99)").is_err());
-        assert!(try_eval("5 to hex(65)").is_err());
-        assert_eq!(show(r#""hi" to hex"#), "6869");
-    }
-
-    #[test]
-    fn type_conversions() {
-        assert_eq!(show(r#""ab" to list"#), r#"["a", "b"]"#);
-        assert_eq!(show(r#""0xff" to int"#), "0xff");
-        assert_eq!(show(r#""2.5" to float * 2"#), "5");
-        assert_eq!(show("[1, 2] to str"), "[1, 2]");
-        assert_eq!(show("0 to bool"), "true");
-        assert_eq!(show("nil to bool"), "false");
-        assert_eq!(show("5 km to float"), "5");
-        assert!(try_eval("5 to list").is_err());
-        assert_eq!(show(r#""hi there" to base64"#), "aGkgdGhlcmU=");
-        assert_eq!(show(r#"base64("hi there")"#), "aGkgdGhlcmU=");
-        assert_eq!(show("hex(255)"), "0xff");
-        assert_eq!(show("255.bin"), "0b11111111");
-        assert_eq!(show("bin(5, 8)"), "0b00000101");
-        assert_eq!(show("oct(8)"), "0o10");
-        assert_eq!(show("dec(0xff)"), "255");
-        assert_eq!(show("base(35, 36)"), "36#z");
-        assert_eq!(show(r#"hex("hi")"#), "6869");
-        assert_eq!(
-            show(
-                "hex = 3
-hex + 1"
-            ),
-            "4"
-        );
-        assert!(try_eval("hex(256, 8)").is_err());
-        assert!(try_eval("base(1, 99)").is_err());
     }
 
     #[test]
@@ -624,28 +539,5 @@ u.tags.push("x")
 u.tags[0] = "y"
 [u.age, u.tags, u.missing]"#;
         assert_eq!(show(src), r#"[30, ["y"], nil]"#);
-    }
-
-    #[test]
-    fn dates() {
-        assert_eq!(show(r#"date("2026-01-31") + 1 mo"#)[..10], *"2026-02-28");
-        assert_eq!(show(r#"date("2026-12-25") - date("2026-12-20")"#), "5 d");
-        assert_eq!(show(r#"date("2026-03-01T12:00") + 90 min"#)[..16], *"2026-03-01 13:30");
-        assert_eq!(show(r#"date(0) to "UTC""#), "1970-01-01 00:00:00 +00:00");
-        assert_eq!(show(r#"date(0) to unix"#), "0");
-        assert_eq!(show(r#"(date(0) to UTC).year"#), "1970");
-        assert_eq!(show(r#"date("2026-12-25")"#), "2026-12-25");
-        assert_eq!(show("date(2026, 12, 25, 18, 30)")[..16], *"2026-12-25 18:30");
-        assert_eq!(show("tomorrow - today"), "1 d");
-        assert_eq!(show("today == now.start_of(\"day\")"), "true");
-        assert_eq!(show(r#"date("2026-11-01").nth_weekday(4, "thursday")"#), "2026-11-26");
-        assert_eq!(show(r#"date("2026-10-06").next("fri").weekday"#), "Friday");
-        assert_eq!(show(r#"(date("2026-12-25T00:00Z") - date("2026-10-06T14:24Z")) to d h min"#), "79 d 9 h 36 min");
-        assert_eq!(show("5.5 ft to ft in"), "5 ft 6 in");
-        assert_eq!(show("-90 s to min s"), "-1 min 30 s");
-        assert_eq!(show("5000 s.parts"), "1 h 23 min 20 s");
-        assert_eq!(show("0.5 d.parts"), "12 h");
-        assert!(try_eval("5 km to h min").is_err());
-        assert!(try_eval(r#"now.start_of("fortnight")"#).is_err());
     }
 }

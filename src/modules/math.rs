@@ -123,11 +123,7 @@ fn from_digits(l: &[Value], base: u32) -> Result<Value, String> {
 
 #[cfg(test)]
 mod tests {
-    use crate::interp::tests::{eval, try_eval};
-
-    fn show(src: &str) -> String {
-        eval(src).to_string()
-    }
+    use crate::interp::tests::{show, try_eval};
 
     #[test]
     fn math() {
