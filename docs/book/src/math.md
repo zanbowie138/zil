@@ -37,13 +37,14 @@ rounding, roots, logs, constants; exact fractions and big ints
 | [formatting](math/formatting.md) | format specs in strings, printf, and fixed/sci/percent/commas |
 | [random](math/random.md) | numbers, picks, shuffles, UUIDs |
 | [uncertainty](math/uncertainty.md) | measurements with an error, `5 ± 0.1 m`, propagated through arithmetic and math (first order, independent errors) |
+| [complex](math/complex.md) | complex numbers, `2 + 3i`; a number touching `i` is imaginary |
 
 ## Functions
 
 | function | description |
 |---|---|
-| [`sqrt(x: num)`](#sqrt) | square root |
-| [`abs(x: num\|quantity)`](#abs) | absolute value; keeps units |
+| [`sqrt(x: num\|complex)`](#sqrt) | square root |
+| [`abs(x: num\|quantity\|complex)`](#abs) | absolute value; keeps units. A complex number's magnitude |
 | [`round(x: num\|quantity, digits?: int) / round(x: num\|quantity, step: num\|quantity)`](#round) | round to nearest; keeps units. A non-int second arg rounds to a multiple of it |
 | [`floor(x: num\|quantity)`](#floor) | round down |
 | [`ceil(x: num\|quantity)`](#ceil) | round up |
@@ -51,15 +52,15 @@ rounding, roots, logs, constants; exact fractions and big ints
 | [`sign(x: num\|quantity)`](#sign) | -1, 0 or 1 |
 | [`clamp(x: any, lo: any, hi: any)`](#clamp) | limit x to [lo, hi] |
 | [`cbrt(x: num)`](#cbrt) | cube root |
-| [`exp(x: num)`](#exp) | e to the power x |
-| [`ln(x: num)`](#ln) | natural log |
+| [`exp(x: num\|complex)`](#exp) | e to the power x |
+| [`ln(x: num\|complex)`](#ln) | natural log |
 | [`log(x: num, base?: num)`](#log) | log base 10, or another base |
 | [`hypot(x: num\|quantity, y: num\|quantity)`](#hypot) | sqrt(x² + y²) without overflow; keeps units |
 | [`is_nan(x: any)`](#is_nan) | whether x is nan (nan != nan) |
 
 ### sqrt
 
-`sqrt(x: num)`: square root
+`sqrt(x: num|complex)`: square root
 
 ```zil
 sqrt(2)
@@ -70,7 +71,7 @@ See also: [cbrt](math.md#cbrt)
 
 ### abs
 
-`abs(x: num|quantity)`: absolute value; keeps units
+`abs(x: num|quantity|complex)`: absolute value; keeps units. A complex number's magnitude
 
 ```zil
 abs(-3)
@@ -170,7 +171,7 @@ See also: [sqrt](math.md#sqrt)
 
 ### exp
 
-`exp(x: num)`: e to the power x
+`exp(x: num|complex)`: e to the power x
 
 ```zil
 exp(1)
@@ -181,7 +182,7 @@ See also: [ln](math.md#ln)
 
 ### ln
 
-`ln(x: num)`: natural log
+`ln(x: num|complex)`: natural log
 
 ```zil
 ln(e)

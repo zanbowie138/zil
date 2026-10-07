@@ -287,8 +287,12 @@ impl Parser<'_> {
                     Tok::Dec(r) => ExprKind::Dec(Rc::new(r)),
                     _ => unreachable!(),
                 };
+                // `3i`: imaginary, only when the `i` touches the number.
+                if matches!(self.peek(), Tok::Ident(s) if s == "i") && self.touching() {
+                    self.bump();
+                    ExprKind::Imag(Box::new(self.mk(kind, start)))
                 // `20%` unless an operand follows: `20 % 3` and `7%3` stay remainders.
-                if *self.peek() == Tok::Percent && self.touching() && !starts_operand(self.peek_at(1)) {
+                } else if *self.peek() == Tok::Percent && self.touching() && !starts_operand(self.peek_at(1)) {
                     self.bump();
                     ExprKind::Percent(Box::new(self.mk(kind, start)))
                 } else if self.unit_next() {

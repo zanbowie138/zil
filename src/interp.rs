@@ -1,7 +1,7 @@
 use crate::Error;
 use crate::ast::{BinOp, Expr, ExprKind, FnDef, Pat, Radix, Target, UnOp};
 use crate::lexer::Span;
-use crate::modules::{self, math::uncertainty, units};
+use crate::modules::{self, math::complex, math::uncertainty, units};
 use crate::value::{Value, compare, exact, num, ratio};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
@@ -198,7 +198,9 @@ impl Interp {
     #[inline(never)]
     fn call_builtin(&mut self, m: &'static modules::Module, name: &'static str, args: Vec<Value>, span: &Span, arg_spans: &[Span]) -> Result<Value, Error> {
         let doc = m.fns.iter().find(|f| f.name == name).expect("builtins have docs");
-        let mut call = |args: &[Value]| (m.call)(self, name, args, span);
+        // `sqrt(-4 + 0i)`, `abs(3 + 4i)`: the complex module takes over the call.
+        let m2 = if args.iter().any(|a| matches!(a, Value::Cplx(..))) && complex::LIFTED.contains(&name) { &complex::MODULE } else { m };
+        let mut call = |args: &[Value]| (m2.call)(self, name, args, span);
         let r = if args.iter().any(|a| matches!(a, Value::Unc(..))) && uncertainty::LIFTED.contains(&name) {
             uncertainty::propagate(&args, call)
         } else {
@@ -370,7 +372,11 @@ impl Interp {
                 self.call(&Value::Builtin(m, f), args, &e.span)?
             }
             ExprKind::To(x, target) => self.convert_to(e, x, target, env)?,
-            ExprKind::Percent(x) => binary(BinOp::Div, &self.eval(x, env)?, &Value::int(100)).map_err(err)?,
+            // One arm for both: each arm of `eval` costs stack in debug builds, on every recursion level.
+            ExprKind::Percent(x) | ExprKind::Imag(x) => {
+                let (op, k) = if matches!(e.kind, ExprKind::Imag(_)) { (BinOp::Mul, Value::Cplx(0.0, 1.0)) } else { (BinOp::Div, Value::int(100)) };
+                binary(op, &self.eval(x, env)?, &k).map_err(err)?
+            }
             ExprKind::Format(x, spec) => {
                 let v = self.eval(x, env)?;
                 let spec = modules::math::formatting::Spec::parse(spec).expect("parser checks specs");
@@ -384,6 +390,7 @@ impl Interp {
                 (UnOp::Neg, Value::Float(n)) => Value::Float(-n),
                 (UnOp::Neg, Value::Qty(n, u)) => Value::Qty(-n, u),
                 (UnOp::Neg, Value::Unc(c)) => Value::unc(-c.0, c.1, c.2.clone()),
+                (UnOp::Neg, Value::Cplx(re, im)) => Value::Cplx(-re, -im),
                 (UnOp::Neg, v) => return Err(err(format!("cannot negate a {}", v.type_name()))),
                 (UnOp::BitNot, Value::Int(n, b)) => Value::Int(!n, b),
                 (UnOp::BitNot, Value::Big(n, b)) => exact(BigRational::from_integer(!&*n), b, false),

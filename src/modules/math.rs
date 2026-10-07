@@ -2,6 +2,7 @@
 
 pub mod bases;
 pub mod bits;
+pub mod complex;
 pub mod formatting;
 pub mod numtheory;
 pub mod random;
@@ -51,14 +52,24 @@ pub const MODULE: Module = Module {
         ("pi", std::f64::consts::PI), ("e", std::f64::consts::E), ("tau", std::f64::consts::TAU),
         ("phi", 1.618033988749895), ("inf", f64::INFINITY), ("nan", f64::NAN),
     ],
-    children: &[stats::MODULE, trig::MODULE, numtheory::MODULE, bits::MODULE, bases::MODULE, formatting::MODULE, random::MODULE, uncertainty::MODULE],
+    children: &[
+        stats::MODULE,
+        trig::MODULE,
+        numtheory::MODULE,
+        bits::MODULE,
+        bases::MODULE,
+        formatting::MODULE,
+        random::MODULE,
+        uncertainty::MODULE,
+        complex::MODULE,
+    ],
     ..Module::EMPTY
 };
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("sqrt", "sqrt(x: num)", "square root", &["sqrt(2)"], &["cbrt"]),
-    doc("abs", "abs(x: num|quantity)", "absolute value; keeps units", &["abs(-3)", "abs(-2 km)"], &["round", "sign"]),
+    doc("sqrt", "sqrt(x: num|complex)", "square root", &["sqrt(2)"], &["cbrt"]),
+    doc("abs", "abs(x: num|quantity|complex)", "absolute value; keeps units. A complex number's magnitude", &["abs(-3)", "abs(-2 km)"], &["round", "sign"]),
     doc("round", "round(x: num|quantity, digits?: int) / round(x: num|quantity, step: num|quantity)", "round to nearest; keeps units. A non-int second arg rounds to a multiple of it", &["round(pi, 2)", "round(2.5 km)", "round(7.3, 0.25)", "round(17 min, 15 min)"], &["floor", "ceil", "trunc"]),
     doc("floor", "floor(x: num|quantity)", "round down", &["floor(2.7)"], &["ceil", "round"]),
     doc("ceil", "ceil(x: num|quantity)", "round up", &["ceil(2.1)"], &["floor", "round"]),
@@ -66,16 +77,19 @@ const FNS: &[Doc] = &[
     doc("sign", "sign(x: num|quantity)", "-1, 0 or 1", &["sign(-5 km)", "sign(0)"], &["abs"]),
     doc("clamp", "clamp(x: any, lo: any, hi: any)", "limit x to [lo, hi]", &["clamp(15, 0, 10)", "clamp(5 m, 1 m, 2 m)"], &["min", "max"]),
     doc("cbrt", "cbrt(x: num)", "cube root", &["cbrt(27)"], &["sqrt"]),
-    doc("exp", "exp(x: num)", "e to the power x", &["exp(1)"], &["ln"]),
-    doc("ln", "ln(x: num)", "natural log", &["ln(e)"], &["log", "exp"]),
+    doc("exp", "exp(x: num|complex)", "e to the power x", &["exp(1)"], &["ln"]),
+    doc("ln", "ln(x: num|complex)", "natural log", &["ln(e)"], &["log", "exp"]),
     doc("log", "log(x: num, base?: num)", "log base 10, or another base", &["log(1000)", "log(8, 2)"], &["ln"]),
     doc("hypot", "hypot(x: num|quantity, y: num|quantity)", "sqrt(x² + y²) without overflow; keeps units", &["hypot(3, 4)", "hypot(3 m, 4 m)"], &["sqrt", "atan2"]),
     doc("is_nan", "is_nan(x: any)", "whether x is nan (nan != nan)", &["is_nan(nan)", "is_nan(inf - inf)"], &[]),
 ];
 
-fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
+fn call(_: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Call {
     use Value::*;
     Ok(match (name, args) {
+        ("sqrt", [v]) if num(v).is_some_and(|x| x < 0.0) => {
+            return Err(Fail::Err(crate::Error::new(format!("sqrt: `{v}` is negative"), span.clone()).help(format!("for a complex root, `csqrt({v})`"))));
+        }
         ("sqrt", [v]) if num(v).is_some() => Float(num(v).unwrap().sqrt()),
         ("abs" | "round" | "floor" | "ceil" | "trunc", [v]) => round_like(name, v, 0).ok_or(Fail::BadArgs)?,
         ("round", [v, Int(n, _)]) => round_like(name, v, *n).ok_or(Fail::BadArgs)?,

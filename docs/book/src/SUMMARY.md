@@ -21,6 +21,7 @@
   - [formatting](math/formatting.md)
   - [random](math/random.md)
   - [uncertainty](math/uncertainty.md)
+  - [complex](math/complex.md)
 - [units](units.md)
   - [constants](units/constants.md)
   - [money](units/money.md)

@@ -28,6 +28,8 @@ pub enum ExprKind {
     Qty(Box<Expr>, UnitSpec),
     /// `20%`, which is 0.2; `x + 20%` is sugar for `x * (1 + 20%)`.
     Percent(Box<Expr>),
+    /// `3i`: the number times the imaginary unit.
+    Imag(Box<Expr>),
     /// `"{x:.2f}"`: an interpolated value and its format spec.
     Format(Box<Expr>, Rc<str>),
     Unary(UnOp, Box<Expr>),

@@ -29,6 +29,8 @@ pub enum Value {
     /// `5 ± 0.1 m`: value, uncertainty (≥ 0) and unit, which is empty for a plain number.
     /// Behind an `Rc` so `Value` stays small: every eval frame holds several.
     Unc(Rc<(f64, f64, Unit)>),
+    /// `2 + 3i`: real and imaginary parts.
+    Cplx(f64, f64),
     Str(Rc<str>),
     Regex(Rc<Regex>),
     Date(Rc<Zoned>),
@@ -98,6 +100,7 @@ impl Value {
             Value::Float(_) => "float",
             Value::Qty(..) => "quantity",
             Value::Unc(..) => "uncertain",
+            Value::Cplx(..) => "complex",
             Value::Str(_) => "str",
             Value::Regex(_) => "regex",
             Value::Date(_) => "date",
@@ -123,6 +126,9 @@ impl Value {
             },
             Value::Unc(c) if c.2.0.is_empty() => write!(f, "{} ± {}", fmt_float(c.0), fmt_float(c.1)),
             Value::Unc(c) => write!(f, "{} ± {} {}", fmt_float(c.0), fmt_float(c.1), c.2),
+            Value::Cplx(re, im) if *re == 0.0 => write!(f, "{}i", fmt_float(*im)),
+            Value::Cplx(re, im) if im.is_sign_negative() => write!(f, "{} - {}i", fmt_float(*re), fmt_float(-im)),
+            Value::Cplx(re, im) => write!(f, "{} + {}i", fmt_float(*re), fmt_float(*im)),
             Value::Str(s) if top => write!(f, "{s}"),
             Value::Str(s) => write!(f, "{s:?}"),
             Value::Regex(r) => write!(f, "r\"{}\"", r.as_str()),
@@ -191,6 +197,7 @@ impl PartialEq for Value {
             (Int(..) | Big(..) | Frac(..) | Float(_), Int(..) | Big(..) | Frac(..) | Float(_)) => num(self) == num(other),
             (Qty(..), Qty(..)) => compare(self, other) == Some(Ordering::Equal),
             (Unc(a), Unc(b)) => Value::qty(a.0, a.2.clone()) == Value::qty(b.0, b.2.clone()) && Value::qty(a.1, a.2.clone()) == Value::qty(b.1, b.2.clone()),
+            (Cplx(a, b), Cplx(c, d)) => a == c && b == d,
             (Str(a), Str(b)) => a == b,
             (Regex(a), Regex(b)) => a.as_str() == b.as_str(),
             (Date(a), Date(b)) => a.timestamp() == b.timestamp(),
