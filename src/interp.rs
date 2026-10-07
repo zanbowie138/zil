@@ -1,3 +1,5 @@
+//! Tree-walking evaluator: scopes, closures, calls, operators and `to` conversions.
+
 use crate::Error;
 use crate::ast::{BinOp, Expr, ExprKind, FnDef, Pat, Radix, Target, UnOp};
 use crate::lexer::Span;

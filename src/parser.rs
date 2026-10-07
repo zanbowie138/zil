@@ -1,3 +1,5 @@
+//! Recursive-descent parser: tokens into statements of `Expr`, including string `{}` interpolation.
+
 use crate::Error;
 use crate::ast::{BinOp, Expr, ExprKind, FnDef, Pat, Target, UnOp, UnitSpec};
 use crate::lexer::{Span, Tok, lex, lex_at};

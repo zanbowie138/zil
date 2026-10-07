@@ -2,6 +2,11 @@
 name = "zil"
 version = "0.1.0"
 edition = "2024"
+description = "An expression calculator and scripting language with units, dates, exact fractions and big ints"
+repository = "https://github.com/zanbowie138/zil"
+readme = "README.md"
+keywords = ["calculator", "units", "repl", "scripting", "language"]
+categories = ["command-line-utilities", "mathematics"]
 
 [dependencies]
 ariadne = "0.6.0"

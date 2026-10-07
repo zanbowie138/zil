@@ -1,3 +1,5 @@
+//! Syntax tree produced by the parser and walked by the interpreter.
+
 use crate::lexer::Span;
 use num_bigint::BigInt;
 use regex::Regex;

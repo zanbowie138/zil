@@ -1,3 +1,5 @@
+//! zil: an expression calculator and scripting language. CLI entry point and REPL.
+
 mod ast;
 mod docs;
 mod error;

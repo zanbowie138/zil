@@ -1,3 +1,5 @@
+//! Tokens and the logos lexer: numbers, strings, operators, comments.
+
 use crate::Error;
 use crate::ast::BinOp;
 use logos::Logos;
