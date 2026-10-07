@@ -118,7 +118,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             };
             Value::list(re.find_iter(s).map(num).collect())
         }
-        ("strip_ansi", [Str(s)]) => Value::str(strip_ansi(s)),
+        ("strip_ansi", [Str(s)]) => Value::str(crate::ansi::strip_ansi(s)),
         _ => return Err(Fail::BadArgs),
     })
 }
@@ -135,12 +135,6 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
 
 fn strs<'a>(it: impl Iterator<Item = &'a str>) -> Value {
     Value::list(it.map(Value::str).collect())
-}
-
-/// Remove terminal color and cursor codes.
-pub fn strip_ansi(s: &str) -> String {
-    let re = regex::Regex::new(r"\x1b\[[0-9;?]*[A-Za-z]").unwrap();
-    re.replace_all(s, "").into_owned()
 }
 
 #[cfg(test)]

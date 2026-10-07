@@ -1,6 +1,6 @@
 //! Calendars: periods, weekdays, business days, month grids, cron, zodiac signs. Weeks start Monday.
 
-use super::{e, end_of, is_weekend, start_of, unknown_weekday, weekday};
+use super::{end_of, is_weekend, msg, start_of, unknown_weekday, weekday};
 use crate::interp::Interp;
 use crate::modules::{Call, Doc, Fail, Module, doc};
 use crate::value::Value;
@@ -406,12 +406,12 @@ pub fn add_workdays(z: &Zoned, n: i64, off: &Off) -> Result<Zoned, String> {
     let step = if n < 0 { -1 } else { 1 };
     let mut d = z.date();
     for _ in 0..n.abs() {
-        d = d.checked_add(Span::new().days(step)).map_err(e)?;
+        d = d.checked_add(Span::new().days(step)).map_err(msg)?;
         while off.has(d) {
-            d = d.checked_add(Span::new().days(step)).map_err(e)?;
+            d = d.checked_add(Span::new().days(step)).map_err(msg)?;
         }
     }
-    z.with().date(d).build().map_err(e)
+    z.with().date(d).build().map_err(msg)
 }
 
 /// Monday-Friday days that aren't holidays from `a` up to (not including) `b`; negative if `b` is earlier.
@@ -420,7 +420,7 @@ pub fn workdays(a: &Zoned, b: &Zoned, off: &Off) -> Result<i64, String> {
     let mut n = 0;
     while d < end {
         n += i64::from(!off.has(d));
-        d = d.tomorrow().map_err(e)?;
+        d = d.tomorrow().map_err(msg)?;
     }
     Ok(n * sign)
 }
@@ -429,7 +429,7 @@ pub fn workdays(a: &Zoned, b: &Zoned, off: &Off) -> Result<i64, String> {
 pub fn calendar(year: i64, month: i64) -> Result<String, String> {
     let y = i16::try_from(year).map_err(|_| format!("year {year} out of range"))?;
     let m = i8::try_from(month).map_err(|_| format!("month {month} out of range"))?;
-    let first = Date::new(y, m, 1).map_err(e)?;
+    let first = Date::new(y, m, 1).map_err(msg)?;
     let mut cells = vec!["  ".to_string(); first.weekday().to_monday_zero_offset() as usize];
     cells.extend((1..=first.days_in_month()).map(|d| format!("{d:>2}")));
     let rows: Vec<String> = cells.chunks(7).map(|c| c.join(" ")).collect();

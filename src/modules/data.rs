@@ -141,7 +141,7 @@ fn sort_keyed(keyed: &mut [(Value, Value)], desc: bool) -> Result<Value, String>
     let mut bad = None;
     keyed.sort_by(|(a, _), (b, _)| {
         let ord = compare(a, b).unwrap_or_else(|| {
-            bad = Some(format!("cannot compare {} and {}", crate::modules::short(a), crate::modules::short(b)));
+            bad = Some(format!("cannot compare {} and {}", crate::error::short(a), crate::error::short(b)));
             Ordering::Equal
         });
         if desc { ord.reverse() } else { ord }

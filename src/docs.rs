@@ -1,7 +1,8 @@
 //! `zil --docs <dir>`: the mdBook reference, rendered from the same module tree as `help`, one page per module.
 //! Example results are evaluated live, so the pages are build output: CI regenerates them on deploy.
 
-use crate::help::{ADVANCED, ADVANCED_UNRUN, HIGHLIGHTS, eval};
+use crate::guide::{ADVANCED, ADVANCED_UNRUN, HIGHLIGHTS};
+use crate::help::eval;
 use crate::modules::{ALL, Doc, Module, Section, modules, units};
 use std::fmt::Write;
 use std::path::Path;

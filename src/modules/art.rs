@@ -8,10 +8,10 @@ pub mod games;
 pub mod generative;
 mod img;
 
+use crate::ansi::{RESET, strip_ansi};
 use crate::interp::Interp;
 use crate::lexer::Span;
 use crate::modules::dev::colors::{self, Rgb};
-use crate::modules::text::strip_ansi;
 use crate::modules::{Call, Doc, Fail, Module, doc};
 use crate::value::Value;
 
@@ -141,8 +141,6 @@ fn paint(s: &str, rgb: impl Fn(usize, usize, usize) -> Rgb) -> String {
     });
     lines.collect::<Vec<_>>().join("\n")
 }
-
-pub const RESET: &str = "\x1b[0m";
 
 /// The truecolor escape for a foreground color.
 pub fn fg(c: Rgb) -> String {

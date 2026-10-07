@@ -1,6 +1,7 @@
 //! Pictures as text for `img`: PNG, JPEG and GIF files drawn with an ASCII ramp, colored half blocks or dithered braille.
 
-use super::{Dots, RESET, fg};
+use super::{Dots, fg};
+use crate::ansi::RESET;
 use crate::modules::{Call, Fail};
 use crate::value::Value;
 use image::imageops::FilterType;

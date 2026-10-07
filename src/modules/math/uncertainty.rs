@@ -3,10 +3,11 @@
 //! difference) times its error, added in quadrature.
 
 use crate::ast::{BinOp, Target};
-use crate::interp::{Interp, binary as op, mismatch};
+use crate::interp::Interp;
 use crate::lexer::Span;
 use crate::modules::units::Unit;
 use crate::modules::{self, Call, Claim, Doc, Fail, Module, doc};
+use crate::ops::{binary as op, mismatch};
 use crate::value::{Value, compare, num};
 use std::cmp::Ordering;
 

@@ -1,9 +1,10 @@
 //! Sets: unique values in insertion order, with set algebra as operators.
 
 use crate::ast::BinOp;
+use crate::error::short;
 use crate::interp::Interp;
 use crate::lexer::Span;
-use crate::modules::{Call, Claim, Doc, Fail, Module, doc, short};
+use crate::modules::{Call, Claim, Doc, Fail, Module, doc};
 use crate::value::Value;
 use indexmap::IndexSet;
 

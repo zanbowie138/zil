@@ -2,6 +2,7 @@
 //! Calendars, time zones and the sky (sunrise, moon) are children.
 
 pub mod calendars;
+mod parsing;
 pub mod sky;
 pub mod zones;
 
@@ -10,8 +11,9 @@ use crate::interp::Interp;
 use crate::modules::units::{self, Unit};
 use crate::modules::{Call, Claim, Doc, Fail, Module, doc};
 use crate::value::Value;
-use jiff::civil::{self, Date, Time, Weekday};
+use jiff::civil::{self, Date, Weekday};
 use jiff::{SignedDuration, Span, Timestamp, Zoned, tz::TimeZone};
+use parsing::{parse, time, with_format};
 
 pub const MODULE: Module = Module {
     name: "time",
@@ -164,7 +166,7 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &crate::lexer
         ("format", [Str(f), rest @ ..]) => Value::str(crate::modules::math::formatting::printf(f, rest)?),
         ("unix", [Date(z)]) => Value::int(z.timestamp().as_second()),
         ("unix_ms", [Date(z)]) => Value::int(z.timestamp().as_millisecond()),
-        ("date_ms", [Int(n, _)]) => Value::date(Timestamp::from_millisecond(*n).map_err(e)?.to_zoned(TimeZone::system())),
+        ("date_ms", [Int(n, _)]) => Value::date(Timestamp::from_millisecond(*n).map_err(msg)?.to_zoned(TimeZone::system())),
         ("timeit", [f]) => {
             let t = std::time::Instant::now();
             it.call(f, vec![], span)?;
@@ -203,7 +205,7 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
         (BinOp::Sub, Str(x), Str(y)) => {
             let (x, y) = (time(&x.to_lowercase())?, time(&y.to_lowercase())?);
             let today = Zoned::now().date();
-            let at = |t| today.to_datetime(t).to_zoned(TimeZone::system()).map(Value::date).map_err(e);
+            let at = |t| today.to_datetime(t).to_zoned(TimeZone::system()).map(Value::date).map_err(msg);
             return binary(op, &at(x).ok()?, &at(y).ok()?);
         }
         (BinOp::Sub, Date(x), Date(y)) => {
@@ -234,7 +236,8 @@ fn compare(a: &Value, b: &Value) -> Option<std::cmp::Ordering> {
 
 type R<T> = Result<T, String>;
 
-pub fn e(x: impl ToString) -> String {
+/// An error as its message, for `map_err`.
+pub fn msg(x: impl ToString) -> String {
     x.to_string()
 }
 
@@ -261,184 +264,10 @@ pub fn add(z: &Zoned, v: f64, u: &Unit) -> R<Zoned> {
         _ => None,
     };
     let r = match span {
-        Some(span) => z.checked_add(span.map_err(e)?),
-        None => z.checked_add(SignedDuration::try_from_secs_f64(u.to_si(v)).map_err(e)?),
+        Some(span) => z.checked_add(span.map_err(msg)?),
+        None => z.checked_add(SignedDuration::try_from_secs_f64(u.to_si(v)).map_err(msg)?),
     };
-    r.map_err(e)
-}
-
-/// Any supported date string: ISO 8601 / RFC 9557 / RFC 2822, US and written-out dates, or natural language.
-pub fn parse(s: &str, now: &Zoned) -> Option<Zoned> {
-    strict(s.trim(), now.time_zone()).or_else(|| natural(s, now))
-}
-
-const DATE_FORMATS: &[&str] = &[
-    "%m/%d/%y",
-    "%d/%m/%y",
-    "%m/%d/%Y",
-    "%d/%m/%Y", // US first; day/month only when month would be > 12
-    "%b %d %Y",
-    "%b %d, %Y",
-    "%d %b %Y",
-    "%d %b, %Y",
-    "%a %b %d %Y",
-    "%a, %b %d, %Y", // abbreviated month
-    "%B %d %Y",
-    "%B %d, %Y",
-    "%d %B %Y",
-    "%d %B, %Y",
-    "%A %B %d %Y",
-    "%A, %B %d, %Y", // full month
-];
-const TIME_FORMATS: &[&str] = &["", " %H:%M", " %H:%M:%S", " %I:%M %p", " %I:%M%p", " %I%p", " %I %p"];
-
-fn strict(s: &str, tz: &TimeZone) -> Option<Zoned> {
-    if let Ok(z) = s.parse::<Zoned>() {
-        return Some(z);
-    }
-    if let Ok(t) = s.parse::<Timestamp>() {
-        return Some(t.to_zoned(tz.clone()));
-    }
-    if let Ok(dt) = s.replacen(' ', "T", 1).parse::<civil::DateTime>() {
-        return dt.to_zoned(tz.clone()).ok();
-    }
-    if let Ok(d) = s.parse::<Date>() {
-        return d.to_zoned(tz.clone()).ok();
-    }
-    if let Ok(z) = jiff::fmt::rfc2822::parse(s) {
-        return Some(z);
-    }
-    DATE_FORMATS.iter().flat_map(|d| TIME_FORMATS.iter().map(move |t| format!("{d}{t}"))).find_map(|f| with_format(s, &f, tz))
-}
-
-/// Parse with explicit strftime codes; missing time means midnight, missing zone means `tz`.
-pub fn with_format(s: &str, fmt: &str, tz: &TimeZone) -> Option<Zoned> {
-    let tm = jiff::fmt::strtime::parse(fmt, s).ok()?;
-    if let Ok(z) = tm.to_zoned() {
-        return Some(z);
-    }
-    if let Ok(dt) = tm.to_datetime() {
-        return dt.to_zoned(tz.clone()).ok();
-    }
-    tm.to_date().ok()?.to_zoned(tz.clone()).ok()
-}
-
-/// "tomorrow at 5pm", "next friday", "3 days ago", "in 2 weeks", "end of month", "first day of next year".
-fn natural(s: &str, now: &Zoned) -> Option<Zoned> {
-    let s = s.trim().to_lowercase().replace(" am", "am").replace(" pm", "pm");
-    let (day, time) = split_time(&s);
-    let w: Vec<&str> = day.split_whitespace().filter(|w| *w != "the").collect();
-    let tz = now.time_zone();
-    let today = now.date();
-    let at = |d: Date| d.to_zoned(tz.clone()).ok();
-    let z = match w[..] {
-        [] if time.is_some() => at(today)?,
-        ["now"] => now.clone(),
-        ["today"] => at(today)?,
-        ["tomorrow"] => at(today.tomorrow().ok()?)?,
-        ["yesterday"] => at(today.yesterday().ok()?)?,
-        ["in", n, u] | [n, u, "from", "now"] => add(now, count(n)?, &time_unit(u)?).ok()?,
-        [n, u, "ago"] => add(now, -count(n)?, &time_unit(u)?).ok()?,
-        ["next" | "last", wd] if weekday(wd).is_some() => at(today.nth_weekday(if w[0] == "next" { 1 } else { -1 }, weekday(wd)?).ok()?)?,
-        ["this", wd] | [wd] if weekday(wd).is_some() => {
-            let wd = weekday(wd)?;
-            at(if today.weekday() == wd { today } else { today.nth_weekday(1, wd).ok()? })?
-        }
-        ["next" | "last" | "this", p] => at(shift(now, p, rel(w[0]))?.date())?,
-        ["start" | "beginning" | "end", "of", ref rest @ ..] => {
-            let (base, p) = period_base(rest, now)?;
-            if w[0] == "end" { end_of(&base, p).ok()? } else { start_of(&base, p).ok()? }
-        }
-        ["first" | "last", "day", "of", ref rest @ ..] => {
-            let (base, p) = period_base(rest, now)?;
-            let z = if w[0] == "first" { start_of(&base, p) } else { end_of(&base, p) };
-            z.ok()?.start_of_day().ok()?
-        }
-        _ => strict(day, tz)?,
-    };
-    match time {
-        Some(t) => z.with().time(t).build().ok(),
-        None => Some(z),
-    }
-}
-
-/// `["month"]`, `["next", "month"]` → the moment to take the period from, and the period.
-fn period_base<'a>(rest: &[&'a str], now: &Zoned) -> Option<(Zoned, &'a str)> {
-    match *rest {
-        [p] => Some((now.clone(), p)),
-        [r @ ("next" | "last" | "this"), p] => Some((shift(now, p, rel(r))?, p)),
-        _ => None,
-    }
-}
-
-fn rel(word: &str) -> i64 {
-    match word {
-        "next" => 1,
-        "last" => -1,
-        _ => 0,
-    }
-}
-
-fn shift(z: &Zoned, period: &str, n: i64) -> Option<Zoned> {
-    add_period(z, period, n).ok()
-}
-
-fn count(n: &str) -> Option<f64> {
-    match n {
-        "a" | "an" | "one" => Some(1.0),
-        _ => n.parse().ok(),
-    }
-}
-
-fn time_unit(u: &str) -> Option<Unit> {
-    let u = units::unit(u).ok()?;
-    (u.dim() == units::unit("s").ok()?.dim()).then_some(u)
-}
-
-/// Split a trailing time off: "tomorrow at 5pm", "dec 25 17:30", "noon".
-fn split_time(s: &str) -> (&str, Option<Time>) {
-    if let Some((d, t)) = s.rsplit_once(" at ")
-        && let Some(t) = time(t)
-    {
-        return (d, Some(t));
-    }
-    if let Some(t) = time(s) {
-        return ("", Some(t));
-    }
-    match s.rsplit_once(' ').and_then(|(d, t)| Some((d, time(t)?))) {
-        Some((d, t)) => (d, Some(t)),
-        None => (s, None),
-    }
-}
-
-/// "5pm", "5:30am", "17:30", "17:30:15", "noon", "midnight". A bare number is not a time.
-fn time(t: &str) -> Option<Time> {
-    match t {
-        "noon" => return Some(Time::constant(12, 0, 0, 0)),
-        "midnight" => return Some(Time::midnight()),
-        _ => {}
-    }
-    let (t, half) = match (t.strip_suffix("pm"), t.strip_suffix("am")) {
-        (Some(r), _) => (r, Some(12)),
-        (_, Some(r)) => (r, Some(0)),
-        _ => (t, None),
-    };
-    if half.is_none() && !t.contains(':') {
-        return None;
-    }
-    let mut p = t.split(':').map(|x| x.parse::<i8>().ok());
-    let h = p.next()??;
-    let m = p.next().unwrap_or(Some(0))?;
-    let s = p.next().unwrap_or(Some(0))?;
-    if p.next().is_some() {
-        return None;
-    }
-    let h = match half {
-        Some(off) if (1..=12).contains(&h) => h % 12 + off,
-        Some(_) => return None,
-        None => h,
-    };
-    Time::new(h, m, s, 0).ok()
+    r.map_err(msg)
 }
 
 const WEEKDAYS: [&str; 7] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
@@ -458,25 +287,25 @@ pub fn weekday(w: &str) -> Option<Weekday> {
 pub fn start_of(z: &Zoned, period: &str) -> R<Zoned> {
     let d = z.date();
     let day = match period {
-        "second" => return z.with().subsec_nanosecond(0).build().map_err(e),
-        "minute" => return z.with().second(0).subsec_nanosecond(0).build().map_err(e),
+        "second" => return z.with().subsec_nanosecond(0).build().map_err(msg),
+        "minute" => return z.with().second(0).subsec_nanosecond(0).build().map_err(msg),
         "hour" => {
-            return z.with().minute(0).second(0).subsec_nanosecond(0).build().map_err(e);
+            return z.with().minute(0).second(0).subsec_nanosecond(0).build().map_err(msg);
         }
         "day" => d,
-        "week" => d.checked_sub(Span::new().days(d.weekday().to_monday_zero_offset())).map_err(e)?,
+        "week" => d.checked_sub(Span::new().days(d.weekday().to_monday_zero_offset())).map_err(msg)?,
         "month" => d.first_of_month(),
-        "quarter" => Date::new(d.year(), (d.month() - 1) / 3 * 3 + 1, 1).map_err(e)?,
+        "quarter" => Date::new(d.year(), (d.month() - 1) / 3 * 3 + 1, 1).map_err(msg)?,
         "year" => d.first_of_year(),
         _ => return Err(unknown_period(period)),
     };
-    day.to_zoned(z.time_zone().clone()).map_err(e)
+    day.to_zoned(z.time_zone().clone()).map_err(msg)
 }
 
 /// The last nanosecond of the period.
 pub fn end_of(z: &Zoned, period: &str) -> R<Zoned> {
     let next = add_period(&start_of(z, period)?, period, 1)?;
-    next.checked_sub(SignedDuration::from_nanos(1)).map_err(e)
+    next.checked_sub(SignedDuration::from_nanos(1)).map_err(msg)
 }
 
 fn add_period(z: &Zoned, period: &str, n: i64) -> R<Zoned> {
@@ -491,7 +320,7 @@ fn add_period(z: &Zoned, period: &str, n: i64) -> R<Zoned> {
         "year" => Span::new().try_years(n),
         _ => return Err(unknown_period(period)),
     };
-    z.checked_add(span.map_err(e)?).map_err(e)
+    z.checked_add(span.map_err(msg)?).map_err(msg)
 }
 
 /// Same date and time with some fields replaced: year, month, day, hour, minute, second.
@@ -517,7 +346,7 @@ pub fn with(z: &Zoned, fields: &[(String, i64)]) -> R<Zoned> {
             }
         };
     }
-    w.build().map_err(e)
+    w.build().map_err(msg)
 }
 
 pub fn is_weekend(d: Date) -> bool {
@@ -533,7 +362,7 @@ pub fn age(birth: &Zoned, now: &Zoned) -> i64 {
 
 /// Calendar difference from `a` to `b`: "1 yr 2 mo 3 d 4 h".
 pub fn diff(a: &Zoned, b: &Zoned) -> R<String> {
-    let s = a.until((jiff::Unit::Year, b)).map_err(e)?;
+    let s = a.until((jiff::Unit::Year, b)).map_err(msg)?;
     let fields = [
         (s.get_years() as i64, "yr"),
         (s.get_months() as i64, "mo"),

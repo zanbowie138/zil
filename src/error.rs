@@ -1,6 +1,7 @@
 //! Errors, how they print, and did-you-mean suggestions.
 
 use crate::lexer::Span;
+use crate::value::Value;
 use ariadne::{Color, Config, IndexType, Label, Report, ReportKind, Source};
 
 /// A located error with labels, `note:` and `help:` lines.
@@ -113,6 +114,18 @@ pub fn edits(a: &str, b: &str) -> usize {
         }
     }
     d[a.len()][b.len()]
+}
+
+/// `n argument(s)`.
+pub fn args_word(n: usize) -> String {
+    format!("{n} argument{}", if n == 1 { "" } else { "s" })
+}
+
+/// A value for a label: `` `5 km` ``, cut short if long.
+pub fn short(v: &Value) -> String {
+    let s = format!("{v:?}");
+    let s = if s.chars().count() > 40 { format!("{}...", s.chars().take(37).collect::<String>()) } else { s };
+    format!("`{s}`")
 }
 
 #[cfg(test)]

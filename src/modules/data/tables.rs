@@ -1,10 +1,10 @@
 //! Tables: rows under named columns, like nushell's. `ls`, `glob` and `from_csv` make them.
 
+use crate::ansi::{BOLD, DIM, RESET};
 use crate::interp::Interp;
 use crate::lexer::Span;
 use crate::modules::{Call, Doc, Fail, Module, doc};
 use crate::value::{self, Table, Value};
-use crate::{BOLD, DIM, RESET};
 
 pub const MODULE: Module = Module {
     name: "tables",
@@ -162,7 +162,7 @@ pub fn grid_with(t: &Table, color: bool, cell: &dyn Fn(&Value) -> String) -> Str
     let numeric: Vec<bool> = (0..n)
         .map(|c| {
             let mut vs = t.rows.iter().map(|r| &r[c]).filter(|v| !matches!(v, Value::Nil)).peekable();
-            vs.peek().is_some() && vs.all(|v| crate::tint(v) == crate::CYAN)
+            vs.peek().is_some() && vs.all(|v| crate::ansi::tint(v) == crate::ansi::CYAN)
         })
         .collect();
     // One long cell (a description, a list) would otherwise pad its whole column: text past MAX ends in `…`.
@@ -190,7 +190,7 @@ pub fn grid_with(t: &Table, color: bool, cell: &dyn Fn(&Value) -> String) -> Str
     let rule = paint(DIM, &"─".repeat(total));
     let mut out = vec![line("#", &t.cols.iter().map(|c| (c.clone(), BOLD)).collect::<Vec<_>>()), rule.clone()];
     for (i, (r, cs)) in t.rows.iter().zip(cells).enumerate() {
-        out.push(line(&i.to_string(), &cs.into_iter().zip(r.iter().map(crate::tint)).collect::<Vec<_>>()));
+        out.push(line(&i.to_string(), &cs.into_iter().zip(r.iter().map(crate::ansi::tint)).collect::<Vec<_>>()));
     }
     let plural = |k: usize, w: &str| format!("{k} {w}{}", if k == 1 { "" } else { "s" });
     out.push(rule);

@@ -1,9 +1,10 @@
 //! Numeric calculus on functions: roots, derivatives, integrals.
 
 use crate::ast::BinOp;
-use crate::interp::{Interp, binary};
+use crate::interp::Interp;
 use crate::lexer::Span;
 use crate::modules::{Call, Doc, Fail, Module, doc};
+use crate::ops::binary;
 use crate::value::{Value, num};
 
 pub const MODULE: Module = Module {

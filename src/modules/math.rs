@@ -14,9 +14,10 @@ pub mod uncertainty;
 
 use crate::ast::BinOp;
 use crate::ast::Radix;
-use crate::interp::{Interp, binary as op};
+use crate::interp::Interp;
 use crate::lexer::Span;
 use crate::modules::{Call, Doc, Fail, Module, doc};
+use crate::ops::binary as op;
 use crate::value::{Value, compare, exact, num, ratio};
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -137,7 +138,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Call
             }
         }
         ("clamp", [v, lo, hi]) => {
-            let cmp = |a: &Value, b: &Value| compare(a, b).ok_or_else(|| format!("cannot compare {} and {}", super::short(a), super::short(b)));
+            let cmp = |a: &Value, b: &Value| compare(a, b).ok_or_else(|| format!("cannot compare {} and {}", crate::error::short(a), crate::error::short(b)));
             if cmp(lo, hi)?.is_gt() {
                 return Err(Fail::Arg(1, format!("lo {lo:?} is greater than hi {hi:?}")));
             }

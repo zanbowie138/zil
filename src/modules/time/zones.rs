@@ -1,6 +1,6 @@
 //! Time zones: the same moment on another clock. Zones are IANA names, or city or country names (`"Tokyo"`, `"Seattle"`, `"India"`).
 
-use super::e;
+use super::msg;
 use crate::ast::Target;
 use crate::interp::Interp;
 use crate::modules::{Call, Claim, Doc, Fail, Module, doc};
@@ -81,7 +81,7 @@ pub fn zone(name: &str) -> Result<TimeZone, String> {
     let names: Vec<_> = db.available().collect();
     let full = names.iter().map(|n| n.as_str()).find(|n| n.rsplit('/').next().is_some_and(|c| c.eq_ignore_ascii_case(&city)));
     match full.or_else(|| crate::modules::geo::zone_of(name)) {
-        Some(n) => db.get(n).map_err(e),
+        Some(n) => db.get(n).map_err(msg),
         None => {
             let cities: Vec<_> = names.iter().filter_map(|n| n.as_str().rsplit_once('/').map(|(_, c)| c.replace('_', " ").to_lowercase())).collect();
             let hint = crate::error::did_you_mean(&name.to_lowercase(), cities.iter().map(|c| c.as_str()));

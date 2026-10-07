@@ -1,10 +1,11 @@
 //! Statistics over lists: sums, means, spread, extremes.
 
 use crate::ast::BinOp;
-use crate::interp::{Interp, binary as op};
+use crate::interp::Interp;
 use crate::lexer::Span;
 use crate::modules::units::Unit;
 use crate::modules::{Call, Doc, Fail, Module, doc};
+use crate::ops::binary as op;
 use crate::value::{Value, compare, num};
 use std::collections::HashMap;
 
@@ -216,7 +217,7 @@ fn extreme(name: &str, vs: &[Value]) -> Result<Value, String> {
         best = Some(match best {
             None => v,
             Some(b) => {
-                let ord = compare(v, b).ok_or_else(|| format!("cannot compare {} and {}", crate::modules::short(v), crate::modules::short(b)))?;
+                let ord = compare(v, b).ok_or_else(|| format!("cannot compare {} and {}", crate::error::short(v), crate::error::short(b)))?;
                 if (name == "min" && ord.is_lt()) || (name == "max" && ord.is_gt()) { v } else { b }
             }
         });
