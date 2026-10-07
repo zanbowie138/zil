@@ -3,7 +3,7 @@
 use crate::Error;
 use crate::ast::{BinOp, Expr, ExprKind, FnDef, Pat, Radix, Target, UnOp};
 use crate::lexer::Span;
-use crate::modules::{self, math::complex, math::uncertainty, units};
+use crate::modules::{self, data::tables, math::complex, math::uncertainty, units};
 use crate::value::{Value, compare, exact, num, ratio};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
@@ -203,7 +203,9 @@ impl Interp {
         // `sqrt(-4 + 0i)`, `abs(3 + 4i)`: the complex module takes over the call.
         let m2 = if args.iter().any(|a| matches!(a, Value::Cplx(..))) && complex::LIFTED.contains(&name) { &complex::MODULE } else { m };
         let mut call = |args: &[Value]| (m2.call)(self, name, args, span);
-        let r = if args.iter().any(|a| matches!(a, Value::Unc(..))) && uncertainty::LIFTED.contains(&name) {
+        let r = if matches!(args.first(), Some(Value::Table(_))) && tables::LIFTED.contains(&name) {
+            tables::lift(name, &args, call)
+        } else if args.iter().any(|a| matches!(a, Value::Unc(..))) && uncertainty::LIFTED.contains(&name) {
             uncertainty::propagate(&args, call)
         } else {
             call(&args)
@@ -211,7 +213,7 @@ impl Interp {
         r.map_err(|f| f.error(doc, &args, span, arg_spans))
     }
 
-    /// `obj.key`: a map's key, else a zero-arg method (`s.upper` is `upper(s)`), else nil for maps.
+    /// `obj.key`: a map's key or a table's column, else a zero-arg method (`s.upper` is `upper(s)`), else nil for maps.
     /// The second half is the keys of a map that just lacked `key`, so `{a: 1}.b.c` can blame `.b`.
     fn field(&mut self, e: &Expr, obj: &Expr, key: &str, env: &Env) -> Result<(Value, Option<Vec<String>>), Ctl> {
         let (o, missed) = match &obj.kind {
@@ -228,6 +230,11 @@ impl Interp {
             && let Some(v) = m.borrow().get(key)
         {
             return Ok((v.clone(), None));
+        }
+        if let Value::Table(t) = &o
+            && let Some(col) = t.column(key)
+        {
+            return Ok((col, None));
         }
         match (lookup(env, key), missed) {
             (Some(f @ (Value::Fn(_) | Value::Builtin(..))), missed) => match self.call_at(&f, vec![o], &e.span, std::slice::from_ref(&obj.span), Some(key)) {
@@ -312,6 +319,33 @@ impl Interp {
             _ => None,
         };
         Ok(self.call_at(&f, argv, &e.span, &spans, name)?)
+    }
+
+    /// `obj[idx]`; out of `eval` to keep its frame small.
+    #[inline(never)]
+    fn index(&mut self, e: &Expr, obj: &Expr, idx: &Expr, env: &Env) -> EResult {
+        let err = |msg: String| Ctl::Err(Error::new(msg, e.span.clone()));
+        Ok(match (self.eval(obj, env)?, self.eval(idx, env)?) {
+            (Value::List(l), Value::Int(i, _)) => {
+                let l = l.borrow();
+                let at = list_index(i, l.len()).ok_or_else(|| out_of_range(i, l.len(), obj, idx))?;
+                l[at].clone()
+            }
+            (Value::Str(s), Value::Int(i, _)) => {
+                let n = s.chars().count();
+                let at = list_index(i, n).ok_or_else(|| out_of_range(i, n, obj, idx))?;
+                Value::str(s.chars().nth(at).unwrap().to_string())
+            }
+            (Value::Map(m), Value::Str(k)) => m.borrow().get(&*k).cloned().unwrap_or(Value::Nil),
+            (Value::Table(t), Value::Int(i, _)) => t.row(list_index(i, t.rows.len()).ok_or_else(|| out_of_range(i, t.rows.len(), obj, idx))?),
+            (Value::Table(t), Value::Str(k)) => t.column(&k).ok_or_else(|| {
+                let hint = crate::error::did_you_mean(&k, t.cols.iter().map(String::as_str));
+                Ctl::Err(Error::new(format!("table has no column `{k}`{hint}"), idx.span.clone()))
+            })?,
+            (o, i) => {
+                return Err(err(format!("cannot index {} with {}", o.type_name(), i.type_name())));
+            }
+        })
     }
 
     /// `unit pizza`, `unit slice = pizza / 8`; out of `eval` to keep its frame small.
@@ -469,22 +503,7 @@ impl Interp {
             }
             ExprKind::Call(callee, args) => self.call_expr(e, callee, args, env)?,
             ExprKind::Field(obj, key) => self.field(e, obj, key, env)?.0,
-            ExprKind::Index(obj, idx) => match (self.eval(obj, env)?, self.eval(idx, env)?) {
-                (Value::List(l), Value::Int(i, _)) => {
-                    let l = l.borrow();
-                    let at = list_index(i, l.len()).ok_or_else(|| out_of_range(i, l.len(), obj, idx))?;
-                    l[at].clone()
-                }
-                (Value::Str(s), Value::Int(i, _)) => {
-                    let n = s.chars().count();
-                    let at = list_index(i, n).ok_or_else(|| out_of_range(i, n, obj, idx))?;
-                    Value::str(s.chars().nth(at).unwrap().to_string())
-                }
-                (Value::Map(m), Value::Str(k)) => m.borrow().get(&*k).cloned().unwrap_or(Value::Nil),
-                (o, i) => {
-                    return Err(err(format!("cannot index {} with {}", o.type_name(), i.type_name())));
-                }
-            },
+            ExprKind::Index(obj, idx) => self.index(e, obj, idx, env)?,
             ExprKind::Slice(obj, from, to) => {
                 let o = self.eval(obj, env)?;
                 let mut bound = |b: &Option<Box<Expr>>| -> Result<Option<i64>, Ctl> {
@@ -506,6 +525,10 @@ impl Interp {
                     Value::Str(s) => {
                         let (a, b) = slice_range(from, to, s.chars().count());
                         Value::str(s.chars().skip(a).take(b - a).collect::<String>())
+                    }
+                    Value::Table(t) => {
+                        let (a, b) = slice_range(from, to, t.rows.len());
+                        Value::table(crate::value::Table { cols: t.cols.clone(), rows: t.rows[a..b].to_vec() })
                     }
                     o => return Err(err(format!("cannot slice {}", o.type_name()))),
                 }
@@ -535,6 +558,7 @@ impl Interp {
                     Value::List(l) => l.borrow().clone(),
                     Value::Map(m) => m.borrow().keys().map(|k| Value::str(k.as_str())).collect(),
                     Value::Set(s) => s.borrow().iter().cloned().collect(),
+                    Value::Table(t) => t.maps(),
                     Value::Str(s) => s.chars().map(|c| Value::str(c.to_string())).collect(),
                     v => {
                         return Err(Ctl::Err(

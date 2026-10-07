@@ -14,6 +14,7 @@
 pub mod core;
 pub mod data;
 pub mod dev;
+pub mod fs;
 pub mod fun;
 pub mod math;
 pub mod text;
@@ -101,7 +102,7 @@ impl Fail {
 
 /// Type names a signature may use: what `type()` returns, plus `num` (int, frac or float) and `any`.
 pub const TYPES: &[&str] =
-    &["nil", "bool", "int", "frac", "float", "quantity", "uncertain", "complex", "str", "regex", "date", "list", "map", "set", "fn", "num", "any"];
+    &["nil", "bool", "int", "frac", "float", "quantity", "uncertain", "complex", "str", "regex", "date", "list", "map", "set", "table", "fn", "num", "any"];
 
 /// One form of a typed signature, like `round(x: num|quantity, digits?: int)`; a trailing `...` repeats the last parameter.
 pub struct Form {
@@ -275,7 +276,7 @@ impl Module {
 }
 
 /// Root modules, in `help()` order.
-pub const TREE: &[Module] = &[core::MODULE, text::MODULE, data::MODULE, math::MODULE, units::MODULE, time::MODULE, dev::MODULE, fun::MODULE];
+pub const TREE: &[Module] = &[core::MODULE, fs::MODULE, text::MODULE, data::MODULE, math::MODULE, units::MODULE, time::MODULE, dev::MODULE, fun::MODULE];
 
 /// Modules with hooks, in the order hooks are tried.
 pub const DISPATCH: &[&Module] = &[

@@ -39,7 +39,7 @@ const FNS: &[Doc] = &[
     doc("sci", "sci(x: num|quantity, digits?: int)", "string in scientific notation", &["123456.sci", "123456.sci(2)"], &["fixed"]),
     doc("percent", "percent(x: num|quantity, digits?: int)", "string as a percentage", &["0.256.percent", "(1/3).percent(1)"], &["fixed"]),
     doc("commas", "commas(x: num|quantity, digits?: int)", "string with thousands separators", &["1234567.commas", "1234.5.commas(2)"], &["fixed"]),
-    doc("human_bytes", "human_bytes(n: num)", "a byte count in binary units (KiB = 1024 B), one decimal", &["123456789.human_bytes", "1023.human_bytes"], &["fixed"]),
+    doc("human_bytes", "human_bytes(n: num|quantity)", "a byte count (or data quantity) in binary units (KiB = 1024 B), one decimal", &["123456789.human_bytes", "1023.human_bytes", "3 MB.human_bytes"], &["fixed"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -58,6 +58,10 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             };
             Value::str(render(v, &Spec { kind, prec: digits, commas: name == "commas", ..Spec::PLAIN })?)
         }
+        ("human_bytes", [Value::Qty(n, u)]) => match crate::modules::units::to_unit(*n, u, crate::modules::units::terms("B").expect("bytes are a unit"))? {
+            Value::Qty(b, _) => Value::str(human_bytes(b)),
+            v => Value::str(human_bytes(num(&v).unwrap_or(f64::NAN))),
+        },
         ("human_bytes", [v]) if num(v).is_some() => Value::str(human_bytes(num(v).unwrap())),
         _ => return Err(Fail::BadArgs),
     })

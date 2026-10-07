@@ -83,7 +83,7 @@ fn jwt(s: &str) -> Result<Value, &'static str> {
     };
     let part = |p: &str| -> Result<Value, &'static str> {
         let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(p.trim_end_matches('=')).map_err(|_| "invalid base64url in JWT")?;
-        Ok(from_json(serde_json::from_slice(&bytes).map_err(|_| "JWT part is not JSON")?))
+        Ok(super::fs::from_json(serde_json::from_slice(&bytes).map_err(|_| "JWT part is not JSON")?))
     };
     let payload = part(payload)?;
     if let Value::Map(m) = &payload {
@@ -97,18 +97,6 @@ fn jwt(s: &str) -> Result<Value, &'static str> {
     }
     let fields = [("header", part(header)?), ("payload", payload), ("signature", Value::str(signature))];
     Ok(Value::map(fields.into_iter().map(|(k, v)| (k.to_string(), v)).collect()))
-}
-
-fn from_json(j: serde_json::Value) -> Value {
-    use serde_json::Value as J;
-    match j {
-        J::Null => Value::Nil,
-        J::Bool(b) => Value::Bool(b),
-        J::Number(n) => n.as_i64().map_or_else(|| Value::Float(n.as_f64().unwrap_or(f64::NAN)), Value::int),
-        J::String(s) => Value::str(s),
-        J::Array(a) => Value::list(a.into_iter().map(from_json).collect()),
-        J::Object(o) => Value::map(o.into_iter().map(|(k, v)| (k, from_json(v))).collect::<IndexMap<_, _>>()),
-    }
 }
 
 fn uuid_info(s: &str) -> Option<Value> {

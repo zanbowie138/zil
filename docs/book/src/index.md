@@ -48,15 +48,17 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 
 | module | about |
 |---|---|
-| [core](core.md) | values, printing, type conversions, parsing, files, help |
+| [core](core.md) | values, printing, type conversions, parsing, help |
+| [fs](fs.md) | files and directories, path pieces, JSON and CSV; relative paths start at the current directory |
 | [text](text.md) | case, splitting, search and regex; encodings, hashes and ciphers below |
 | [text.encoding](text/encoding.md) | base64, base32, base58, URL and hex encodings, code points, UTF-8 bytes |
 | [text.hash](text/hash.md) | SHA-1/256/512, MD5, HMAC and CRC-32 of strings |
 | [text.ciphers](text/ciphers.md) | Caesar, ROT13, Atbash, Vigenère, Morse, Braille (for fun, not secrecy) |
-| [data](data.md) | length, search, sorting and picking across strings, lists, maps and sets; lists, maps and sets below |
+| [data](data.md) | length, search, sorting and picking across strings, lists, maps and sets; lists, maps, sets and tables below |
 | [data.lists](data/lists.md) | ranges, map/filter/reduce, building lists |
 | [data.maps](data/maps.md) | keys, values, lookups, merging and transforming maps |
 | [data.sets](data/sets.md) | unique values in insertion order: union, intersection, difference |
+| [data.tables](data/tables.md) | rows under named columns: filter, pick columns, sort; list fns work on the rows |
 | [math](math.md) | rounding, roots, logs, constants; exact fractions and big ints |
 | [math.stats](math/stats.md) | sums, averages, spread and extremes of lists; units welcome |
 | [math.trig](math/trig.md) | sine, cosine and friends; angles as units |

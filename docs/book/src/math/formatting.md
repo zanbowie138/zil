@@ -36,7 +36,7 @@ format("%5.2f|%-4d|", pi, 7)
 | [`sci(x: num\|quantity, digits?: int)`](#sci) | string in scientific notation |
 | [`percent(x: num\|quantity, digits?: int)`](#percent) | string as a percentage |
 | [`commas(x: num\|quantity, digits?: int)`](#commas) | string with thousands separators |
-| [`human_bytes(n: num)`](#human_bytes) | a byte count in binary units (KiB = 1024 B), one decimal |
+| [`human_bytes(n: num\|quantity)`](#human_bytes) | a byte count (or data quantity) in binary units (KiB = 1024 B), one decimal |
 
 ### fixed
 
@@ -92,13 +92,15 @@ See also: [fixed](../math/formatting.md#fixed)
 
 ### human_bytes
 
-`human_bytes(n: num)`: a byte count in binary units (KiB = 1024 B), one decimal
+`human_bytes(n: num|quantity)`: a byte count (or data quantity) in binary units (KiB = 1024 B), one decimal
 
 ```zil
 123456789.human_bytes
 # → "117.7 MiB"
 1023.human_bytes
 # → "1023 B"
+3 MB.human_bytes
+# → "2.9 MiB"
 ```
 
 See also: [fixed](../math/formatting.md#fixed)

@@ -3,6 +3,7 @@
 pub mod lists;
 pub mod maps;
 pub mod sets;
+pub mod tables;
 
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -12,7 +13,7 @@ use std::cmp::Ordering;
 
 pub const MODULE: Module = Module {
     name: "data",
-    about: "length, search, sorting and picking across strings, lists, maps and sets; lists, maps and sets below",
+    about: "length, search, sorting and picking across strings, lists, maps and sets; lists, maps, sets and tables below",
     #[rustfmt::skip]
     examples: &[
         ("data", &[
@@ -36,7 +37,7 @@ pub const MODULE: Module = Module {
         ("test", &["any", "all"]),
     ],
     call,
-    children: &[lists::MODULE, maps::MODULE, sets::MODULE],
+    children: &[lists::MODULE, maps::MODULE, sets::MODULE, tables::MODULE],
     ..Module::EMPTY
 };
 

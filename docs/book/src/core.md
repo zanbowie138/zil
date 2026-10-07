@@ -1,6 +1,6 @@
 # core
 
-values, printing, type conversions, parsing, files, help
+values, printing, type conversions, parsing, help
 
 > Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
@@ -50,10 +50,8 @@ true
 | [`float(v: num\|quantity\|str)`](#float) | convert to a float; drops a quantity's unit |
 | [`frac(v: num)`](#frac) | show as a fraction; floats become the simplest fraction within 1e-12 |
 | [`bool(v: any)`](#bool) | truthiness: false only for nil and false |
-| [`list(v: str\|list\|map\|set)`](#list) | convert to a list: characters, a copy, [key, value] pairs, or a set's items |
+| [`list(v: str\|list\|map\|set\|table)`](#list) | convert to a list: characters, a copy, [key, value] pairs, a set's items, or a table's rows as maps |
 | [`parse(s: str)`](#parse) | read a zil literal (number, string, list, map, quantity); never runs code |
-| [`read_file(path: str)`](#read_file) | file contents as a string |
-| [`write_file(path: str, v: any)`](#write_file) | write v to a file as text |
 | [`help(topic?: any)`](#help) | this help, as text; topic is a function, module ("trig" or "math.trig"), unit, or any value to list functions for its type |
 
 ### print
@@ -152,7 +150,7 @@ See also: [str](core.md#str)
 
 ### list
 
-`list(v: str|list|map|set)`: convert to a list: characters, a copy, [key, value] pairs, or a set's items
+`list(v: str|list|map|set|table)`: convert to a list: characters, a copy, [key, value] pairs, a set's items, or a table's rows as maps
 
 ```zil
 list("abc")
@@ -177,26 +175,6 @@ See also: [chars](text.md#chars), [parse](core.md#parse)
 ```
 
 See also: [str](core.md#str), [nums](text.md#nums)
-
-### read_file
-
-`read_file(path: str)`: file contents as a string
-
-```zil
-read_file("notes.txt").lines.len
-```
-
-See also: [write_file](core.md#write_file), [lines](text.md#lines)
-
-### write_file
-
-`write_file(path: str, v: any)`: write v to a file as text
-
-```zil
-write_file("out.txt", [1, 2, 3])
-```
-
-See also: [read_file](core.md#read_file)
 
 ### help
 

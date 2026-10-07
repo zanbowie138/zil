@@ -38,8 +38,50 @@ pub enum Value {
     Map(Rc<RefCell<IndexMap<String, Value>>>),
     /// Insertion-ordered; holds only `hashable` values.
     Set(Rc<RefCell<IndexSet<Value>>>),
+    /// Rows under named columns; immutable, so ops build new tables.
+    Table(Rc<Table>),
     Fn(Rc<Closure>),
     Builtin(&'static Module, &'static str),
+}
+
+pub struct Table {
+    pub cols: Vec<String>,
+    /// Each row has one cell per column; missing cells are nil.
+    pub rows: Vec<Vec<Value>>,
+}
+
+impl Table {
+    /// A table from maps, columns in order of first appearance; `None` if any item isn't a map.
+    pub fn from_maps(items: &[Value]) -> Option<Table> {
+        let mut cols: IndexSet<String> = IndexSet::new();
+        for v in items {
+            let Value::Map(m) = v else { return None };
+            cols.extend(m.borrow().keys().cloned());
+        }
+        let rows = items
+            .iter()
+            .map(|v| {
+                let Value::Map(m) = v else { unreachable!() };
+                let m = m.borrow();
+                cols.iter().map(|c| m.get(c).cloned().unwrap_or(Value::Nil)).collect()
+            })
+            .collect();
+        Some(Table { cols: cols.into_iter().collect(), rows })
+    }
+
+    pub fn row(&self, i: usize) -> Value {
+        Value::map(self.cols.iter().cloned().zip(self.rows[i].iter().cloned()).collect())
+    }
+
+    /// The rows as a list of maps.
+    pub fn maps(&self) -> Vec<Value> {
+        (0..self.rows.len()).map(|i| self.row(i)).collect()
+    }
+
+    pub fn column(&self, name: &str) -> Option<Value> {
+        let c = self.cols.iter().position(|k| k == name)?;
+        Some(Value::list(self.rows.iter().map(|r| r[c].clone()).collect()))
+    }
 }
 
 impl Value {
@@ -53,6 +95,10 @@ impl Value {
 
     pub fn map(m: IndexMap<String, Value>) -> Value {
         Value::Map(Rc::new(RefCell::new(m)))
+    }
+
+    pub fn table(t: Table) -> Value {
+        Value::Table(Rc::new(t))
     }
 
     pub fn set(s: IndexSet<Value>) -> Value {
@@ -107,6 +153,7 @@ impl Value {
             Value::List(_) => "list",
             Value::Map(_) => "map",
             Value::Set(_) => "set",
+            Value::Table(_) => "table",
             Value::Fn(_) | Value::Builtin(..) => "fn",
         }
     }
@@ -168,6 +215,9 @@ impl Value {
                 }
                 write!(f, ")")
             }
+            // Top level is CSV, so `str` and `write_file` round-trip with `from_csv`; nested reads back as code.
+            Value::Table(t) if top => write!(f, "{}", modules::fs::csv(&t.cols, &t.rows)),
+            Value::Table(t) => write!(f, "table({:?})", Value::list(t.maps())),
             Value::Fn(_) => write!(f, "<fn>"),
             Value::Builtin(_, name) => write!(f, "<builtin {name}>"),
         }
@@ -204,6 +254,7 @@ impl PartialEq for Value {
             (List(a), List(b)) => *a.borrow() == *b.borrow(),
             (Map(a), Map(b)) => *a.borrow() == *b.borrow(),
             (Set(a), Set(b)) => *a.borrow() == *b.borrow(),
+            (Table(a), Table(b)) => a.cols == b.cols && a.rows == b.rows,
             (Fn(a), Fn(b)) => Rc::ptr_eq(a, b),
             (Builtin(_, a), Builtin(_, b)) => a == b,
             _ => false,

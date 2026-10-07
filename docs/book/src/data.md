@@ -1,6 +1,6 @@
 # data
 
-length, search, sorting and picking across strings, lists, maps and sets; lists, maps and sets below
+length, search, sorting and picking across strings, lists, maps and sets; lists, maps, sets and tables below
 
 > Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
@@ -29,6 +29,7 @@ length, search, sorting and picking across strings, lists, maps and sets; lists,
 | [lists](data/lists.md) | ranges, map/filter/reduce, building lists |
 | [maps](data/maps.md) | keys, values, lookups, merging and transforming maps |
 | [sets](data/sets.md) | unique values in insertion order: union, intersection, difference |
+| [tables](data/tables.md) | rows under named columns: filter, pick columns, sort; list fns work on the rows |
 
 ## Functions
 

@@ -230,6 +230,10 @@ fn tint(v: &Value) -> &'static str {
 
 /// A REPL result labeled with the `_n` it's saved as, colored by type when `color_on`.
 fn show(n: usize, v: &Value) -> String {
+    if let Value::Table(t) = v {
+        let label = if color_on() { format!("{DIM} · _{n}{RESET}") } else { format!(" · _{n}") };
+        return modules::data::tables::grid(t, color_on()) + &label;
+    }
     if !color_on() {
         return format!("_{n} = {v}");
     }
@@ -325,6 +329,7 @@ fn real_main() {
         [] => repl(&mut interp),
         [flag, code] if flag == "-e" => match run_or_exit(&mut interp, "<-e>", code) {
             Value::Nil => {}
+            Value::Table(t) => println!("{}", modules::data::tables::grid(&t, color_on())),
             v => println!("{v}"),
         },
         [flag, dir] if flag == "--docs" => docs::write(dir.as_ref()).unwrap_or_else(|e| {

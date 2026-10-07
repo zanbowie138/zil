@@ -4,6 +4,7 @@
 
 - [Syntax](syntax.md)
 - [core](core.md)
+- [fs](fs.md)
 - [text](text.md)
   - [encoding](text/encoding.md)
   - [hash](text/hash.md)
@@ -12,6 +13,7 @@
   - [lists](data/lists.md)
   - [maps](data/maps.md)
   - [sets](data/sets.md)
+  - [tables](data/tables.md)
 - [math](math.md)
   - [stats](math/stats.md)
   - [trig](math/trig.md)
