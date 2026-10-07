@@ -1,34 +1,15 @@
-//! Animation: frames redrawn in place in the terminal.
+//! `animate`: frames redrawn in place in the terminal.
 
 use crate::interp::Interp;
 use crate::lexer::Span;
-use crate::modules::{Call, Doc, Fail, Module, doc};
+use crate::modules::{Call, Fail};
 use crate::value::{Value, num};
 use std::io::{IsTerminal, Write};
 
-pub const MODULE: Module = Module {
-    name: "motion",
-    about: "play a list of frames, or a function of the frame number, as an animation in the terminal",
-    #[rustfmt::skip]
-    guide: &[("animate", &[
-        ("a glider crossing the screen: animate(|i| life(\"glider\", i), 8, 40)", ""),
-        ("a fractal growing: animate(|i| fractal(\"tree\", i + 1, 40), 2, 7)", ""),
-    ])],
-    fns: FNS,
-    call,
-    ..Module::EMPTY
-};
-
-#[rustfmt::skip]
-const FNS: &[Doc] = &[
-    doc("animate", "animate(frames: list|fn, fps?: num, count?: int)", "draw frames one after another in place, fps a second (default 10). A list plays count times (default once); a function gets the frame number from 0 and plays count frames (default 60). Off a terminal only the last frame prints", &[], &["life", "fractal"])
-        .shown(&[r#"animate(|i| life("glider", i), 8, 40)"#, r#"animate(["|", "/", "-", "\\"], 12, 5)"#]),
-];
-
-fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Call {
+pub fn animate(it: &mut Interp, args: &[Value], span: &Span) -> Call {
     use Value::*;
     let (frames, rest) = match args {
-        [f @ (List(_) | Fn(_) | Builtin(..)), rest @ ..] if name == "animate" && rest.len() <= 2 => (f, rest),
+        [f @ (List(_) | Fn(_) | Builtin(..)), rest @ ..] if rest.len() <= 2 => (f, rest),
         _ => return Err(Fail::BadArgs),
     };
     let fps = match rest.first() {
@@ -78,7 +59,7 @@ mod tests {
     use crate::interp::tests::{show, try_eval};
 
     #[test]
-    fn motion() {
+    fn animate() {
         // Tests don't run on a terminal, so only the last frame prints and nothing sleeps.
         assert_eq!(show(r#"animate(["a", "b"], 1, 3)"#), "nil");
         assert_eq!(show(r#"animate(|i| str(i), 1, 5)"#), "nil");

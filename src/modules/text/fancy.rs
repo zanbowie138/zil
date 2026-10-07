@@ -1,4 +1,4 @@
-//! Text, mangled: SpOnGeBoB case, l33t, uwu, Pig Latin, zalgo, upside down, NATO spelling, emoji.
+//! Fancy text: SpOnGeBoB case, l33t, uwu, Pig Latin, zalgo, upside down, emoji, 𝐛𝐨𝐥𝐝/𝒮𝒸𝓇𝒾𝓅𝓉/ｗｉｄｅ Unicode styles.
 
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -6,13 +6,13 @@ use crate::modules::{Call, Doc, Fail, Module, doc};
 use crate::value::Value;
 
 pub const MODULE: Module = Module {
-    name: "mangle",
-    about: "mock case, l33t, uwu, Pig Latin, zalgo, upside-down text, NATO spelling and emoji",
+    name: "fancy",
+    about: "mock case, l33t, uwu, Pig Latin, zalgo, upside-down text, emoji, and 𝐛𝐨𝐥𝐝/𝒮𝒸𝓇𝒾𝓅𝓉/ｗｉｄｅ Unicode styles",
     #[rustfmt::skip]
     examples: &[
-        ("mangle", &[
+        ("fancy", &[
             ("reply to a bad take", r#""tabs are better than spaces".mock"#),
-            ("spell it over the phone", r#""zil 2".nato"#),
+            ("every style", r#"styles().map(|st| "Zil 2".style(st))"#),
             ("table flip", r#""(╯°□°)╯ " + "zil".flip"#),
             ("a commit message", r#"":rocket: ship it :tada:".emojify"#),
         ]),
@@ -27,10 +27,11 @@ const FNS: &[Doc] = &[
     doc("mock", "mock(s: str)", "aLtErNaTiNg CaSe, for quoting someone sarcastically", &[r#""this is fine".mock"#], &["upper", "leet"]),
     doc("leet", "leet(s: str)", "l33t sp34k", &[r#""elite hacker".leet"#], &["mock"]),
     doc("uwu", "uwu(s: str)", "uwu-ify text", &[r#""hello friend, I really love this".uwu"#], &["mock"]),
-    doc("pig_latin", "pig_latin(s: str)", "translate to Pig Latin, keeping capitals and punctuation", &[r#""Hello, string theory!".pig_latin"#], &["nato"]),
+    doc("pig_latin", "pig_latin(s: str)", "translate to Pig Latin, keeping capitals and punctuation", &[r#""Hello, string theory!".pig_latin"#], &["caesar"]),
     doc("zalgo", "zalgo(s: str, marks?: int)", "Z̷a̸l̵g̶o̴ text: pile marks (default 3) onto every character", &[r#""he comes".zalgo"#, r#""ok".zalgo(1)"#], &["flip"]),
     doc("flip", "flip(s: str)", "turn text upside down", &[r#""hello world".flip"#], &["reverse", "zalgo"]),
-    doc("nato", "nato(s: str)", "spell with the NATO phonetic alphabet", &[r#""SOS".nato"#, r#""b2b".nato"#], &["morse"]),
+    doc("style", "style(s: str, style: str)", "restyle letters and digits with Unicode look-alikes; style is one of styles()", &[r#""Hello".style("bold")"#, r#""vaporwave".style("wide")"#], &["styles", "banner", "fonts"]),
+    doc("styles", "styles()", "the styles for style()", &["styles()"], &["style"]),
     doc("emoji", "emoji(name: str)", "an emoji by name, or nil", &[r#"emoji("taco")"#, r#"emoji("fire")"#], &["emojify"]),
     doc("emojify", "emojify(s: str)", "replace :name: codes with emoji; unknown codes stay", &[r#"":fire: deploy on friday :skull:".emojify"#], &["emoji"]),
 ];
@@ -112,18 +113,13 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
                 })
                 .collect::<String>(),
         ),
-        ("nato", [Str(s)]) => {
-            let words: Vec<&str> = s
-                .chars()
-                .filter_map(|c| match c.to_ascii_lowercase() {
-                    c @ 'a'..='z' => Some(NATO[c as usize - 'a' as usize]),
-                    c @ '0'..='9' => Some(DIGITS[c as usize - '0' as usize]),
-                    ' ' => Some("/"),
-                    _ => None,
-                })
-                .collect();
-            Value::str(words.join(" "))
+        ("style", [Str(s), Str(st)]) => {
+            if !STYLES.contains(&&**st) {
+                return Err(Fail::Arg(1, format!("unknown style {st:?}; try {}", STYLES.join(", "))));
+            }
+            Value::str(s.chars().map(|c| restyle(c, st)).collect::<String>())
         }
+        ("styles", []) => Value::list(STYLES.iter().copied().map(Value::str).collect()),
         ("emoji", [Str(n)]) => emoji(n).map_or(Nil, Value::str),
         ("emojify", [Str(s)]) => {
             let re = regex::Regex::new(r":([a-z0-9_+-]+):").unwrap();
@@ -158,12 +154,6 @@ fn emoji(name: &str) -> Option<&'static str> {
     EMOJI.iter().find(|e| e.0.split(' ').any(|n| n == name)).map(|e| e.1)
 }
 
-const NATO: [&str; 26] = [
-    "Alfa", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliett", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa", "Quebec",
-    "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whiskey", "X-ray", "Yankee", "Zulu",
-];
-const DIGITS: [&str; 10] = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
-
 #[rustfmt::skip]
 const FLIP: &[(char, char)] = &[
     ('a', 'ɐ'), ('b', 'q'), ('c', 'ɔ'), ('d', 'p'), ('e', 'ǝ'), ('f', 'ɟ'), ('g', 'ƃ'), ('h', 'ɥ'), ('i', 'ᴉ'), ('j', 'ɾ'), ('k', 'ʞ'), ('l', 'l'), ('m', 'ɯ'),
@@ -194,20 +184,70 @@ const EMOJI: &[(&str, &str)] = &[
     ("dice die", "🎲"), ("soccer", "⚽"), ("basketball", "🏀"), ("car", "🚗"), ("bike", "🚲"), ("airplane plane", "✈️"), ("ship", "🚢"), ("house home", "🏠"),
 ];
 
+const STYLES: &[&str] =
+    &["bold", "italic", "bold_italic", "script", "fraktur", "double", "sans", "sans_bold", "mono", "wide", "circled", "small_caps", "strike", "underline"];
+
+/// One character in a style; anything the style has no look-alike for passes through.
+fn restyle(c: char, style: &str) -> String {
+    let from = |base: u32, start: char| char::from_u32(base + (c as u32 - start as u32)).unwrap();
+    // Mathematical Alphanumeric Symbols: capital A, small a and digit 0 per style; a few letters live in Letterlike Symbols instead.
+    #[rustfmt::skip]
+    let (upper, lower, digit, holes): (u32, u32, Option<u32>, &[(char, char)]) = match style {
+        "bold" => (0x1D400, 0x1D41A, Some(0x1D7CE), &[]),
+        "italic" => (0x1D434, 0x1D44E, None, &[('h', 'ℎ')]),
+        "bold_italic" => (0x1D468, 0x1D482, None, &[]),
+        "script" => (0x1D49C, 0x1D4B6, None, &[('B', 'ℬ'), ('E', 'ℰ'), ('F', 'ℱ'), ('H', 'ℋ'), ('I', 'ℐ'), ('L', 'ℒ'), ('M', 'ℳ'), ('R', 'ℛ'), ('e', 'ℯ'), ('g', 'ℊ'), ('o', 'ℴ')]),
+        "fraktur" => (0x1D504, 0x1D51E, None, &[('C', 'ℭ'), ('H', 'ℌ'), ('I', 'ℑ'), ('R', 'ℜ'), ('Z', 'ℨ')]),
+        "double" => (0x1D538, 0x1D552, Some(0x1D7D8), &[('C', 'ℂ'), ('H', 'ℍ'), ('N', 'ℕ'), ('P', 'ℙ'), ('Q', 'ℚ'), ('R', 'ℝ'), ('Z', 'ℤ')]),
+        "sans" => (0x1D5A0, 0x1D5BA, Some(0x1D7E2), &[]),
+        "sans_bold" => (0x1D5D4, 0x1D5EE, Some(0x1D7EC), &[]),
+        "mono" => (0x1D670, 0x1D68A, Some(0x1D7F6), &[]),
+        "circled" => (0x24B6, 0x24D0, None, &[('0', '⓪')]),
+        "wide" => return match c {
+            '!'..='~' => from(0xFF01, '!').to_string(),
+            _ => c.to_string(),
+        },
+        "small_caps" => return match c {
+            'a'..='z' => "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ".chars().nth(c as usize - 'a' as usize).unwrap().to_string(),
+            _ => c.to_string(),
+        },
+        "strike" | "underline" if c.is_whitespace() => return c.to_string(),
+        "strike" => return format!("{c}\u{336}"),
+        "underline" => return format!("{c}\u{332}"),
+        _ => unreachable!("style checked against STYLES"),
+    };
+    if let Some(&(_, h)) = holes.iter().find(|h| h.0 == c) {
+        return h.to_string();
+    }
+    match (c, digit) {
+        ('A'..='Z', _) => from(upper, 'A'),
+        ('a'..='z', _) => from(lower, 'a'),
+        ('0'..='9', Some(d)) => from(d, '0'),
+        ('1'..='9', None) if style == "circled" => from(0x2460, '1'),
+        _ => c,
+    }
+    .to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use crate::interp::tests::show;
 
     #[test]
-    fn mangle() {
+    fn fancy() {
         assert_eq!(show(r#""this is fine".mock"#), "tHiS iS fInE");
         assert_eq!(show(r#""leet sauce".leet"#), "l337 54uc3");
         assert!(show(r#""hello, really".uwu"#).starts_with("hewwo, weawwy"));
         assert_eq!(show(r#""Hello, string theory! Eat quiet rhythm".pig_latin"#), "Ellohay, ingstray eorythay! Eatway ietquay rhythmay");
         assert_eq!(show(r#"["ab".zalgo(2).len, "a b".zalgo(1).len, "x".zalgo(0)]"#), r#"[6, 5, "x"]"#);
         assert_eq!(show(r#"["hello!".flip, "hello!".flip.flip]"#), r#"["¡ollǝɥ", "hello!"]"#);
-        assert_eq!(show(r#""Hi 5".nato"#), "Hotel India / Five");
         assert_eq!(show(r#"[emoji("Taco"), emoji("rust"), emoji("nope")]"#), r#"["🌮", "🦀", nil]"#);
         assert_eq!(show(r#"":fire: :nope: ok".emojify"#), "🔥 :nope: ok");
+        assert_eq!(
+            show(r#"["Hi 0".style("bold"), "Hero".style("script"), "CHAZ".style("double"), "a1 0".style("circled")]"#),
+            r#"["𝐇𝐢 𝟎", "ℋℯ𝓇ℴ", "ℂℍ𝔸ℤ", "ⓐ① ⓪"]"#
+        );
+        assert_eq!(show(r#"["ab 1!".style("wide"), "Hi z".style("small_caps"), "a b".style("strike").len]"#), r#"["ａｂ １！", "Hɪ ᴢ", 5]"#);
+        assert_eq!(show(r#"styles().map(|s| "x".style(s)).len"#), "14");
     }
 }

@@ -1,36 +1,14 @@
-//! Pictures as text: PNG, JPEG and GIF files drawn with an ASCII ramp, colored half blocks or dithered braille.
+//! Pictures as text for `img`: PNG, JPEG and GIF files drawn with an ASCII ramp, colored half blocks or dithered braille.
 
 use super::{Dots, RESET, fg};
-use crate::interp::Interp;
-use crate::lexer::Span;
-use crate::modules::{Call, Doc, Fail, Module, doc};
+use crate::modules::{Call, Fail};
 use crate::value::Value;
 use image::imageops::FilterType;
 
-pub const MODULE: Module = Module {
-    name: "images",
-    about: "PNG, JPEG and GIF images as ASCII, truecolor half blocks or dithered braille",
-    #[rustfmt::skip]
-    guide: &[("modes", &[
-        ("\"blocks\" (default): two pixels per character in full color, for truecolor terminals", ""),
-        ("\"ascii\": brightness as \" .:-=+*#%@\", pastes anywhere", ""),
-        ("\"braille\": Floyd–Steinberg dithered dots, the sharpest in black and white", ""),
-    ])],
-    fns: FNS,
-    call,
-    ..Module::EMPTY
-};
-
-#[rustfmt::skip]
-const FNS: &[Doc] = &[
-    doc("img", "img(path: str, width?: int, mode?: str)", "draw an image file width characters wide (default: the terminal's, or 80); mode is \"blocks\" (default), \"ascii\" or \"braille\"", &[], &["negative", "boxed"])
-        .shown(&[r#"img("cat.png")"#, r#"img("logo.jpg", 40, "ascii")"#, r#"img("photo.png", 60, "braille").negative"#]),
-];
-
-fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
+pub fn img(args: &[Value]) -> Call {
     use Value::*;
-    Ok(match (name, args) {
-        ("img", [Str(path), rest @ ..]) if rest.len() <= 2 => {
+    Ok(match args {
+        [Str(path), rest @ ..] if rest.len() <= 2 => {
             let width = match rest.first() {
                 None => terminal_size::terminal_size().map_or(80, |(w, _)| w.0 as usize),
                 Some(Int(w, _)) if (1..=1000).contains(w) => *w as usize,
@@ -109,7 +87,7 @@ mod tests {
     use crate::interp::tests::try_eval;
 
     #[test]
-    fn images() {
+    fn img() {
         // Left half black, right half white, 8×4 pixels.
         let pic = image::DynamicImage::ImageRgb8(image::RgbImage::from_fn(8, 4, |x, _| if x < 4 { image::Rgb([0, 0, 0]) } else { image::Rgb([255; 3]) }));
         assert_eq!(draw(&pic, 8, "ascii"), "    @@@@\n    @@@@");

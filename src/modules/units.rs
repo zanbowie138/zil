@@ -1,4 +1,4 @@
-//! Units: quantities with dimensions, arithmetic and conversion between them, live currency rates.
+//! Units: quantities with dimensions, arithmetic and conversion between them, live currency rates, decibels.
 
 pub mod constants;
 pub mod goofy;
@@ -21,7 +21,7 @@ use std::rc::Rc;
 
 pub const MODULE: Module = Module {
     name: "units",
-    about: "numbers with units, combined and converted; currencies use live rates",
+    about: "numbers with units, combined and converted, decibels; currencies use live rates",
     #[rustfmt::skip]
     examples: &[
         ("units", &[
@@ -36,6 +36,9 @@ pub const MODULE: Module = Module {
             ("force", "9.81 m/s^2 * 70 kg to N"),
             ("a month of a 60 W bulb", "60 W * 8 h * 30 to kWh"),
             ("temperature", "101 F to C"),
+            ("a 1080p screen at 96 dpi", "1080 px to in"),
+            ("twice the power", "db(2)"),
+            ("+3 dB louder means", "from_db(3)"),
             ("20 USD to EUR   (currencies use live rates)", ""),
         ]),
     ],
@@ -82,16 +85,33 @@ pub const MODULE: Module = Module {
 const FNS: &[Doc] = &[
     doc("simplify", "simplify(q: quantity)", "the quantity in the prefixed unit of the same family that reads best, like `1.2 m` or `3.6 kW`; also `to best`",
         &["0.0012 km to best", "3600 J/s to best", "1 kg*m^2/s^2 to best", "1.5e9 B.simplify"], &[]),
-    doc("all_units", "all_units()", "every unit as a table: {name, full, desc, aliases, kind, si, source}; source is units, goofy, kitchen, currency or user",
+    doc("all_units", "all_units()", "every unit as a table: {name, full, desc, aliases, kind, si, source}; source is units, goofy, currency or user",
         &["all_units().len", r#"all_units().filter(|u| u.kind == "length").map(|u| u.name).take(5)"#, r#"all_units().filter(|u| u.source == "goofy")[0]"#], &["simplify"]),
+    doc("db", "db(ratio: num, kind?: str)", "a power ratio in decibels (10 log10); kind \"amplitude\" for voltage or pressure ratios (20 log10)", &["db(2)", "db(1000)", r#"db(2, "amplitude")"#], &["from_db", "log"]),
+    doc("from_db", "from_db(db: num, kind?: str)", "decibels back to a power ratio, or an amplitude ratio with \"amplitude\"", &["from_db(3)", "from_db(-6, \"amplitude\")"], &["db"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
-    match (name, args) {
-        ("simplify", [Value::Qty(x, u)]) => Ok(simplify(*x, u)),
-        ("all_units", []) => Ok(all_units()),
-        _ => Err(Fail::BadArgs),
-    }
+    use Value::*;
+    let amplitude = |rest: &[Value]| match rest {
+        [] => Ok(false),
+        [Str(k)] if &**k == "amplitude" => Ok(true),
+        [Str(k)] if &**k == "power" => Ok(false),
+        _ => Err(Fail::Arg(1, "kind must be \"power\" or \"amplitude\"".into())),
+    };
+    Ok(match (name, args) {
+        ("simplify", [Qty(x, u)]) => simplify(*x, u),
+        ("all_units", []) => all_units(),
+        ("db", [x, rest @ ..]) if rest.len() <= 1 && num(x).is_some() => {
+            let x = num(x).unwrap();
+            if x <= 0.0 {
+                return Err(Fail::Arg(0, format!("the ratio must be positive, got {x}")));
+            }
+            Float(if amplitude(rest)? { 20.0 } else { 10.0 } * x.log10())
+        }
+        ("from_db", [d, rest @ ..]) if rest.len() <= 1 && num(d).is_some() => Float(10f64.powf(num(d).unwrap() / if amplitude(rest)? { 20.0 } else { 10.0 })),
+        _ => return Err(Fail::BadArgs),
+    })
 }
 
 /// `x u` in the table unit whose scale is a power of ten times `u`'s (so bytes stay bytes, feet stay feet)
@@ -329,7 +349,7 @@ fn all_units() -> Value {
         ]))
     };
     let mut maps = Vec::new();
-    for (source, table) in [("units", TABLE), ("goofy", goofy::TABLE), ("kitchen", kitchen::TABLE)] {
+    for (source, table) in [("units", TABLE), ("goofy", goofy::TABLE)] {
         for (names, scale, _, dim, about) in table {
             let mut names = names.split(' ');
             let name = names.next().unwrap();
@@ -448,6 +468,7 @@ pub const TABLE: &[Row] = &[
     ("yd yard yards", 0.9144, 0.0, LEN, "yard: 3 feet, exactly 0.9144 m"),
     ("ft foot feet", 0.3048, 0.0, LEN, "foot: 12 inches, exactly 0.3048 m"),
     ("in inch inches", 0.0254, 0.0, LEN, "inch: exactly 2.54 cm"),
+    ("px pixel pixels", 0.0254 / 96.0, 0.0, LEN, "pixel: the CSS reference pixel, 1/96 inch"),
     ("nmi", 1852.0, 0.0, LEN, "nautical mile: exactly 1852 m, about one minute of latitude"),
     ("au", 1.495978707e11, 0.0, LEN, "astronomical unit: about the mean distance from Earth to the Sun"),
     ("ly lightyear lightyears", 9.4607304725808e15, 0.0, LEN, "light-year: how far light travels in a Julian year"),
@@ -798,7 +819,7 @@ fn load_rates_once() {
 
 /// Every unit row: the real ones, then those children add.
 pub fn rows() -> impl Iterator<Item = &'static Row> {
-    TABLE.iter().chain(goofy::TABLE).chain(kitchen::TABLE)
+    TABLE.iter().chain(goofy::TABLE)
 }
 
 fn builtin_units() -> HashMap<String, Rc<UnitDef>> {
@@ -940,12 +961,20 @@ mod tests {
     #[test]
     fn units_lists_every_source() {
         try_eval("unit widget").unwrap();
-        for source in ["units", "goofy", "kitchen", "currency", "user"] {
+        for source in ["units", "goofy", "currency", "user"] {
             assert_eq!(show(&format!(r#"all_units().filter(|u| u.source == "{source}").len > 0"#)), "true", "{source}");
         }
         assert_eq!(show(r#"all_units().filter(|u| u.name == "mi")[0].si"#), "1609.34 m");
         assert_eq!(show(r#"all_units().filter(|u| u.name == "USD")[0].kind"#), "money");
         assert_eq!(show(r#"all_units().filter(|u| u.name == "widget")[0].kind"#), "widget");
+    }
+
+    #[test]
+    fn decibels_and_pixels() {
+        assert_eq!(show(r#"[db(2).round(2), db(100), db(10, "amplitude"), from_db(20), from_db(-20, "amplitude")]"#), "[3.01, 20, 20, 100, 0.1]");
+        assert_eq!(show("[96 px to in, 1 in to px]"), "[1 in, 96 px]");
+        assert!(try_eval("db(0)").is_err());
+        assert!(try_eval(r#"db(2, "loud")"#).is_err());
     }
 
     #[test]

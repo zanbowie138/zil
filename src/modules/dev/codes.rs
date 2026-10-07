@@ -1,4 +1,4 @@
-//! Check digits (Luhn, ISBN, IBAN) and lookup tables (HTTP statuses, well-known ports, MIME types).
+//! Check digits (Luhn, ISBN, IBAN) and lookup tables (HTTP statuses, MIME types).
 
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -7,14 +7,13 @@ use crate::value::Value;
 
 pub const MODULE: Module = Module {
     name: "codes",
-    about: "check digits for cards, ISBNs and IBANs; HTTP status, port and MIME type lookups",
+    about: "check digits for cards, ISBNs and IBANs; HTTP status and MIME type lookups",
     #[rustfmt::skip]
     examples: &[
         ("codes", &[
             ("a typo in a card number?", r#"luhn("4111 1111 1111 1112")"#),
             ("valid ISBN?", r#"isbn("978-0-306-40615-7")"#),
             ("what's a 418?", "http_status(418)"),
-            ("what runs on 5432?", "port(5432)"),
             ("Content-Type for a file", r#"mime("report.pdf")"#),
         ]),
     ],
@@ -22,7 +21,7 @@ pub const MODULE: Module = Module {
     #[rustfmt::skip]
     groups: &[
         ("check digits", &["luhn", "isbn", "iban"]),
-        ("lookups", &["http_status", "port", "mime"]),
+        ("lookups", &["http_status", "mime"]),
     ],
     call,
     ..Module::EMPTY
@@ -33,8 +32,7 @@ const FNS: &[Doc] = &[
     doc("luhn", "luhn(s: str|int)", "whether the Luhn check digit is right, as on credit cards and IMEIs; spaces and dashes are ignored", &[r#"luhn("4111 1111 1111 1111")"#, "luhn(79927398710)"], &["isbn", "iban"]),
     doc("isbn", "isbn(s: str)", "whether an ISBN-10 or ISBN-13 has a valid check digit", &[r#"isbn("0-306-40615-2")"#, r#"isbn("9780306406157")"#], &["luhn"]),
     doc("iban", "iban(s: str)", "whether an IBAN passes its mod-97 check", &[r#"iban("GB82 WEST 1234 5698 7654 32")"#], &["luhn"]),
-    doc("http_status", "http_status(code: int)", "the reason phrase for an HTTP status code, or nil", &["http_status(404)", "(200..=204).map(http_status)"], &["port"]),
-    doc("port", "port(n: int) / port(name: str)", "the service on a well-known port, or the port for a service; nil if unknown", &["port(22)", r#"port("postgresql")"#], &["http_status", "mime"]),
+    doc("http_status", "http_status(code: int)", "the reason phrase for an HTTP status code, or nil", &["http_status(404)", "(200..=204).map(http_status)"], &["mime"]),
     doc("mime", "mime(name: str)", "the MIME type for a file name or extension, or nil", &[r#"mime("png")"#, r#"mime("data.json")"#], &["ext"]),
 ];
 
@@ -81,8 +79,6 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             Bool(ok && rem == Some(1))
         }
         ("http_status", [Int(n, _)]) => opt(HTTP.iter().find(|h| h.0 == *n).map(|h| h.1)),
-        ("port", [Int(n, _)]) => opt(PORTS.iter().find(|p| p.0 == *n).map(|p| p.1)),
-        ("port", [Str(s)]) => PORTS.iter().find(|p| p.1.eq_ignore_ascii_case(s)).map_or(Nil, |p| Value::int(p.0)),
         ("mime", [Str(s)]) => {
             let ext = s.rsplit('.').next().unwrap_or(s).to_lowercase();
             opt(MIME.iter().find(|m| m.0.split(' ').any(|e| e == ext)).map(|m| m.1))
@@ -103,16 +99,6 @@ const HTTP: &[(i64, &str)] = &[
     (428, "Precondition Required"), (429, "Too Many Requests"), (431, "Request Header Fields Too Large"), (451, "Unavailable For Legal Reasons"),
     (500, "Internal Server Error"), (501, "Not Implemented"), (502, "Bad Gateway"), (503, "Service Unavailable"), (504, "Gateway Timeout"), (505, "HTTP Version Not Supported"),
     (506, "Variant Also Negotiates"), (507, "Insufficient Storage"), (508, "Loop Detected"), (510, "Not Extended"), (511, "Network Authentication Required"),
-];
-
-#[rustfmt::skip]
-const PORTS: &[(i64, &str)] = &[
-    (20, "ftp-data"), (21, "ftp"), (22, "ssh"), (23, "telnet"), (25, "smtp"), (53, "dns"), (67, "dhcp"), (69, "tftp"), (80, "http"), (110, "pop3"), (123, "ntp"),
-    (143, "imap"), (161, "snmp"), (179, "bgp"), (389, "ldap"), (443, "https"), (445, "smb"), (465, "smtps"), (514, "syslog"), (587, "submission"), (636, "ldaps"),
-    (853, "dns-over-tls"), (873, "rsync"), (993, "imaps"), (995, "pop3s"), (1194, "openvpn"), (1433, "mssql"), (1521, "oracle"), (1883, "mqtt"), (2049, "nfs"),
-    (2181, "zookeeper"), (2375, "docker"), (3000, "dev-server"), (3306, "mysql"), (3389, "rdp"), (4369, "epmd"), (5000, "flask"), (5173, "vite"), (5222, "xmpp"),
-    (5353, "mdns"), (5432, "postgresql"), (5672, "amqp"), (5900, "vnc"), (6379, "redis"), (6443, "kubernetes"), (8080, "http-alt"), (8443, "https-alt"),
-    (9000, "php-fpm"), (9090, "prometheus"), (9092, "kafka"), (9200, "elasticsearch"), (11211, "memcached"), (25565, "minecraft"), (27017, "mongodb"), (51820, "wireguard"),
 ];
 
 #[rustfmt::skip]
@@ -148,7 +134,7 @@ mod tests {
             show(r#"[iban("GB82 WEST 1234 5698 7654 32"), iban("GB82 WEST 1234 5698 7654 33"), iban("DE89370400440532013000"), iban("xx")]"#),
             "[true, false, true, false]"
         );
-        assert_eq!(show(r#"[http_status(418), http_status(999), port(22), port("REDIS"), port(1)]"#), r#"["I'm a teapot", nil, "ssh", 6379, nil]"#);
+        assert_eq!(show(r#"[http_status(418), http_status(999)]"#), r#"["I'm a teapot", nil]"#);
         assert_eq!(show(r#"[mime("PNG"), mime("a/b.tar.gz"), mime(".json"), mime("nope")]"#), r#"["image/png", "application/gzip", "application/json", nil]"#);
     }
 }

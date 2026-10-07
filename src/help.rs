@@ -248,7 +248,7 @@ flight = great_circle("Seattle", "Tokyo") / 900 km/h
 day = date("2026-10-12T00:00Z") to UTC
 hours = (0..24).map(|h| day + h * 1 h)
 hours.filter(|t| office(t to "New York") && office(t to "London") && office(t to "Berlin")).map(|t| t.format("%H:%M"))"#),
-        ("hours of daylight on the 21st of each month, equator to arctic", "time.sky · geo · art.renderers · art.frames", r#"places = ["Singapore", "Cairo", "Paris", "Oslo", "Reykjavik"]
+        ("hours of daylight on the 21st of each month, equator to arctic", "time.sky · geo · data.charts · art.frames", r#"places = ["Singapore", "Cairo", "Paris", "Oslo", "Reykjavik"]
 rows = places.map(|p| (1..=12).map(|m| day_length(p, date(2026, m, 21)) / 1 h))
 places.map(|p| p.pad(10)).join("\n").beside(rows.heatmap)"#),
         ("where the sun sets within the next hour", "geo · time.sky · time", r#"cities().filter(|c| now <= sunset(c.name, today) < now + 1 h).map(|c| c.name).take(6)"#),
@@ -263,11 +263,11 @@ gains = (0..365).map(|i| day_length("Oslo", start + i * 1 d)).deltas
 {day: start + (gains.find(gains.max) + 1) * 1 d, gained: gains.max to min, fastest_loss: gains.min to min}"#),
     ]),
     ("money and science", &[
-        ("a $400k mortgage from January 2027: cost, crossover, interest by year", "units.money · time · data.lists · data.charts", r#"plan = amortize($400000, 6.5%/yr, 30 yr)
+        ("a $400k mortgage from January 2027: cost, crossover, interest by year", "finance · time · data.lists · data.charts", r#"plan = amortize($400000, 6.5%/yr, 30 yr)
 flip = plan.filter(|m| m.principal > m.interest).first
 yearly = plan.chunks(12).map(|y| y.map(|m| m.interest).sum / $1)
 {monthly: plan[0].payment, interest: plan.map(|m| m.interest).sum, crossover: date(2027, 1, 1) + (flip.n - 1) * 1 mo, by_year: yearly.sparkline}"#),
-        ("a ski trip: who owes whom", "units.money · data.maps", r#"paid = {ana: $640 + $85.50, ben: 3 * $42, cy: $0, dee: $310}
+        ("a ski trip: who owes whom", "finance · data.maps", r#"paid = {ana: $640 + $85.50, ben: 3 * $42, cy: $0, dee: $310}
 {each: share(paid.values.sum, 4)[0], settle: settle(paid)}"#),
         ("weigh the Earth with a pendulum; errors carry through every step", "math.uncertainty · units.constants", r#"L = 1.000 ± 0.005 m
 T = (20.07 ± 0.1 s) / 10    # timed 10 swings
@@ -312,7 +312,7 @@ pretty(subnets("10.0.0.0/22", 24).map(|b| {
 }).table)"#),
         ("six hues, each as light as it can be while still readable on white", "dev.colors · data.lists", r#"readable = |h| (20..=70).map(|l| hsl(h, 75, l)).filter(|c| contrast(c, "white") >= 4.5).last
 (0..6).map(|i| readable(i * 60)).map(|c| "{swatch(c)} {round(contrast(c, "white"), 2)}").join("\n")"#),
-        ("when were this token and this ID minted, in Tokyo time?", "dev · time.zones", r#"token = jwt("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZGEiLCJpYXQiOjE1MTYyMzkwMjJ9.c2ln")
+        ("when were this token and this ID minted, in Tokyo time?", "dev · dev.ids · time.zones", r#"token = jwt("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZGEiLCJpYXQiOjE1MTYyMzkwMjJ9.c2ln")
 id = uuid_info("01890a5d-ac96-774b-bcce-b302099a8057")
 [token.payload.iat, id.timestamp].map(|d| [d to "Tokyo", d.relative])"#),
         ("anagram groups: words that sort to the same letters", "text.layout · data.lists", r#"words = "listen silent enlist google tinsel inlets banana stone tones notes onset".words
@@ -321,7 +321,7 @@ words.group_by(|w| w.chars.sort.join).values.filter(|g| g.len > 1)"#),
 "teh qiuck bronw fox jumsp ovr the lazzy dgo".words.map(|w| w.closest(dict)).join(" ")"#),
         ("newest release per major version, by semver precedence rather than string order", "dev · data.lists · data.maps", r#"tags = ["1.9.3", "1.10.0", "2.0.0-rc.1", "2.0.0", "1.2.11", "2.1.0-beta"]
 tags.group_by(|t| semver(t).major).map_values(|vs| vs.sort(semver).last)"#),
-        ("how many files until two CRC-32s probably collide?", "fun.games · math.calculus", r#"half = root(|k| birthday_paradox(round(k), 2 ** 32) - 0.5, 1, 1e6)
+        ("how many files until two CRC-32s probably collide?", "math.random · math.calculus", r#"half = root(|k| birthday_paradox(round(k), 2 ** 32) - 0.5, 1, 1e6)
 {even_odds_at: round(half), at_10k_files: odds(birthday_paradox(10000, 2 ** 32))}"#),
         ("proof of work: the first nonce whose SHA-256 starts with 000", "text.hash · math", r#"n = 0
 while !"zil:{n}".sha256.starts_with("000") { n += 1 }
@@ -335,7 +335,7 @@ primes = days.filter(|d| is_prime(int(d.format("%Y%m%d"))))
 (1..1000).filter(|n| pal(n) && pal(n to bin))"#),
         ("which points are in the Mandelbrot set? escape step, or stays", "math.complex · data.maps", r#"escapes = fn(c) { z = 0; for n in 1..=50 { z = z * z + c; if abs(z) > 2 { return n } }; return "stays" }
 [0, -1, 1, 1i, 0.3 + 0.5i, -0.75 + 0.1i].map(|c| [str(c), escapes(c)]).from_entries"#),
-        ("the exact chance of a poker full house", "math.numtheory · fun.games", r#"p = 13 * choose(4, 3) * 12 * choose(4, 2) / choose(52, 5)
+        ("the exact chance of a poker full house", "math.numtheory · math.random", r#"p = 13 * choose(4, 3) * 12 * choose(4, 2) / choose(52, 5)
 [p to frac, odds(p)]"#),
     ]),
 ];
@@ -569,7 +569,7 @@ fn below(r: &str) -> String {
 fn result(src: &str) -> (String, String) {
     match crate::run(&mut Interp::new(), src) {
         Ok(crate::value::Value::Str(s)) if s.contains(['\n', '\x1b']) => {
-            let plain = crate::modules::art::strip_ansi(&s);
+            let plain = crate::modules::text::strip_ansi(&s);
             let colored = if COLOR.get() { s.to_string() } else { plain.clone() };
             (plain, colored)
         }
@@ -645,6 +645,11 @@ mod tests {
         assert!(found("advanced"));
         for (_, _, src) in ADVANCED_UNRUN.1 {
             assert!(crate::parser::parse(src).is_ok(), "{src}");
+        }
+        for (title, uses, _) in ADVANCED.iter().flat_map(|t| t.1).chain(ADVANCED_UNRUN.1) {
+            for path in uses.split(" · ") {
+                assert!(ALL.iter().any(|(p, _)| p == path), "{title}: no module {path}");
+            }
         }
         assert!(found("quantity"));
         assert!(!found("nope"));

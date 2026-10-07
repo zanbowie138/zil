@@ -14,7 +14,7 @@ use std::cmp::Ordering;
 
 pub const MODULE: Module = Module {
     name: "data",
-    about: "length, search, sorting and picking across strings, lists, maps and sets; lists, maps, sets and tables below",
+    about: "length, search, sorting and picking across strings, lists, maps and sets; lists, maps, sets, tables and charts below",
     #[rustfmt::skip]
     examples: &[
         ("data", &[

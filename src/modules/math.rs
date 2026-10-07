@@ -12,8 +12,9 @@ pub mod stats;
 pub mod trig;
 pub mod uncertainty;
 
+use crate::ast::BinOp;
 use crate::ast::Radix;
-use crate::interp::Interp;
+use crate::interp::{Interp, binary as op};
 use crate::lexer::Span;
 use crate::modules::{Call, Doc, Fail, Module, doc};
 use crate::value::{Value, compare, exact, num, ratio};
@@ -24,7 +25,7 @@ use std::rc::Rc;
 
 pub const MODULE: Module = Module {
     name: "math",
-    about: "rounding, roots, logs, constants; exact fractions and big ints",
+    about: "rounding, roots, logs, interpolation, constants; exact fractions and big ints",
     #[rustfmt::skip]
     examples: &[
         ("math", &[
@@ -35,6 +36,8 @@ pub const MODULE: Module = Module {
             ("big ints never overflow", "2 ** 100"),
             ("add a percent", "80 + 15%"),
             ("percent of", "15% of 64.50"),
+            ("halfway between dates", r#"lerp(date("2026-01-01"), date("2026-12-31"), 1/2)"#),
+            ("°C to a 0-255 byte", "remap(25, 0, 40, 0, 255).round"),
         ]),
     ],
     #[rustfmt::skip]
@@ -47,6 +50,7 @@ pub const MODULE: Module = Module {
     groups: &[
         ("rounding", &["abs", "round", "sig", "floor", "ceil", "trunc", "sign", "clamp"]),
         ("powers", &["sqrt", "cbrt", "exp", "ln", "log", "hypot", "is_nan"]),
+        ("in between", &["lerp", "remap"]),
     ],
     call,
     #[rustfmt::skip]
@@ -87,6 +91,8 @@ const FNS: &[Doc] = &[
     doc("log", "log(x: num, base?: num)", "log base 10, or another base", &["log(1000)", "log(8, 2)"], &["ln"]),
     doc("hypot", "hypot(x: num|quantity, y: num|quantity)", "sqrt(x² + y²) without overflow; keeps units", &["hypot(3, 4)", "hypot(3 m, 4 m)"], &["sqrt", "atan2"]),
     doc("is_nan", "is_nan(x: any)", "whether x is nan (nan != nan)", &["is_nan(nan)", "is_nan(inf - inf)"], &[]),
+    doc("lerp", "lerp(a: any, b: any, t: num)", "a + (b - a) * t: the point a fraction t of the way from a to b; numbers, units or dates", &["lerp(10, 20, 0.25)", "lerp(0 C, 100 C, 0.37)"], &["remap"]),
+    doc("remap", "remap(x: any, lo: any, hi: any, to_lo: any, to_hi: any)", "x moved from the range lo..hi to the range to_lo..to_hi, proportionally", &["remap(5, 0, 10, 100, 200)", "remap(72 F, 32 F, 212 F, 0, 100)"], &["lerp", "normalize"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Call {
@@ -153,6 +159,11 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Call
         ("log", [v, b]) if num(v).is_some() && num(b).is_some() => Float(num(v).unwrap().log(num(b).unwrap())),
         ("hypot", [Qty(x, u), Qty(y, w)]) if u.dim() == w.dim() => Qty(x.hypot(u.value_from_si(w.to_si(*y))), u.clone()),
         ("hypot", [x, y]) if num(x).is_some() && num(y).is_some() => Float(num(x).unwrap().hypot(num(y).unwrap())),
+        ("lerp", [a, b, t]) => op(BinOp::Add, a, &op(BinOp::Mul, &op(BinOp::Sub, b, a)?, t)?)?,
+        ("remap", [x, lo, hi, to_lo, to_hi]) => {
+            let t = op(BinOp::Div, &op(BinOp::Sub, x, lo)?, &op(BinOp::Sub, hi, lo)?)?;
+            op(BinOp::Add, to_lo, &op(BinOp::Mul, &op(BinOp::Sub, to_hi, to_lo)?, &t)?)?
+        }
         _ => return Err(Fail::BadArgs),
     })
 }
@@ -244,6 +255,8 @@ mod tests {
         assert_eq!(show("[sign(-5 km), sign(0), sign(2/3), trunc(-2.7), trunc(7/2), trunc(-2.7 m)]"), "[-1, 0, 1, -2, 3, -2 m]");
         assert_eq!(show("[round(7.3, 0.25), round(7, 1/2), round(17 min, 15 min), round(80 min, 1 h)]"), "[7.25, 7, 15 min, 60 min]");
         assert_eq!(show("[is_nan(nan), is_nan(1), nan == nan, inf > 10 ** 300, tau / pi]"), "[true, false, false, true, 2]");
+        assert_eq!(show("[lerp(10, 20, 1/4), lerp(0 m, 1 km, 0.5), remap(5, 0, 10, 100, 200)]"), "[12.5, 500 m, 150]");
+        assert_eq!(show(r#"lerp(date("2026-01-01"), date("2026-01-03"), 1/2)"#), "2026-01-02");
         assert!(try_eval("clamp(1, 5, 0)").is_err());
     }
 }

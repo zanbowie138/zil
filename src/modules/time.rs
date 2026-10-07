@@ -1,7 +1,7 @@
 //! Dates: parsing (fixed formats and natural language), fields, date math, relative text.
-//! Calendar math, time zones and the sky (sunrise, moon) are children.
+//! Calendars, time zones and the sky (sunrise, moon) are children.
 
-pub mod calendar_math;
+pub mod calendars;
 pub mod sky;
 pub mod zones;
 
@@ -71,7 +71,7 @@ pub const MODULE: Module = Module {
     ident: Some(ident),
     binary: Some(binary),
     compare: Some(compare),
-    children: &[calendar_math::MODULE, zones::MODULE, sky::MODULE],
+    children: &[calendars::MODULE, zones::MODULE, sky::MODULE],
     ..Module::EMPTY
 };
 
@@ -578,7 +578,7 @@ pub fn relative(z: &Zoned, now: &Zoned) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::calendar_math::{Off, add_workdays, calendar, workdays};
+    use super::calendars::{Off, add_workdays, calendar, workdays};
     use super::*;
     use crate::interp::tests::{show, try_eval};
 
@@ -634,7 +634,7 @@ mod tests {
     }
 
     #[test]
-    fn calendar_math() {
+    fn calendar_fns() {
         let z = now();
         assert_eq!(start_of(&z, "quarter").unwrap().date().to_string(), "2026-10-01");
         assert_eq!(end_of(&z, "week").unwrap().strftime("%F %T").to_string(), "2026-10-11 23:59:59");

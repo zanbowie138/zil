@@ -1,4 +1,4 @@
-//! Text charts for the terminal: sparklines, bar charts, histograms, function plots.
+//! Text charts for the terminal: sparklines, bar charts, histograms, function plots, heatmaps, progress bars, trees.
 
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -7,7 +7,7 @@ use crate::value::{Value, fmt_float, num};
 
 pub const MODULE: Module = Module {
     name: "charts",
-    about: "sparklines, bar charts, histograms and braille function plots, as text",
+    about: "sparklines, bar charts, histograms, braille function plots, heatmaps, progress bars and trees of nested data, as text",
     #[rustfmt::skip]
     examples: &[
         ("charts", &[
@@ -16,6 +16,8 @@ pub const MODULE: Module = Module {
             ("letter frequencies", r#""mississippi".chars.count_by(|c| c) |> bars"#),
             ("dice sums", "(1..=2000).map(|_| rand(1, 6) + rand(1, 6)).histogram(11)"),
             ("a sine wave", "plot(sin, 0, 2 * pi)"),
+            ("a multiplication table", "(1..=6).map(|r| (1..=10).map(|c| r * c)).heatmap"),
+            ("a config at a glance", r#"tree_view({server: {host: "localhost", ports: [80, 443]}, debug: false})"#),
         ]),
     ],
     fns: FNS,
@@ -29,6 +31,9 @@ const FNS: &[Doc] = &[
     doc("bars", "bars(m: map|list, width?: int)", "a horizontal bar chart of a map (labels → numbers) or a list; width defaults to 40", &["bars({a: 3, b: 7, c: 5})", "[2, 4, 8].bars(16)"], &["histogram", "sparkline"]),
     doc("histogram", "histogram(xs: list, bins?: int)", "count numbers into equal-width bins (default 10) and draw them as bars", &["[1, 2, 2, 3, 3, 3, 4, 4, 5].histogram(5)"], &["bars", "count_by"]),
     doc("plot", "plot(f: fn, a: num, b: num)", "plot f from a to b in braille dots, 60 columns by 16 rows", &["plot(|x| x ** 2, -1, 1)"], &["sparkline"]),
+    doc("tree_view", "tree_view(v: map|list)", "nested maps and lists drawn like the `tree` command", &[r#"tree_view({src: {main: "rs", lib: "rs"}, docs: ["book"]})"#], &["keys", "from_json"]),
+    doc("heatmap", "heatmap(rows: list)", "a list of rows of numbers as shades from ░ (low) to █ (high)", &["[[1, 2, 3], [4, 5, 6], [7, 8, 9]].heatmap"], &["bars", "sparkline"]),
+    doc("progress", "progress(frac: num, width?: int)", "a progress bar for frac from 0 to 1, width cells wide (default 30)", &["progress(0.42)", "progress(2 / 3, 12)"], &["bars"]),
 ];
 
 const BLOCKS: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
@@ -138,6 +143,39 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Cal
             out.push(format!("{:pad$}  {left}{right:>w$}", "", w = W / 2 - left.chars().count()));
             Value::str(out.join("\n"))
         }
+        ("tree_view", [v @ (Map(_) | List(_))]) => {
+            let mut out = vec![];
+            tree(v, "", &mut out);
+            Value::str(out.join("\n"))
+        }
+        ("heatmap", [List(rows)]) => {
+            let grid = rows
+                .borrow()
+                .iter()
+                .map(|r| match r {
+                    List(r) => r.borrow().iter().map(num).collect::<Option<Vec<f64>>>(),
+                    _ => None,
+                })
+                .collect::<Option<Vec<_>>>()
+                .ok_or(Fail::Arg(0, "expected a list of lists of numbers".into()))?;
+            let all = grid.iter().flatten().copied();
+            let (lo, hi) = all.fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), x| (lo.min(x), hi.max(x)));
+            const SHADES: [&str; 5] = ["  ", "░░", "▒▒", "▓▓", "██"];
+            let shade = |x: f64| if hi > lo { SHADES[((x - lo) / (hi - lo) * 4.0).round() as usize] } else { SHADES[2] };
+            Value::str(grid.iter().map(|r| r.iter().map(|x| shade(*x)).collect::<String>().trim_end().to_string()).collect::<Vec<_>>().join("\n"))
+        }
+        ("progress", [f, rest @ ..]) if rest.len() <= 1 => {
+            let f = num(f).ok_or(Fail::Arg(0, "expected a number from 0 to 1".into()))?.clamp(0.0, 1.0);
+            let w = match rest {
+                [] => 30,
+                [Int(w, _)] if (1..=500).contains(w) => *w as usize,
+                _ => return Err(Fail::Arg(1, "width must be an int from 1 to 500".into())),
+            };
+            let eighths = (f * w as f64 * 8.0).round() as usize;
+            let bar = "█".repeat(eighths / 8) + ["", "▏", "▎", "▍", "▌", "▋", "▊", "▉"][eighths % 8];
+            let pad = w - bar.chars().count();
+            Value::str(format!("▕{bar}{}▏ {}%", " ".repeat(pad), (f * 100.0).round()))
+        }
         _ => return Err(Fail::BadArgs),
     })
 }
@@ -153,6 +191,32 @@ fn bars(rows: &[(String, Value)], width: usize) -> Result<String, Fail> {
         format!("{label:>label_w$} │{bar} {v}")
     });
     Ok(lines.collect::<Vec<_>>().join("\n"))
+}
+
+fn tree(v: &Value, prefix: &str, out: &mut Vec<String>) {
+    let items: Vec<(String, Value)> = match v {
+        Value::Map(m) => m.borrow().iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+        Value::List(l) => l.borrow().iter().enumerate().map(|(i, v)| (format!("[{i}]"), v.clone())).collect(),
+        _ => return,
+    };
+    let is_list = matches!(v, Value::List(_));
+    for (i, (k, v)) in items.iter().enumerate() {
+        let last = i == items.len() - 1;
+        let nested = match v {
+            Value::Map(m) => !m.borrow().is_empty(),
+            Value::List(l) => !l.borrow().is_empty(),
+            _ => false,
+        };
+        let label = match (nested, is_list) {
+            (true, _) => k.clone(),
+            (false, true) => v.to_string(),
+            (false, false) => format!("{k}: {v}"),
+        };
+        out.push(format!("{prefix}{}{label}", if last { "└── " } else { "├── " }));
+        if nested {
+            tree(v, &format!("{prefix}{}", if last { "    " } else { "│   " }), out);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -175,5 +239,10 @@ mod tests {
         assert!(p.starts_with("1 ┤") && p.lines().nth(15).unwrap().starts_with("0 ┤"));
         assert!(try_eval(r#"["a"].sparkline"#).is_err());
         assert!(try_eval(r#"plot(|x| "a", 0, 1)"#).is_err());
+        assert_eq!(show(r#"tree_view({a: {b: 1, c: [2, 3]}, d: "x"})"#), "├── a\n│   ├── b: 1\n│   └── c\n│       ├── 2\n│       └── 3\n└── d: x");
+        assert_eq!(show("[[0, 1], [2, 4]].heatmap"), "  ░░\n▒▒██");
+        assert!(try_eval("[1, 2].heatmap").is_err());
+        assert_eq!(show("progress(0.5, 4)"), "▕██  ▏ 50%");
+        assert_eq!(show("progress(2, 2)"), "▕██▏ 100%");
     }
 }

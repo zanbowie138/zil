@@ -3,8 +3,10 @@
 pub mod ciphers;
 pub mod compare;
 pub mod encoding;
+pub mod fancy;
 pub mod hash;
 pub mod layout;
+pub mod placeholder;
 pub mod translation;
 
 use super::{Call, Claim, Doc, Fail, Module, doc};
@@ -15,7 +17,7 @@ use crate::value::Value;
 
 pub const MODULE: Module = Module {
     name: "text",
-    about: "case, splitting, search and regex; layout, comparison, translation, encodings, hashes and ciphers below",
+    about: "case, splitting, search and regex; layout, comparison, translation, encodings, hashes, ciphers, fancy text and placeholders below",
     #[rustfmt::skip]
     examples: &[
         ("text", &[
@@ -35,13 +37,13 @@ pub const MODULE: Module = Module {
     fns: FNS,
     #[rustfmt::skip]
     groups: &[
-        ("shape", &["upper", "lower", "capitalize", "trim", "repeat"]),
+        ("shape", &["upper", "lower", "capitalize", "trim", "repeat", "strip_ansi"]),
         ("split", &["split", "lines", "chars", "join"]),
         ("search", &["starts_with", "ends_with", "match", "find_all", "grep", "replace", "nums"]),
     ],
     call,
     binary: Some(binary),
-    children: &[layout::MODULE, compare::MODULE, translation::MODULE, encoding::MODULE, hash::MODULE, ciphers::MODULE],
+    children: &[layout::MODULE, compare::MODULE, translation::MODULE, encoding::MODULE, hash::MODULE, ciphers::MODULE, fancy::MODULE, placeholder::MODULE],
     ..Module::EMPTY
 };
 
@@ -63,6 +65,7 @@ const FNS: &[Doc] = &[
     doc("grep", "grep(v: str|list, pat: str|regex)", "lines of a string (or items of a list) containing pat", &[r#""ok\nERROR 1\nERROR 2".grep("ERROR")"#, r#"["a1", "b", "c22"].grep(r"\d")"#], &["lines", "filter", "contains"]),
     doc("repeat", "repeat(s: str, n: int)", "repeat a string n times", &[r#""ab".repeat(3)"#], &[]),
     doc("nums", "nums(s: str)", "every number in a string", &[r#""x=3, y=-2.5; 1e3".nums"#], &["find_all", "parse"]),
+    doc("strip_ansi", "strip_ansi(s: str)", "remove terminal color and cursor codes", &[r#"gradient("ab", "red", "blue").strip_ansi"#], &["rainbow", "len"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -115,6 +118,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             };
             Value::list(re.find_iter(s).map(num).collect())
         }
+        ("strip_ansi", [Str(s)]) => Value::str(strip_ansi(s)),
         _ => return Err(Fail::BadArgs),
     })
 }
@@ -131,6 +135,12 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
 
 fn strs<'a>(it: impl Iterator<Item = &'a str>) -> Value {
     Value::list(it.map(Value::str).collect())
+}
+
+/// Remove terminal color and cursor codes.
+pub fn strip_ansi(s: &str) -> String {
+    let re = regex::Regex::new(r"\x1b\[[0-9;?]*[A-Za-z]").unwrap();
+    re.replace_all(s, "").into_owned()
 }
 
 #[cfg(test)]

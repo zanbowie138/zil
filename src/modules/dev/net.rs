@@ -12,7 +12,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 pub const MODULE: Module = Module {
     name: "net",
-    about: "IP addresses, CIDR blocks, subnets",
+    about: "IP addresses, CIDR blocks, subnets, well-known ports",
     #[rustfmt::skip]
     examples: &[
         ("net", &[
@@ -21,6 +21,7 @@ pub const MODULE: Module = Module {
             ("address as bits", r#"ip("192.168.1.5") to bin"#),
             ("next address", r#"ip(ip("10.0.0.255") + 1)"#),
             ("split into /24s", r#"subnets("10.0.0.0/22", 24)"#),
+            ("what runs on 5432?", "port(5432)"),
         ]),
     ],
     fns: FNS,
@@ -35,6 +36,7 @@ const FNS: &[Doc] = &[
     doc("in_cidr", "in_cidr(ip: str, block: str)", "whether an IPv4 address is inside a CIDR block", &[r#"in_cidr("10.0.3.7", "10.0.0.0/22")"#], &["cidr"]),
     doc("subnets", "subnets(block: str, prefix: int)", "split an IPv4 block into smaller blocks", &[r#"subnets("10.0.0.0/24", 26)"#], &["cidr"]),
     doc("ip_kind", "ip_kind(ip: str)", "loopback, private, link-local, multicast, unspecified or public", &[r#"ip_kind("10.1.2.3")"#, r#"ip_kind("8.8.8.8")"#], &["ip"]),
+    doc("port", "port(n: int) / port(name: str)", "the service on a well-known port, or the port for a service; nil if unknown", &["port(22)", r#"port("postgresql")"#], &["http_status", "ip"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -96,6 +98,8 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             IpAddr::V6(a) if a.segments()[0] & 0xffc0 == 0xfe80 => "link-local",
             _ => "public",
         }),
+        ("port", [Int(n, _)]) => PORTS.iter().find(|p| p.0 == *n).map_or(Nil, |p| Value::str(p.1)),
+        ("port", [Str(s)]) => PORTS.iter().find(|p| p.1.eq_ignore_ascii_case(s)).map_or(Nil, |p| Value::int(p.0)),
         _ => return Err(Fail::BadArgs),
     })
 }
@@ -117,6 +121,16 @@ fn block(s: &str) -> Result<(u32, u32), String> {
     Ok((u32::from(a) & mask(p), p))
 }
 
+#[rustfmt::skip]
+const PORTS: &[(i64, &str)] = &[
+    (20, "ftp-data"), (21, "ftp"), (22, "ssh"), (23, "telnet"), (25, "smtp"), (53, "dns"), (67, "dhcp"), (69, "tftp"), (80, "http"), (110, "pop3"), (123, "ntp"),
+    (143, "imap"), (161, "snmp"), (179, "bgp"), (389, "ldap"), (443, "https"), (445, "smb"), (465, "smtps"), (514, "syslog"), (587, "submission"), (636, "ldaps"),
+    (853, "dns-over-tls"), (873, "rsync"), (993, "imaps"), (995, "pop3s"), (1194, "openvpn"), (1433, "mssql"), (1521, "oracle"), (1883, "mqtt"), (2049, "nfs"),
+    (2181, "zookeeper"), (2375, "docker"), (3000, "dev-server"), (3306, "mysql"), (3389, "rdp"), (4369, "epmd"), (5000, "flask"), (5173, "vite"), (5222, "xmpp"),
+    (5353, "mdns"), (5432, "postgresql"), (5672, "amqp"), (5900, "vnc"), (6379, "redis"), (6443, "kubernetes"), (8080, "http-alt"), (8443, "https-alt"),
+    (9000, "php-fpm"), (9090, "prometheus"), (9092, "kafka"), (9200, "elasticsearch"), (11211, "memcached"), (25565, "minecraft"), (27017, "mongodb"), (51820, "wireguard"),
+];
+
 #[cfg(test)]
 mod tests {
     use crate::interp::tests::{show, try_eval};
@@ -136,6 +150,7 @@ mod tests {
         assert_eq!(show(r#"in_cidr("10.0.4.0", "10.0.0.0/22")"#), "false");
         assert_eq!(show(r#"subnets("10.0.0.0/23", 24)"#), r#"["10.0.0.0/24", "10.0.1.0/24"]"#);
         assert_eq!(show(r#"ip_kind("192.168.0.1")"#), "private");
+        assert_eq!(show(r#"[port(22), port("REDIS"), port(1)]"#), r#"["ssh", 6379, nil]"#);
         assert!(try_eval(r#"cidr("10.0.0.0/33")"#).is_err());
         assert!(try_eval(r#"ip("300.1.1.1")"#).is_err());
     }

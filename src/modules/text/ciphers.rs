@@ -1,4 +1,4 @@
-//! Classic ciphers and codes: Caesar, ROT13, Atbash, Vigenère, Morse, Braille. For fun, not secrecy.
+//! Classic ciphers and codes: Caesar, ROT13, Atbash, Vigenère, Morse, Braille, NATO spelling. For fun, not secrecy.
 
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -7,7 +7,7 @@ use crate::value::Value;
 
 pub const MODULE: Module = Module {
     name: "ciphers",
-    about: "Caesar, ROT13, Atbash, Vigenère, Morse, Braille (for fun, not secrecy)",
+    about: "Caesar, ROT13, Atbash, Vigenère, Morse, Braille, NATO spelling (for fun, not secrecy)",
     #[rustfmt::skip]
     examples: &[
         ("ciphers", &[
@@ -17,6 +17,7 @@ pub const MODULE: Module = Module {
             ("crack a Caesar", r#"(1..26).map(|k| "Wkh hdjoh odqgv".caesar(-k)).grep("eagle")"#),
             ("Vigenère round trip", r#""attack at dawn".vigenere("lemon").unvigenere("lemon")"#),
             ("Braille", r#""hello".braille"#),
+            ("spell it over the phone", r#""zil 2".nato"#),
         ]),
     ],
     fns: FNS,
@@ -32,7 +33,8 @@ const FNS: &[Doc] = &[
     doc("vigenere", "vigenere(s: str, key: str)", "Caesar with a shift per letter from a key word", &[r#""attack at dawn".vigenere("lemon")"#], &["unvigenere", "caesar"]),
     doc("unvigenere", "unvigenere(s: str, key: str)", "undo vigenere", &[r#""lxfopv ef rnhr".unvigenere("lemon")"#], &["vigenere"]),
     doc("morse", "morse(s: str)", "text to Morse code, or Morse (dots, dashes, / between words) back to text", &[r#""sos".morse"#, r#"".... .. / - .... . .-. .".morse"#], &["braille"]),
-    doc("braille", "braille(s: str)", "text to Grade 1 Braille cells, or Braille back to text", &[r#""hello world".braille"#, r#""⠓⠊".braille"#], &["morse"]),
+    doc("braille", "braille(s: str)", "text to Grade 1 Braille cells, or Braille back to text", &[r#""hello world".braille"#, r#""⠓⠊".braille"#], &["morse", "nato"]),
+    doc("nato", "nato(s: str)", "spell with the NATO phonetic alphabet", &[r#""SOS".nato"#, r#""b2b".nato"#], &["morse"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -64,6 +66,18 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
                 None => LETTERS.find(c.to_ascii_lowercase()).map_or(c, |i| BRAILLE.chars().nth(i).unwrap()),
             })
             .collect(),
+        ("nato", [Str(s)]) => {
+            let words: Vec<&str> = s
+                .chars()
+                .filter_map(|c| match c.to_ascii_lowercase() {
+                    c @ 'a'..='z' => Some(NATO[c as usize - 'a' as usize]),
+                    c @ '0'..='9' => Some(DIGITS[c as usize - '0' as usize]),
+                    ' ' => Some("/"),
+                    _ => None,
+                })
+                .collect();
+            words.join(" ")
+        }
         _ => return Err(Fail::BadArgs),
     }))
 }
@@ -103,6 +117,12 @@ const MORSE: &[(char, &str)] = &[
     (')', "-.--.-"), ('&', ".-..."), (':', "---..."), ('=', "-...-"), ('+', ".-.-."), ('-', "-....-"), ('"', ".-..-."), ('@', ".--.-."),
 ];
 
+const NATO: [&str; 26] = [
+    "Alfa", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliett", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa", "Quebec",
+    "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whiskey", "X-ray", "Yankee", "Zulu",
+];
+const DIGITS: [&str; 10] = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+
 #[cfg(test)]
 mod tests {
     use crate::interp::tests::{show, try_eval};
@@ -118,6 +138,7 @@ mod tests {
         assert_eq!(show(r#""SOS hi".morse"#), "... --- ... / .... ..");
         assert_eq!(show(r#""... --- ... / .... ..".morse"#), "SOS HI");
         assert_eq!(show(r#""hi there".braille.braille"#), "hi there");
+        assert_eq!(show(r#""Hi 5".nato"#), "Hotel India / Five");
         assert!(try_eval(r#""x".vigenere("123")"#).is_err());
     }
 }

@@ -1,4 +1,4 @@
-//! Calendar math: periods, weekdays, business days, month grids, cron. Weeks start Monday.
+//! Calendars: periods, weekdays, business days, month grids, cron, zodiac signs. Weeks start Monday.
 
 use super::{e, end_of, is_weekend, start_of, unknown_weekday, weekday};
 use crate::interp::Interp;
@@ -8,11 +8,11 @@ use jiff::civil::{Date, Weekday};
 use jiff::{Span, Zoned};
 
 pub const MODULE: Module = Module {
-    name: "calendar_math",
-    about: "periods, weekdays, business days, week numbers, month grids, cron schedules; weeks start Monday",
+    name: "calendars",
+    about: "periods, weekdays, business days, week numbers, month grids, cron schedules, Western and Chinese zodiac; weeks start Monday",
     #[rustfmt::skip]
     examples: &[
-        ("calendar_math", &[
+        ("calendars", &[
             ("Thanksgiving: 4th Thursday", r#"date(2026, 11, 1).nth_weekday(4, "thu")"#),
             ("Memorial Day: last Monday", r#"date(2026, 5, 1).nth_weekday(-1, "mon")"#),
             ("3 business days later", r#"date("2026-12-24").add_workdays(3)"#),
@@ -21,6 +21,7 @@ pub const MODULE: Module = Module {
             ("ISO week number", "today.iso_week"),
             ("what does this cron line mean?", r#"cron("*/15 9-17 * * mon-fri")"#),
             ("when does it run next?", r#""0 9 * * 1-5".next(3)"#),
+            ("your sign", r#"[zodiac(date("1990-08-10")), chinese_zodiac(1990)]"#),
         ]),
     ],
     fns: FNS,
@@ -30,6 +31,7 @@ pub const MODULE: Module = Module {
         ("year", &["leap_year", "days_in_month", "days_in_year", "calendar"]),
         ("moving", &["start_of", "end_of", "next", "prev", "nth_weekday", "add_workdays", "workdays", "holidays"]),
         ("cron", &["cron"]),
+        ("zodiac", &["zodiac", "chinese_zodiac"]),
     ],
     call,
     ..Module::EMPTY
@@ -59,6 +61,8 @@ const FNS: &[Doc] = &[
     doc("cron", "cron(expr: str)", "a cron expression (minute hour day month weekday, or @daily etc.) in plain English",
         &[r#"cron("0 9 * * 1-5")"#, r#"cron("30 4 1,15 * fri")"#, r#"cron("@hourly")"#], &["next"]),
     doc("calendar", "calendar(d: date) / calendar(year: int, month: int)", "month grid, weeks starting Monday", &["calendar(2026, 12)"], &["date"]),
+    doc("zodiac", "zodiac(day?: date)", "the Western zodiac sign for a date (default today)", &[r#"zodiac(date("2000-01-01"))"#], &["chinese_zodiac"]),
+    doc("chinese_zodiac", "chinese_zodiac(year: int|date)", "the Chinese zodiac element and animal; by Gregorian year, so January dates before Lunar New Year come out a year late", &["chinese_zodiac(2026)", "chinese_zodiac(1984)"], &["zodiac"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &crate::lexer::Span) -> Call {
@@ -114,6 +118,18 @@ note: ask for 1 to 1000 runs"
         }
         ("calendar", [Date(z)]) => Value::str(calendar(z.year() as i64, z.month() as i64)?),
         ("calendar", [Int(y, _), Int(m, _)]) => Value::str(calendar(*y, *m)?),
+        ("zodiac", [] | [Date(_)]) => {
+            let d = match args {
+                [Date(z)] => z.date(),
+                _ => jiff::Zoned::now().date(),
+            };
+            let md = d.month() as i32 * 100 + d.day() as i32;
+            // Each sign starts on the given month/day; Capricorn wraps over New Year.
+            let sign = SIGNS.iter().rev().find(|s| md >= s.0).unwrap_or(&SIGNS[SIGNS.len() - 1]);
+            Value::str(sign.1)
+        }
+        ("chinese_zodiac", [Int(y, _)]) => Value::str(chinese(*y)),
+        ("chinese_zodiac", [Date(z)]) => Value::str(chinese(z.year() as i64)),
         _ => return Err(Fail::BadArgs),
     })
 }
@@ -421,6 +437,29 @@ pub fn calendar(year: i64, month: i64) -> Result<String, String> {
     Ok(format!("{title:^20}\nMo Tu We Th Fr Sa Su\n{}", rows.join("\n")))
 }
 
+const SIGNS: [(i32, &str); 12] = [
+    (120, "♒ Aquarius"),
+    (219, "♓ Pisces"),
+    (321, "♈ Aries"),
+    (420, "♉ Taurus"),
+    (521, "♊ Gemini"),
+    (621, "♋ Cancer"),
+    (723, "♌ Leo"),
+    (823, "♍ Virgo"),
+    (923, "♎ Libra"),
+    (1023, "♏ Scorpio"),
+    (1122, "♐ Sagittarius"),
+    (1222, "♑ Capricorn"),
+];
+
+fn chinese(y: i64) -> String {
+    const ANIMALS: [&str; 12] = ["Rat", "Ox", "Tiger", "Rabbit", "Dragon", "Snake", "Horse", "Goat", "Monkey", "Rooster", "Dog", "Pig"];
+    const ELEMENTS: [&str; 5] = ["Wood", "Fire", "Earth", "Metal", "Water"];
+    // 1984 was a Wood Rat, the start of a 60-year cycle.
+    let k = (y - 1984).rem_euclid(60);
+    format!("{} {}", ELEMENTS[(k / 2 % 5) as usize], ANIMALS[(k % 12) as usize])
+}
+
 #[cfg(test)]
 mod tests {
     use super::Cron;
@@ -447,5 +486,17 @@ mod tests {
         assert!(Cron::parse("0 0 30 2 *").unwrap().next(&from, 1).is_err());
         assert!(try_eval(r#"cron("61 * * * *")"#).is_err());
         assert!(try_eval(r#""* *".next"#).is_err());
+    }
+
+    #[test]
+    fn zodiac() {
+        assert_eq!(
+            show(r#"[zodiac(date("2000-01-01")), zodiac(date("2000-01-20")), zodiac(date("2000-03-20")), zodiac(date("2000-12-31"))]"#),
+            r#"["♑ Capricorn", "♒ Aquarius", "♓ Pisces", "♑ Capricorn"]"#
+        );
+        assert_eq!(
+            show("[chinese_zodiac(2026), chinese_zodiac(1984), chinese_zodiac(2000), chinese_zodiac(1900)]"),
+            r#"["Fire Horse", "Wood Rat", "Metal Dragon", "Metal Rat"]"#
+        );
     }
 }

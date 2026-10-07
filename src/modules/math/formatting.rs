@@ -1,4 +1,4 @@
-//! Number formatting: format specs, printf, fixed/sci/percent/commas, human_bytes.
+//! Number formatting: format specs, printf, fixed/sci/percent/commas, words, ordinals, Roman numerals, human_bytes.
 
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -8,13 +8,15 @@ use num_traits::Signed;
 
 pub const MODULE: Module = Module {
     name: "formatting",
-    about: "format specs in strings, printf, fixed/sci/percent/commas, and human_bytes",
+    about: "format specs in strings, printf, fixed/sci/percent/commas, numbers in words, ordinals, Roman numerals, and human_bytes",
     #[rustfmt::skip]
     examples: &[
         ("formatting", &[
             ("format specs", r#""{1234567.891:,.2f}""#),
             ("hex with a prefix", r#""{255:#06x}""#),
             ("32-bit binary", r#""{0xdeadbeef:032b}""#),
+            ("this year", "2026 to roman"),
+            ("Super Bowl math", r#"roman("LX") + 1 to roman"#),
         ]),
     ],
     #[rustfmt::skip]
@@ -27,10 +29,11 @@ pub const MODULE: Module = Module {
             (r#""{x:,}"  commas; also + e %"#, r#""{1234567:,}""#),
             (r#"format("%5.2f", x)  printf"#, r#"format("%5.2f|%-4d|", pi, 7)"#),
         ]),
+        ("conversions", &[("to words", "1999 to words"), ("to roman", "1999 to roman")]),
     ],
     fns: FNS,
     call,
-    targets: &[("words", "spell")],
+    targets: &[("words", "spell"), ("roman", "roman")],
     ..Module::EMPTY
 };
 
@@ -43,6 +46,7 @@ const FNS: &[Doc] = &[
     doc("spell", "spell(n: int)", "an integer in English words; same as `n to words`", &["spell(42)", "1999 to words", "-1000001 to words"], &["ordinal", "roman"]),
     doc("ordinal", "ordinal(n: int)", "1st, 2nd, 3rd, 4th, ..., 11th, 12th, 13th, 21st", &["ordinal(3)", "(1..=4).map(ordinal)", "ordinal(112)"], &["spell"]),
     doc("human_bytes", "human_bytes(n: num|quantity)", "a byte count (or data quantity) in binary units (KiB = 1024 B), one decimal", &["123456789.human_bytes", "1023.human_bytes", "3 MB.human_bytes"], &["fixed"]),
+    doc("roman", "roman(v: int|str)", "an int 1-3999 as a Roman numeral, or a numeral back to an int; same as `n to roman`", &["roman(2026)", r#""MCMXCIX".roman"#], &[]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -77,6 +81,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             };
             Value::str(format!("{n}{suffix}"))
         }
+        ("roman", _) => return roman(args),
         _ => return Err(Fail::BadArgs),
     })
 }
@@ -337,6 +342,44 @@ pub fn printf(f: &str, args: &[Value]) -> Result<String, String> {
     Ok(out)
 }
 
+const DIGITS: [(i64, &str); 13] =
+    [(1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"), (90, "XC"), (50, "L"), (40, "XL"), (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I")];
+
+/// `roman(n)` or `roman("XIV")`.
+fn roman(args: &[Value]) -> Call {
+    match args {
+        [Value::Int(n, _)] if (1..4000).contains(n) => Ok(Value::str(to_roman(*n))),
+        [Value::Int(n, _)] => Err(format!("`{n}` has no Roman numeral\nnote: Roman numerals go from 1 to 3999").into()),
+        [Value::Str(s)] => {
+            let s = s.trim().to_uppercase();
+            // Read greedily, then check by writing it back: rejects IIII, IC, VX and friends.
+            let (mut n, mut rest) = (0, s.as_str());
+            for (v, d) in DIGITS {
+                while let Some(r) = rest.strip_prefix(d) {
+                    n += v;
+                    rest = r;
+                }
+            }
+            if !rest.is_empty() || n == 0 || to_roman(n) != s {
+                return Err(format!("{s:?} is not a Roman numeral").into());
+            }
+            Ok(Value::int(n))
+        }
+        _ => Err(Fail::BadArgs),
+    }
+}
+
+fn to_roman(mut n: i64) -> String {
+    let mut s = String::new();
+    for (v, d) in DIGITS {
+        while n >= v {
+            s += d;
+            n -= v;
+        }
+    }
+    s
+}
+
 #[cfg(test)]
 mod tests {
     use crate::interp::tests::{show, try_eval};
@@ -393,5 +436,16 @@ n = 255
         assert!(try_eval(r#""{1.5:x}""#).is_err());
         assert!(try_eval(r#"format("%d %d", 1)"#).is_err());
         assert!(try_eval(r#"format("%d", 1, 2)"#).is_err());
+    }
+
+    #[test]
+    fn roman() {
+        assert_eq!(show("2026 to roman"), "MMXXVI");
+        assert_eq!(show("3999.roman"), "MMMCMXCIX");
+        assert_eq!(show(r#""mcmxcix".roman"#), "1999");
+        assert!((1..4000).all(|n| show(&format!("{n}.roman.roman")) == n.to_string()));
+        assert!(try_eval(r#""IIII".roman"#).is_err());
+        assert!(try_eval(r#""IC".roman"#).is_err());
+        assert!(try_eval("0.roman").is_err());
     }
 }

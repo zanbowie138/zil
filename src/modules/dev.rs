@@ -1,8 +1,8 @@
-//! Developer tools: JWTs, UUIDs, URLs, semver, file permissions, and the parent of net, binary and colors.
+//! Developer tools: JWTs, URLs, semver, file permissions; networks, IDs, colors and check digits below.
 
-pub mod binary;
 pub mod codes;
 pub mod colors;
+pub mod ids;
 pub mod net;
 
 use crate::ast::Radix;
@@ -18,12 +18,11 @@ use std::cmp::Ordering;
 
 pub const MODULE: Module = Module {
     name: "dev",
-    about: "developer tools: JWTs, UUIDs, URLs, semver, file permissions, IP addresses and subnets, raw bytes, colors, check digits and lookups",
+    about: "developer tools: JWTs, URLs, semver, file permissions; IP addresses and ports, UUIDs and passwords, colors, check digits and lookups below",
     #[rustfmt::skip]
     examples: &[
         ("dev", &[
             ("what's in this token?", r#"jwt("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZGEiLCJpYXQiOjE1MTYyMzkwMjJ9.c2ln").payload"#),
-            ("when was this UUID made?", r#"uuid_info("01890a5d-ac96-774b-bcce-b302099a8057").timestamp"#),
             ("query string of a URL", r#"url_parse("https://example.com/search?q=zil&page=2").query"#),
             ("is 1.10 newer than 1.9?", r#"semver("1.10.0") > "1.9.3""#),
             ("chmod 640 means", "perm(640)"),
@@ -32,7 +31,7 @@ pub const MODULE: Module = Module {
     fns: FNS,
     call,
     compare: Some(compare),
-    children: &[net::MODULE, binary::MODULE, colors::MODULE, codes::MODULE],
+    children: &[net::MODULE, ids::MODULE, colors::MODULE, codes::MODULE],
     ..Module::EMPTY
 };
 
@@ -40,8 +39,6 @@ pub const MODULE: Module = Module {
 const FNS: &[Doc] = &[
     doc("jwt", "jwt(s: str)", "decode a JWT into {header, payload, signature} without verifying it; exp, iat and nbf become dates",
         &[r#"jwt("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZGEiLCJleHAiOjE5MjQ5OTIwMDB9.c2ln").payload.exp"#], &["decode", "hmac"]),
-    doc("uuid_info", "uuid_info(s: str)", "version and variant of a UUID, plus its timestamp for v1 and v7",
-        &[r#"uuid_info(uuid())"#, r#"uuid_info("c232ab00-9414-11ec-b3c8-9f6bdeced846")"#], &["uuid"]),
     doc("url_parse", "url_parse(s: str)", "split a URL into {scheme, host, port, path, query, fragment}; the query becomes a map, and repeated keys a list",
         &[r#"url_parse("https://example.com:8080/a/b?x=1&y=two%20words#top")"#], &["url_build", "encode"]),
     doc("url_build", "url_build(m: map)", "the URL for a map like the one url_parse makes; missing parts are left out",
@@ -57,7 +54,6 @@ const FNS: &[Doc] = &[
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     Ok(match (name, args) {
         ("jwt", [Value::Str(s)]) => jwt(s).map_err(|e| Fail::Arg(0, e.into()))?,
-        ("uuid_info", [Value::Str(s)]) => uuid_info(s).ok_or_else(|| Fail::Arg(0, format!("`{s}` is not a UUID")))?,
         ("url_parse", [Value::Str(s)]) => url_parse(s),
         ("url_build", [Value::Map(m)]) => Value::str(url_build(&m.borrow())),
         ("semver", [Value::Str(s)]) => Semver::parse(s).ok_or_else(|| Fail::Arg(0, not_semver(s)))?.value(),
@@ -98,33 +94,6 @@ fn jwt(s: &str) -> Result<Value, &'static str> {
     }
     let fields = [("header", part(header)?), ("payload", payload), ("signature", Value::str(signature))];
     Ok(Value::map(fields.into_iter().map(|(k, v)| (k.to_string(), v)).collect()))
-}
-
-fn uuid_info(s: &str) -> Option<Value> {
-    let h: String = s.trim().trim_start_matches("urn:uuid:").chars().filter(|&c| !"{}-".contains(c)).collect();
-    let n = u128::from_str_radix(&h, 16).ok().filter(|_| h.len() == 32)?;
-    let b = n.to_be_bytes();
-    let version = b[6] >> 4;
-    let variant = match b[8] >> 5 {
-        0..=3 => "NCS",
-        4 | 5 => "RFC 9562",
-        6 => "Microsoft",
-        _ => "reserved",
-    };
-    let time = match version {
-        // 100 ns ticks since 1582-10-15, split low/mid/high across the first 8 bytes.
-        1 => {
-            let ticks = (n >> 64 & 0xfff) << 48 | (n >> 80 & 0xffff) << 32 | n >> 96;
-            Timestamp::from_microsecond((ticks as i64 - 0x01B2_1DD2_1381_4000) / 10).ok()
-        }
-        7 => Timestamp::from_millisecond((n >> 80) as i64).ok(),
-        _ => None,
-    };
-    let mut m = IndexMap::from([("version".to_string(), Value::int(version as i64)), ("variant".to_string(), Value::str(variant))]);
-    if let Some(t) = time {
-        m.insert("timestamp".to_string(), Value::date(t.to_zoned(TimeZone::system())));
-    }
-    Some(Value::map(m))
 }
 
 fn url_parse(s: &str) -> Value {
@@ -342,15 +311,6 @@ mod tests {
         assert_eq!(show(&format!(r#"jwt("{t}").payload.iat.unix"#)), "1516239022");
         assert_eq!(show(&format!(r#"jwt("{t}").signature"#)), "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c");
         assert!(try_eval(r#"jwt("abc")"#).is_err());
-    }
-
-    #[test]
-    fn uuid_info() {
-        // RFC 9562 examples: both made at 2022-02-22 19:22:22 UTC.
-        assert_eq!(show(r#"uuid_info("C232AB00-9414-11EC-B3C8-9F6BDECED846").timestamp.unix"#), "1645557742");
-        assert_eq!(show(r#"uuid_info("017F22E2-79B0-7CC3-98C4-DC0C0C07398F").timestamp.unix"#), "1645557742");
-        assert_eq!(show(r#"uuid_info(uuid())"#), r#"{version: 4, variant: "RFC 9562"}"#);
-        assert!(try_eval(r#"uuid_info("nope")"#).is_err());
     }
 
     #[test]

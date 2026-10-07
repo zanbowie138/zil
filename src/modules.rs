@@ -15,8 +15,8 @@ pub mod art;
 pub mod core;
 pub mod data;
 pub mod dev;
+pub mod finance;
 pub mod fs;
-pub mod fun;
 pub mod geo;
 pub mod math;
 pub mod sys;
@@ -287,11 +287,11 @@ pub const TREE: &[Module] = &[
     data::MODULE,
     math::MODULE,
     units::MODULE,
+    finance::MODULE,
     time::MODULE,
     geo::MODULE,
     dev::MODULE,
     art::MODULE,
-    fun::MODULE,
 ];
 
 /// Modules with hooks, in the order hooks are tried.

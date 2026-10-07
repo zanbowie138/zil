@@ -19,8 +19,6 @@ pub const MODULE: Module = Module {
             ("summary", "[3, 1, 4, 1, 5, 9, 2, 6].describe"),
             ("trend line", "fit([1, 2, 3, 4], [2.1, 3.9, 6.2, 7.8])"),
             ("running total", "[$5, $12, $3].cumsum"),
-            ("halfway between dates", r#"lerp(date("2026-01-01"), date("2026-12-31"), 1/2)"#),
-            ("°C to a 0-255 byte", "remap(25, 0, 40, 0, 255).round"),
         ]),
     ],
     fns: FNS,
@@ -29,7 +27,7 @@ pub const MODULE: Module = Module {
         ("aggregate", &["sum", "product", "avg", "min", "max"]),
         ("spread", &["median", "mode", "percentile", "variance", "stdev", "describe"]),
         ("relations", &["corr", "fit"]),
-        ("transform", &["zscore", "normalize", "cumsum", "deltas", "lerp", "remap"]),
+        ("transform", &["zscore", "normalize", "cumsum", "deltas"]),
     ],
     call,
     ..Module::EMPTY
@@ -51,11 +49,9 @@ const FNS: &[Doc] = &[
     doc("corr", "corr(xs: list, ys: list)", "Pearson correlation, from -1 to 1", &["corr([1, 2, 3, 4], [2, 4, 5, 9])"], &["fit"]),
     doc("fit", "fit(xs: list, ys: list)", "least-squares line: {slope, intercept, r2}", &["fit([1, 2, 3], [2, 4, 6])", "fit([1, 2, 3, 4], [2.1, 3.9, 6.2, 7.8])"], &["corr"]),
     doc("zscore", "zscore(xs: list)", "how many standard deviations each item is from the mean", &["[2, 4, 4, 4, 5, 5, 7, 9].zscore"], &["normalize", "stdev"]),
-    doc("normalize", "normalize(xs: list)", "rescale so the min is 0 and the max is 1", &["[10, 15, 20].normalize"], &["zscore", "remap"]),
+    doc("normalize", "normalize(xs: list)", "rescale so the min is 0 and the max is 1", &["[10, 15, 20].normalize"], &["zscore", "lerp"]),
     doc("cumsum", "cumsum(xs: list)", "running totals", &["[1, 2, 3, 4].cumsum", "[1 km, 500 m].cumsum"], &["deltas", "sum"]),
     doc("deltas", "deltas(xs: list)", "the difference between each item and the one before", &["[1, 4, 9, 16].deltas", "[1, 4, 9, 16].deltas.deltas"], &["cumsum", "windows"]),
-    doc("lerp", "lerp(a: any, b: any, t: num)", "a + (b - a) * t: the point a fraction t of the way from a to b; numbers, units or dates", &["lerp(10, 20, 0.25)", "lerp(0 C, 100 C, 0.37)"], &["remap"]),
-    doc("remap", "remap(x: any, lo: any, hi: any, to_lo: any, to_hi: any)", "x moved from the range lo..hi to the range to_lo..to_hi, proportionally", &["remap(5, 0, 10, 100, 200)", "remap(72 F, 32 F, 212 F, 0, 100)"], &["lerp", "normalize"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -167,11 +163,6 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             Value::list(out)
         }
         ("deltas", [List(l)]) => Value::list(l.borrow().windows(2).map(|w| op(BinOp::Sub, &w[1], &w[0])).collect::<Result<_, _>>()?),
-        ("lerp", [a, b, t]) => op(BinOp::Add, a, &op(BinOp::Mul, &op(BinOp::Sub, b, a)?, t)?)?,
-        ("remap", [x, lo, hi, to_lo, to_hi]) => {
-            let t = op(BinOp::Div, &op(BinOp::Sub, x, lo)?, &op(BinOp::Sub, hi, lo)?)?;
-            op(BinOp::Add, to_lo, &op(BinOp::Mul, &op(BinOp::Sub, to_hi, to_lo)?, &t)?)?
-        }
         _ => return Err(Fail::BadArgs),
     })
 }
@@ -255,8 +246,6 @@ mod tests {
         assert_eq!(show("fit([1, 2, 3], [3, 5, 7])"), "{slope: 2, intercept: 1, r2: 1}");
         assert_eq!(show("[[1, 2, 3].zscore, [10, 15, 20].normalize]"), "[[-1, 0, 1], [0, 0.5, 1]]");
         assert_eq!(show("[[1, 2, 3].cumsum, [1 km, 500 m].cumsum, [1, 4, 9].deltas, [].cumsum]"), "[[1, 3, 6], [1 km, 1.5 km], [3, 5], []]");
-        assert_eq!(show("[lerp(10, 20, 1/4), lerp(0 m, 1 km, 0.5), remap(5, 0, 10, 100, 200)]"), "[12.5, 500 m, 150]");
-        assert_eq!(show(r#"lerp(date("2026-01-01"), date("2026-01-03"), 1/2)"#), "2026-01-02");
         for bad in [
             "[].median",
             "corr([1], [2])",

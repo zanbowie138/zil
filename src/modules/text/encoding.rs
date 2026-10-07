@@ -1,4 +1,4 @@
-//! Encodings: base64/32/58, URL and hex, code points, UTF-8 bytes.
+//! Encodings: base64/32/58, URL and hex, code points, UTF-8 bytes, hex dumps and entropy.
 
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -8,7 +8,7 @@ use base64::Engine;
 
 pub const MODULE: Module = Module {
     name: "encoding",
-    about: "base64, base32, base58, URL and hex encodings, code points, UTF-8 bytes",
+    about: "base64, base32, base58, URL and hex encodings, code points, UTF-8 bytes, hex dumps and entropy",
     #[rustfmt::skip]
     examples: &[
         ("encoding", &[
@@ -18,6 +18,8 @@ pub const MODULE: Module = Module {
             ("UTF-8 bytes", r#""héllo".bytes"#),
             ("code point to char", "chr(9731)"),
             ("bytes vs characters", r#"["😀".byte_len, "😀".len]"#),
+            ("look inside a string", r#"hexdump("héllo\tworld\n")"#),
+            ("how random is it?", r#""aaaaaaaa".entropy"#),
         ]),
     ],
     guide: &[("conversions", &[("to base64", r#""hi" to base64"#)])],
@@ -37,6 +39,8 @@ const FNS: &[Doc] = &[
     doc("bytes", "bytes(s: str)", "list of the string's UTF-8 bytes", &[r#""hé".bytes"#], &["from_bytes", "ord"]),
     doc("from_bytes", "from_bytes(xs: list)", "string from a list of UTF-8 bytes", &["[104, 105].from_bytes"], &["bytes", "chr"]),
     doc("byte_len", "byte_len(v: str|list)", "length in UTF-8 bytes rather than characters", &[r#""héllo".byte_len"#], &["len", "bytes"]),
+    doc("hexdump", "hexdump(v: str|list)", "xxd-style dump of a string's UTF-8 bytes or a list of bytes", &[r#"hexdump("hi\n")"#, "hexdump([0, 255, 65])"], &["bytes", "entropy"]),
+    doc("entropy", "entropy(v: str|list)", "Shannon entropy in bits per byte: 0 is constant, 8 is random", &[r#""aaaa".entropy"#, r#""abcd".entropy"#], &["hexdump"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -87,6 +91,15 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             Value::str(String::from_utf8(bytes).map_err(|_| "bytes are not UTF-8")?)
         }
         ("byte_len", [v]) => Value::int(bytes(v).ok_or(Fail::BadArgs)?.len() as i64),
+        ("hexdump", [v]) => Value::str(hexdump(&bytes(v).ok_or(Fail::BadArgs)?)),
+        ("entropy", [v]) if bytes(v).is_some() => {
+            let b = bytes(v).unwrap();
+            let mut counts = [0usize; 256];
+            b.iter().for_each(|&x| counts[x as usize] += 1);
+            let n = b.len() as f64;
+            // `+ 0.0` turns the -0 from a single repeated byte into 0.
+            Value::Float(counts.iter().filter(|&&c| c > 0).map(|&c| -(c as f64 / n) * (c as f64 / n).log2()).sum::<f64>() + 0.0)
+        }
         _ => return Err(Fail::BadArgs),
     })
 }
@@ -203,6 +216,17 @@ pub fn url_decode(s: &str) -> Option<Vec<u8>> {
     Some(out)
 }
 
+/// 16 bytes per line: offset, hex in pairs, printable ASCII.
+fn hexdump(b: &[u8]) -> String {
+    let mut out = Vec::new();
+    for (i, row) in b.chunks(16).enumerate() {
+        let hex: Vec<String> = row.chunks(2).map(|p| p.iter().map(|x| format!("{x:02x}")).collect()).collect();
+        let ascii: String = row.iter().map(|&x| if x.is_ascii_graphic() || x == b' ' { x as char } else { '.' }).collect();
+        out.push(format!("{:08x}: {:<39}  {ascii}", i * 16, hex.join(" ")));
+    }
+    out.join("\n")
+}
+
 #[cfg(test)]
 mod tests {
     use crate::interp::tests::{show, try_eval};
@@ -229,5 +253,13 @@ mod tests {
         assert_eq!(show(r#""/w==".decode("base64")"#), "[255]");
         assert!(try_eval(r#""0OIl".decode("base58")"#).is_err());
         assert!(try_eval("[256].from_bytes").is_err());
+    }
+
+    #[test]
+    fn binary() {
+        assert_eq!(show(r#""hi\n".hexdump"#), format!("00000000: {:<39}  hi.", "6869 0a"));
+        assert_eq!(show("hexdump([])"), "");
+        assert_eq!(show(r#""aaaa".entropy"#), "0");
+        assert_eq!(show(r#""abcd".entropy"#), "2");
     }
 }
