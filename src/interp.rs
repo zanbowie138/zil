@@ -500,6 +500,7 @@ impl Interp {
                 let items: Vec<Value> = match self.eval(iter, env)? {
                     Value::List(l) => l.borrow().clone(),
                     Value::Map(m) => m.borrow().keys().map(|k| Value::str(k.as_str())).collect(),
+                    Value::Set(s) => s.borrow().iter().cloned().collect(),
                     Value::Str(s) => s.chars().map(|c| Value::str(c.to_string())).collect(),
                     v => {
                         return Err(Ctl::Err(

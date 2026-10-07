@@ -48,7 +48,7 @@ const FNS: &[Doc] = &[
     doc("float", "float(v: num|quantity|str)", "convert to a float; drops a quantity's unit", &[r#"float("2.5")"#, "float(5 km)"], &["int", "str"]),
     doc("frac", "frac(v: num)", "show as a fraction; floats become the simplest fraction within 1e-12", &["7/2 to frac", "1/3 + 1/6 to frac", "0.75.frac"], &["float"]),
     doc("bool", "bool(v: any)", "truthiness: false only for nil and false", &["bool(0)", "nil to bool"], &["str"]),
-    doc("list", "list(v: str|list|map)", "convert to a list: characters, a copy, or [key, value] pairs", &[r#"list("abc")"#, r#""abc" to list"#, "{a: 1, b: 2}.list"], &["chars", "parse"]),
+    doc("list", "list(v: str|list|map|set)", "convert to a list: characters, a copy, [key, value] pairs, or a set's items", &[r#"list("abc")"#, r#""abc" to list"#, "{a: 1, b: 2}.list"], &["chars", "parse"]),
     doc("parse", "parse(s: str)", "read a zil literal (number, string, list, map, quantity); never runs code", &[r#""[1, 2.5, 0xff]".parse"#, r#""5 km".parse to m"#], &["str", "nums"]),
     doc("read_file", "read_file(path: str)", "file contents as a string", &[], &["write_file", "lines"]).shown(&[r#"read_file("notes.txt").lines.len"#]),
     doc("write_file", "write_file(path: str, v: any)", "write v to a file as text", &[], &["read_file"]).shown(&[r#"write_file("out.txt", [1, 2, 3])"#]),
@@ -95,6 +95,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("bool", [v]) => Bool(v.truthy()),
         ("list", [Str(s)]) => Value::list(s.chars().map(|c| Value::str(c.to_string())).collect()),
         ("list", [List(l)]) => Value::list(l.borrow().clone()),
+        ("list", [Set(s)]) => Value::list(s.borrow().iter().cloned().collect()),
         ("list", [Map(m)]) => Value::list(m.borrow().iter().map(|(k, v)| Value::list(vec![Value::str(k.as_str()), v.clone()])).collect()),
         ("parse", [Str(s)]) => parse_literal(s)?,
         ("read_file", [Str(path)]) => {
@@ -193,6 +194,8 @@ fn parse_literal(s: &str) -> Result<Value, String> {
             | ExprKind::Regex(_) => true,
             ExprKind::List(items) => items.iter().all(literal),
             ExprKind::Map(entries) => entries.iter().all(|(_, v)| literal(v)),
+            // `set(1, 2)`, as sets print.
+            ExprKind::Call(f, args) => matches!(&f.kind, ExprKind::Ident(n) if n == "set") && args.iter().all(literal),
             ExprKind::Qty(n, _) | ExprKind::Unary(UnOp::Neg, n) => literal(n),
             // `5 ft 11 in`, as `to ft in` prints it.
             ExprKind::Binary(BinOp::Add, a, b) => matches!(a.kind, ExprKind::Qty(..)) && literal(a) && literal(b),

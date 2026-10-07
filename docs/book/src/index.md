@@ -53,9 +53,10 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 | [text.encoding](text/encoding.md) | base64, URL and hex encodings, code points, UTF-8 bytes |
 | [text.hash](text/hash.md) | SHA-256, MD5 and CRC-32 of strings |
 | [text.ciphers](text/ciphers.md) | Caesar, ROT13, Atbash, Vigenère, Morse, Braille (for fun, not secrecy) |
-| [data](data.md) | length, search, sorting and picking across strings, lists and maps; lists and maps below |
+| [data](data.md) | length, search, sorting and picking across strings, lists, maps and sets; lists, maps and sets below |
 | [data.lists](data/lists.md) | ranges, map/filter/reduce, building lists |
 | [data.maps](data/maps.md) | keys, values, lookups, merging and transforming maps |
+| [data.sets](data/sets.md) | unique values in insertion order: union, intersection, difference |
 | [math](math.md) | rounding, roots, logs, constants; exact fractions and big ints |
 | [math.stats](math/stats.md) | sums, averages, spread and extremes of lists; units welcome |
 | [math.trig](math/trig.md) | sine, cosine and friends; angles as units |

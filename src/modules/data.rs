@@ -1,7 +1,8 @@
-//! Collections: functions shared by strings, lists and maps, with lists and maps below.
+//! Collections: functions shared by strings, lists, maps and sets, with each of those below.
 
 pub mod lists;
 pub mod maps;
+pub mod sets;
 
 use crate::interp::Interp;
 use crate::lexer::Span;
@@ -11,7 +12,7 @@ use std::cmp::Ordering;
 
 pub const MODULE: Module = Module {
     name: "data",
-    about: "length, search, sorting and picking across strings, lists and maps; lists and maps below",
+    about: "length, search, sorting and picking across strings, lists, maps and sets; lists, maps and sets below",
     #[rustfmt::skip]
     examples: &[
         ("data", &[
@@ -35,19 +36,19 @@ pub const MODULE: Module = Module {
         ("test", &["any", "all"]),
     ],
     call,
-    children: &[lists::MODULE, maps::MODULE],
+    children: &[lists::MODULE, maps::MODULE, sets::MODULE],
     ..Module::EMPTY
 };
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("len", "len(v: str|list|map)", "length of a string, list or map", &[r#""héllo".len"#, "[1, 2, 3].len", "{a: 1}.len"], &[]),
-    doc("contains", "contains(v: str|list|map, x: any)", "substring/regex in a string, item in a list, key in a map", &[r#""price: $12".contains(r"\$\d+")"#, "[1, 2].contains(2)"], &["find", "starts_with"]),
+    doc("len", "len(v: str|list|map|set)", "length of a string, list, map or set", &[r#""héllo".len"#, "[1, 2, 3].len", "{a: 1}.len"], &[]),
+    doc("contains", "contains(v: str|list|map|set, x: any)", "substring/regex in a string, item in a list or set, key in a map", &[r#""price: $12".contains(r"\$\d+")"#, "[1, 2].contains(2)"], &["find", "starts_with"]),
     doc("find", "find(v: str|list, x: any)", "index of the first match, or nil", &[r#""hello".find("l")"#, "[5, 6].find(6)", r#""abc".find("z")"#], &["contains", "count"]),
     doc("count", "count(v: str|list, x: any)", "number of matches in a string or list", &[r#""banana".count("a")"#, "[1, 2, 1].count(1)"], &["find"]),
     doc("reverse", "reverse(v: str|list)", "reverse a string or list", &[r#""abc".reverse"#, "[1, 2, 3].reverse"], &["sort"]),
-    doc("sort", "sort(xs: list, key?: fn)", "sorted copy, optionally by key function", &["[3, 1, 2].sort", r#"["ccc", "a", "bb"].sort(|w| w.len)"#], &["reverse", "unique"]),
-    doc("sort_desc", "sort_desc(xs: list, key?: fn)", "like sort, largest first", &["[3, 1, 2].sort_desc", r#"["bb", "a", "ccc"].sort_desc(|w| w.len)"#], &["sort"]),
+    doc("sort", "sort(xs: list|set, key?: fn)", "sorted list, optionally by key function", &["[3, 1, 2].sort", r#"["ccc", "a", "bb"].sort(|w| w.len)"#], &["reverse", "unique"]),
+    doc("sort_desc", "sort_desc(xs: list|set, key?: fn)", "like sort, largest first", &["[3, 1, 2].sort_desc", r#"["bb", "a", "ccc"].sort_desc(|w| w.len)"#], &["sort"]),
     doc("unique", "unique(xs: list)", "drop duplicates, keeping first occurrences", &["[1, 2, 1, 3].unique"], &["sort", "count"]),
     doc("first", "first(xs: list)", "first item, or nil", &["[7, 8].first"], &["last"]),
     doc("last", "last(xs: list)", "last item, or nil", &["[7, 8].last"], &["first"]),
@@ -63,10 +64,16 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Cal
         ("len", [Str(s)]) => Value::int(s.chars().count() as i64),
         ("len", [List(l)]) => Value::int(l.borrow().len() as i64),
         ("len", [Map(m)]) => Value::int(m.borrow().len() as i64),
+        ("len", [Set(s)]) => Value::int(s.borrow().len() as i64),
         ("contains", [Str(s), Str(sub)]) => Bool(s.contains(&**sub)),
         ("contains", [Str(s), Regex(r)]) => Bool(r.is_match(s)),
         ("contains", [List(l), v]) => Bool(l.borrow().contains(v)),
         ("contains", [Map(m), Str(k)]) => Bool(m.borrow().contains_key(&**k)),
+        ("contains", [Set(s), v]) => Bool(s.borrow().contains(v)),
+        ("sort" | "sort_desc", [Set(s), rest @ ..]) => {
+            let xs = Value::list(s.borrow().iter().cloned().collect());
+            return call(it, name, &[&[xs], rest].concat(), span);
+        }
         ("find", [Str(s), Str(sub)]) => s.find(&**sub).map_or(Nil, |i| char_index(s, i)),
         ("find", [Str(s), Regex(r)]) => r.find(s).map_or(Nil, |m| char_index(s, m.start())),
         ("find", [List(l), v]) => l.borrow().iter().position(|x| x == v).map_or(Nil, |i| Value::int(i as i64)),

@@ -11,6 +11,7 @@
 - [data](data.md)
   - [lists](data/lists.md)
   - [maps](data/maps.md)
+  - [sets](data/sets.md)
 - [math](math.md)
   - [stats](math/stats.md)
   - [trig](math/trig.md)

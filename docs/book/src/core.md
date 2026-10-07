@@ -50,7 +50,7 @@ true
 | [`float(v: num\|quantity\|str)`](#float) | convert to a float; drops a quantity's unit |
 | [`frac(v: num)`](#frac) | show as a fraction; floats become the simplest fraction within 1e-12 |
 | [`bool(v: any)`](#bool) | truthiness: false only for nil and false |
-| [`list(v: str\|list\|map)`](#list) | convert to a list: characters, a copy, or [key, value] pairs |
+| [`list(v: str\|list\|map\|set)`](#list) | convert to a list: characters, a copy, [key, value] pairs, or a set's items |
 | [`parse(s: str)`](#parse) | read a zil literal (number, string, list, map, quantity); never runs code |
 | [`read_file(path: str)`](#read_file) | file contents as a string |
 | [`write_file(path: str, v: any)`](#write_file) | write v to a file as text |
@@ -152,7 +152,7 @@ See also: [str](core.md#str)
 
 ### list
 
-`list(v: str|list|map)`: convert to a list: characters, a copy, or [key, value] pairs
+`list(v: str|list|map|set)`: convert to a list: characters, a copy, [key, value] pairs, or a set's items
 
 ```zil
 list("abc")

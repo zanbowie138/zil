@@ -100,7 +100,7 @@ impl Fail {
 }
 
 /// Type names a signature may use: what `type()` returns, plus `num` (int, frac or float) and `any`.
-pub const TYPES: &[&str] = &["nil", "bool", "int", "frac", "float", "quantity", "str", "regex", "date", "list", "map", "fn", "num", "any"];
+pub const TYPES: &[&str] = &["nil", "bool", "int", "frac", "float", "quantity", "str", "regex", "date", "list", "map", "set", "fn", "num", "any"];
 
 /// One form of a typed signature, like `round(x: num|quantity, digits?: int)`; a trailing `...` repeats the last parameter.
 pub struct Form {
@@ -274,8 +274,17 @@ impl Module {
 pub const TREE: &[Module] = &[core::MODULE, text::MODULE, data::MODULE, math::MODULE, units::MODULE, time::MODULE, dev::MODULE, fun::MODULE];
 
 /// Modules with hooks, in the order hooks are tried.
-pub const DISPATCH: &[&Module] =
-    &[&text::MODULE, &data::lists::MODULE, &data::maps::MODULE, &math::bits::MODULE, &time::MODULE, &time::zones::MODULE, &units::MODULE, &core::MODULE];
+pub const DISPATCH: &[&Module] = &[
+    &text::MODULE,
+    &data::lists::MODULE,
+    &data::maps::MODULE,
+    &data::sets::MODULE,
+    &math::bits::MODULE,
+    &time::MODULE,
+    &time::zones::MODULE,
+    &units::MODULE,
+    &core::MODULE,
+];
 
 /// Every module with its dotted path, each parent before its children, in tree order.
 pub static ALL: LazyLock<Vec<(String, &'static Module)>> = LazyLock::new(|| {

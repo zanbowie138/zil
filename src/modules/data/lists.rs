@@ -27,6 +27,7 @@ pub const MODULE: Module = Module {
     #[rustfmt::skip]
     groups: &[
         ("build", &["range", "push", "step"]),
+        ("stack and queue", &["pop", "shift", "unshift"]),
         ("transform", &["map", "filter", "reduce", "flatten"]),
         ("combine", &["zip", "enumerate"]),
         ("group", &["group_by", "count_by", "chunks", "windows"]),
@@ -39,7 +40,10 @@ pub const MODULE: Module = Module {
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
     doc("range", "range(n: int) / range(a: int, b: int)", "integers in [0, n) or [a, b); same as a..b", &["range(4)", "range(2, 5)"], &["map"]),
-    doc("push", "push(xs: list, v: any)", "append v in place and return the list", &["[1, 2].push(3)"], &[]),
+    doc("push", "push(xs: list, v: any)", "append v in place and return the list", &["[1, 2].push(3)"], &["pop", "unshift"]),
+    doc("pop", "pop(xs: list)", "remove and return the last item in place, or nil if empty", &["xs = [1, 2, 3]; [xs.pop, xs]"], &["push", "shift"]),
+    doc("shift", "shift(xs: list)", "remove and return the first item in place, or nil if empty", &["xs = [1, 2, 3]; [xs.shift, xs]"], &["unshift", "pop"]),
+    doc("unshift", "unshift(xs: list, v: any)", "insert v at the front in place and return the list", &["[2, 3].unshift(1)"], &["shift", "push"]),
     doc("map", "map(xs: list, f: fn)", "apply f to every item", &[r"[1, 2, 3].map(|x| x * 10)"], &["filter", "reduce"]),
     doc("filter", "filter(xs: list, f: fn) / filter(m: map, f: fn)", "keep items where f is truthy; for maps, f gets (key, value)", &[r"(1..10).filter(|x| x % 3 == 0)", r"{a: 1, b: 5}.filter(|k, v| v > 2)"], &["map", "reduce", "filter_keys"]),
     doc("reduce", "reduce(xs: list, init: any, f: fn)", "fold with f(acc, item)", &[r"[1, 2, 3].reduce(10, |acc, x| acc + x)"], &["sum", "map"]),
@@ -60,6 +64,16 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Cal
         ("range", [Int(a, _), Int(b, _)]) => range(*a, *b)?,
         ("push", [List(l), v]) => {
             l.borrow_mut().push(v.clone());
+            List(l.clone())
+        }
+        ("pop", [List(l)]) => l.borrow_mut().pop().unwrap_or(Nil),
+        // ponytail: O(n) shift/unshift on a Vec, VecDeque if queues get long
+        ("shift", [List(l)]) => {
+            let mut l = l.borrow_mut();
+            if l.is_empty() { Nil } else { l.remove(0) }
+        }
+        ("unshift", [List(l), v]) => {
+            l.borrow_mut().insert(0, v.clone());
             List(l.clone())
         }
         ("map", [List(l), f]) => {
@@ -152,6 +166,7 @@ mod tests {
         assert_eq!(show("range(5).reduce(0, |acc, x| acc + x)"), "10");
         assert_eq!(show("(1..10).filter(|x| x % 3 == 0).map(|x| x * 2)"), "[6, 12, 18]");
         assert_eq!(show("[[1] + [2], (0..=6).step(3)]"), "[[1, 2], [0, 3, 6]]");
+        assert_eq!(show("xs = [1, 2, 3]; [xs.pop, xs.shift, xs.unshift(0), [].pop, [].shift]"), "[3, 1, [0, 2], nil, nil]");
         assert_eq!(show("[[[1, 2], [3], 4].flatten, zip([1, 2, 3], [4, 5]), [7, 8].enumerate]"), "[[1, 2, 3, 4], [[1, 4], [2, 5]], [[0, 7], [1, 8]]]");
         assert_eq!(show(r#"[(1..=5).group_by(|x| x % 2), ["a", "b", "a"].count_by(|c| c)]"#), "[{1: [1, 3, 5], 0: [2, 4]}, {a: 2, b: 1}]");
         assert_eq!(show("[(1..=5).chunks(2), [1, 2, 3].windows(2), [1].windows(2)]"), "[[[1, 2], [3, 4], [5]], [[1, 2], [2, 3]], []]");

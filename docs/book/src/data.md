@@ -1,6 +1,6 @@
 # data
 
-length, search, sorting and picking across strings, lists and maps; lists and maps below
+length, search, sorting and picking across strings, lists, maps and sets; lists, maps and sets below
 
 > Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
@@ -28,18 +28,19 @@ length, search, sorting and picking across strings, lists and maps; lists and ma
 |---|---|
 | [lists](data/lists.md) | ranges, map/filter/reduce, building lists |
 | [maps](data/maps.md) | keys, values, lookups, merging and transforming maps |
+| [sets](data/sets.md) | unique values in insertion order: union, intersection, difference |
 
 ## Functions
 
 | function | description |
 |---|---|
-| [`len(v: str\|list\|map)`](#len) | length of a string, list or map |
-| [`contains(v: str\|list\|map, x: any)`](#contains) | substring/regex in a string, item in a list, key in a map |
+| [`len(v: str\|list\|map\|set)`](#len) | length of a string, list, map or set |
+| [`contains(v: str\|list\|map\|set, x: any)`](#contains) | substring/regex in a string, item in a list or set, key in a map |
 | [`find(v: str\|list, x: any)`](#find) | index of the first match, or nil |
 | [`count(v: str\|list, x: any)`](#count) | number of matches in a string or list |
 | [`reverse(v: str\|list)`](#reverse) | reverse a string or list |
-| [`sort(xs: list, key?: fn)`](#sort) | sorted copy, optionally by key function |
-| [`sort_desc(xs: list, key?: fn)`](#sort_desc) | like sort, largest first |
+| [`sort(xs: list\|set, key?: fn)`](#sort) | sorted list, optionally by key function |
+| [`sort_desc(xs: list\|set, key?: fn)`](#sort_desc) | like sort, largest first |
 | [`unique(xs: list)`](#unique) | drop duplicates, keeping first occurrences |
 | [`first(xs: list)`](#first) | first item, or nil |
 | [`last(xs: list)`](#last) | last item, or nil |
@@ -50,7 +51,7 @@ length, search, sorting and picking across strings, lists and maps; lists and ma
 
 ### len
 
-`len(v: str|list|map)`: length of a string, list or map
+`len(v: str|list|map|set)`: length of a string, list, map or set
 
 ```zil
 "héllo".len
@@ -63,7 +64,7 @@ length, search, sorting and picking across strings, lists and maps; lists and ma
 
 ### contains
 
-`contains(v: str|list|map, x: any)`: substring/regex in a string, item in a list, key in a map
+`contains(v: str|list|map|set, x: any)`: substring/regex in a string, item in a list or set, key in a map
 
 ```zil
 "price: $12".contains(r"\$\d+")
@@ -117,7 +118,7 @@ See also: [sort](data.md#sort)
 
 ### sort
 
-`sort(xs: list, key?: fn)`: sorted copy, optionally by key function
+`sort(xs: list|set, key?: fn)`: sorted list, optionally by key function
 
 ```zil
 [3, 1, 2].sort
@@ -130,7 +131,7 @@ See also: [reverse](data.md#reverse), [unique](data.md#unique)
 
 ### sort_desc
 
-`sort_desc(xs: list, key?: fn)`: like sort, largest first
+`sort_desc(xs: list|set, key?: fn)`: like sort, largest first
 
 ```zil
 [3, 1, 2].sort_desc

@@ -25,6 +25,9 @@ ranges, map/filter/reduce, building lists
 |---|---|
 | [`range(n: int) / range(a: int, b: int)`](#range) | integers in [0, n) or [a, b); same as a..b |
 | [`push(xs: list, v: any)`](#push) | append v in place and return the list |
+| [`pop(xs: list)`](#pop) | remove and return the last item in place, or nil if empty |
+| [`shift(xs: list)`](#shift) | remove and return the first item in place, or nil if empty |
+| [`unshift(xs: list, v: any)`](#unshift) | insert v at the front in place and return the list |
 | [`map(xs: list, f: fn)`](#map) | apply f to every item |
 | [`filter(xs: list, f: fn) / filter(m: map, f: fn)`](#filter) | keep items where f is truthy; for maps, f gets (key, value) |
 | [`reduce(xs: list, init: any, f: fn)`](#reduce) | fold with f(acc, item) |
@@ -58,6 +61,41 @@ See also: [map](../data/lists.md#map)
 [1, 2].push(3)
 # → [1, 2, 3]
 ```
+
+See also: [pop](../data/lists.md#pop), [unshift](../data/lists.md#unshift)
+
+### pop
+
+`pop(xs: list)`: remove and return the last item in place, or nil if empty
+
+```zil
+xs = [1, 2, 3]; [xs.pop, xs]
+# → [3, [1, 2]]
+```
+
+See also: [push](../data/lists.md#push), [shift](../data/lists.md#shift)
+
+### shift
+
+`shift(xs: list)`: remove and return the first item in place, or nil if empty
+
+```zil
+xs = [1, 2, 3]; [xs.shift, xs]
+# → [1, [2, 3]]
+```
+
+See also: [unshift](../data/lists.md#unshift), [pop](../data/lists.md#pop)
+
+### unshift
+
+`unshift(xs: list, v: any)`: insert v at the front in place and return the list
+
+```zil
+[2, 3].unshift(1)
+# → [1, 2, 3]
+```
+
+See also: [shift](../data/lists.md#shift), [push](../data/lists.md#push)
 
 ### map
 

@@ -3,7 +3,7 @@
 use crate::ast::Radix;
 use crate::interp::Closure;
 use crate::modules::{self, Module, units::Unit};
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use jiff::{Zoned, tz::TimeZone};
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -31,6 +31,8 @@ pub enum Value {
     Date(Rc<Zoned>),
     List(Rc<RefCell<Vec<Value>>>),
     Map(Rc<RefCell<IndexMap<String, Value>>>),
+    /// Insertion-ordered; holds only `hashable` values.
+    Set(Rc<RefCell<IndexSet<Value>>>),
     Fn(Rc<Closure>),
     Builtin(&'static Module, &'static str),
 }
@@ -46,6 +48,15 @@ impl Value {
 
     pub fn map(m: IndexMap<String, Value>) -> Value {
         Value::Map(Rc::new(RefCell::new(m)))
+    }
+
+    pub fn set(s: IndexSet<Value>) -> Value {
+        Value::Set(Rc::new(RefCell::new(s)))
+    }
+
+    /// What a set can hold: values whose equality is plain and whose hash agrees with it.
+    pub fn hashable(&self) -> bool {
+        matches!(self, Value::Nil | Value::Bool(_) | Value::Int(..) | Value::Big(..) | Value::Str(_))
     }
 
     pub fn str(s: impl Into<Rc<str>>) -> Value {
@@ -84,6 +95,7 @@ impl Value {
             Value::Date(_) => "date",
             Value::List(_) => "list",
             Value::Map(_) => "map",
+            Value::Set(_) => "set",
             Value::Fn(_) | Value::Builtin(..) => "fn",
         }
     }
@@ -130,6 +142,16 @@ impl Value {
                 }
                 write!(f, "}}")
             }
+            Value::Set(s) => {
+                write!(f, "set(")?;
+                for (i, v) in s.borrow().iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    v.write(f, false)?;
+                }
+                write!(f, ")")
+            }
             Value::Fn(_) => write!(f, "<fn>"),
             Value::Builtin(_, name) => write!(f, "<builtin {name}>"),
         }
@@ -163,9 +185,26 @@ impl PartialEq for Value {
             (Date(a), Date(b)) => a.timestamp() == b.timestamp(),
             (List(a), List(b)) => *a.borrow() == *b.borrow(),
             (Map(a), Map(b)) => *a.borrow() == *b.borrow(),
+            (Set(a), Set(b)) => *a.borrow() == *b.borrow(),
             (Fn(a), Fn(b)) => Rc::ptr_eq(a, b),
             (Builtin(_, a), Builtin(_, b)) => a == b,
             _ => false,
+        }
+    }
+}
+
+// ponytail: `Eq` is only true for `hashable` values (NaN != NaN), which is all a set ever holds.
+impl Eq for Value {}
+
+impl std::hash::Hash for Value {
+    fn hash<H: std::hash::Hasher>(&self, h: &mut H) {
+        // Big ints never equal an i64 (they shrink back), so hashing each as itself agrees with `==`.
+        match self {
+            Value::Bool(b) => b.hash(h),
+            Value::Int(n, _) => n.hash(h),
+            Value::Big(n, _) => n.hash(h),
+            Value::Str(s) => s.hash(h),
+            v => v.type_name().hash(h),
         }
     }
 }
