@@ -36,7 +36,7 @@ fortune cookies, a magic 8-ball, coin flips, excuses, Roman numerals; lorem ipsu
 
 ```zil
 fortune()
-# → "A wise developer once said: it works on my machine."
+# → "You will soon delete a lot of code, and be happier for it."
 ```
 
 See also: [eight_ball](fun.md#eight_ball)
@@ -58,9 +58,9 @@ See also: [yes_or_no](fun.md#yes_or_no), [fortune](fun.md#fortune)
 
 ```zil
 coin()
-# → "tails"
+# → "heads"
 coin(3)
-# → ["heads", "heads", "tails"]
+# → ["tails", "tails", "heads"]
 ```
 
 See also: [rand](math/random.md#rand)
@@ -82,7 +82,7 @@ See also: [eight_ball](fun.md#eight_ball)
 
 ```zil
 excuse()
-# → "It was DNS."
+# → "Cosmic rays flipped a bit."
 ```
 
 See also: [fortune](fun.md#fortune)
@@ -108,13 +108,13 @@ eight_ball("will it compile?")
 # → "Yes."
 # best of five
 coin(5)
-# → ["heads", "tails", "tails", "heads", "tails"]
+# → ["heads", "heads", "heads", "tails", "heads"]
 # standup
 excuse()
-# → "It must be a timezone thing."
+# → "It was fine in staging."
 # should I ship it?
 yes_or_no()
-# → "no"
+# → "yes"
 ```
 
 ### roman

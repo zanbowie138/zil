@@ -21,8 +21,9 @@ periods, weekdays, business days, week numbers, month grids; weeks start Monday
 | [`next(d: date, weekday: str)`](#next) | the next given weekday strictly after d |
 | [`prev(d: date, weekday: str)`](#prev) | the last given weekday strictly before d |
 | [`nth_weekday(d: date, n: int, weekday: str)`](#nth_weekday) | nth weekday of d's month; negative counts from the end |
-| [`add_workdays(d: date, n: int)`](#add_workdays) | move n Monday-Friday days (no holidays); negative goes back |
-| [`workdays(a: date, b: date)`](#workdays) | Monday-Friday days from a up to (not including) b |
+| [`add_workdays(d: date, n: int, holidays?: list\|str)`](#add_workdays) | move n Monday-Friday days, skipping holidays (a list of dates, or "US"/"UK"); negative goes back |
+| [`workdays(a: date, b: date, holidays?: list\|str)`](#workdays) | Monday-Friday days from a up to (not including) b, minus holidays |
+| [`holidays(year: int, country: str)`](#holidays) | public holidays as observed (moved off weekends): "US" federal or "UK" England bank holidays |
 | [`calendar(d: date) / calendar(year: int, month: int)`](#calendar) | month grid, weeks starting Monday |
 
 ### weekday_num
@@ -125,7 +126,7 @@ See also: [end_of](../time/calendar_math.md#end_of), [with](../time.md#with)
 now.end_of("month")
 # → 2026-10-31 23:59:59 -05:00
 (today.end_of("year") - now).parts
-# → "85 d 14 h 37 min"
+# → "85 d 14 h 28 min"
 ```
 
 See also: [start_of](../time/calendar_math.md#start_of)
@@ -138,7 +139,7 @@ See also: [start_of](../time/calendar_math.md#start_of)
 today.next("friday")
 # → 2026-10-09
 now.next("mon")
-# → 2026-10-12 10:22:57 -05:00
+# → 2026-10-12 10:31:47 -05:00
 ```
 
 See also: [prev](../time/calendar_math.md#prev), [nth_weekday](../time/calendar_math.md#nth_weekday)
@@ -169,25 +170,44 @@ See also: [next](../time/calendar_math.md#next)
 
 ### add_workdays
 
-`add_workdays(d: date, n: int)`: move n Monday-Friday days (no holidays); negative goes back
+`add_workdays(d: date, n: int, holidays?: list|str)`: move n Monday-Friday days, skipping holidays (a list of dates, or "US"/"UK"); negative goes back
 
 ```zil
 today.add_workdays(10)
 # → 2026-10-21
+date("2026-12-24").add_workdays(1, "US")
+# → 2026-12-28
+date("2026-12-24").add_workdays(1, [date("2026-12-28")])
+# → 2026-12-25
 ```
 
-See also: [workdays](../time/calendar_math.md#workdays), [is_weekend](../time.md#is_weekend)
+See also: [workdays](../time/calendar_math.md#workdays), [holidays](../time/calendar_math.md#holidays), [is_weekend](../time.md#is_weekend)
 
 ### workdays
 
-`workdays(a: date, b: date)`: Monday-Friday days from a up to (not including) b
+`workdays(a: date, b: date, holidays?: list|str)`: Monday-Friday days from a up to (not including) b, minus holidays
 
 ```zil
 workdays(today, date("2026-12-25"))
 # → 57
+workdays(date("2026-12-01"), date("2027-01-01"), "UK")
+# → 21
 ```
 
-See also: [add_workdays](../time/calendar_math.md#add_workdays)
+See also: [add_workdays](../time/calendar_math.md#add_workdays), [holidays](../time/calendar_math.md#holidays)
+
+### holidays
+
+`holidays(year: int, country: str)`: public holidays as observed (moved off weekends): "US" federal or "UK" England bank holidays
+
+```zil
+holidays(2026, "US")
+# → [2026-01-01, 2026-01-19, 2026-02-16, 2026-05-25, 2026-06-19, 2026-07-03, 2026-09-07, 2026-10-12, 2026-11-11, 2026-11-26, 2026-12-25]
+holidays(2026, "UK").len
+# → 8
+```
+
+See also: [add_workdays](../time/calendar_math.md#add_workdays), [workdays](../time/calendar_math.md#workdays)
 
 ### calendar
 
@@ -217,6 +237,9 @@ date("2026-12-24").add_workdays(3)
 # workdays in December
 workdays(date("2026-12-01"), date("2026-12-31"))
 # → 22
+# skipping US holidays
+date("2026-12-24").add_workdays(3, "US")
+# → 2026-12-30
 # ISO week number
 today.iso_week
 # → 41

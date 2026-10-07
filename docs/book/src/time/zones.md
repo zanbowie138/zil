@@ -1,6 +1,6 @@
 # time.zones
 
-the same moment in UTC, local time or any IANA zone
+the same moment in UTC, local time, any IANA zone or a city; world clocks
 
 > Example results generated on 2026-10-07.
 > Ones using `now`, `today` or randomness will differ when you run them.
@@ -14,6 +14,9 @@ date("2026-12-25 18:30") to UTC
 # to "Zone/Name"
 date("2026-12-25 18:30") to "Asia/Tokyo"
 # → 2026-12-26 09:30:00 +09:00
+# to "City"
+date("2026-12-25 18:30") to "Sao Paulo"
+# → 2026-12-25 21:30:00 -03:00
 ```
 
 ## Functions
@@ -22,6 +25,7 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 |---|---|
 | [`utc(d: date)`](#utc) | the same moment in UTC; same as `d to UTC` (`d to "Asia/Tokyo"` for any zone) |
 | [`local(d: date)`](#local) | the same moment in the system time zone; same as `d to local` |
+| [`clock(places: list) / clock(place: str)`](#clock) | the time now in each zone or city |
 
 ### utc
 
@@ -47,6 +51,19 @@ See also: [local](../time/zones.md#local), [date](../time.md#date)
 
 See also: [utc](../time/zones.md#utc)
 
+### clock
+
+`clock(places: list) / clock(place: str)`: the time now in each zone or city
+
+```zil
+clock(["Tokyo", "London"])
+# → {Tokyo: 2026-10-08 00:31:47 +09:00, London: 2026-10-07 16:31:47 +01:00}
+clock("Asia/Kolkata").hour >= 0
+# → true
+```
+
+See also: [utc](../time/zones.md#utc), [local](../time/zones.md#local)
+
 ## More examples
 
 ### zones
@@ -55,4 +72,10 @@ See also: [utc](../time/zones.md#utc)
 # time zones
 date("2026-12-25 18:30") to "Asia/Tokyo"
 # → 2026-12-26 09:30:00 +09:00
+# meeting time abroad
+5pm to "London"
+# → 2026-10-07 23:00:00 +01:00
+# world clock
+clock(["Tokyo", "London", "New York"])
+# → {Tokyo: 2026-10-08 00:31:47 +09:00, London: 2026-10-07 16:31:47 +01:00, New York: 2026-10-07 11:31:47 -04:00}
 ```

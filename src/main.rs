@@ -180,7 +180,7 @@ fn highlight(src: &str) -> String {
     let mut last = 0;
     for (tok, span) in Tok::lexer(src).spanned() {
         let color = match tok {
-            Ok(Tok::Int(_) | Tok::Float(_) | Tok::Dec(_) | Tok::Based(_) | Tok::Currency(_)) => CYAN,
+            Ok(Tok::Int(_) | Tok::Float(_) | Tok::Dec(_) | Tok::Dur(_) | Tok::Clock(_) | Tok::Based(_) | Tok::Currency(_)) => CYAN,
             Ok(Tok::Str(_) | Tok::Regex(_)) => GREEN,
             Ok(
                 Tok::Fn

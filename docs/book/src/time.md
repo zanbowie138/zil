@@ -11,6 +11,12 @@ dates: parsing, fields, date math, durations, relative text
 # date
 date("2026-12-25 18:30")
 # → 2026-12-25 18:30:00 -06:00
+# time of day: today at that time
+9:30 + 45 min
+# → 2026-10-07 10:15:00 -05:00
+# duration
+1h30m
+# → 90 min
 ```
 
 ### names
@@ -28,6 +34,9 @@ date("2026-01-31") + 1 mo
 # date - date
 date("2027-01-01") - date("2026-12-25")
 # → 7 d
+# "time" - "time"
+"17:00" - "08:45"
+# → 8.25 h
 # date < date
 yesterday < now
 # → true
@@ -36,9 +45,12 @@ yesterday < now
 ### conversions
 
 ```zil
-# to unix
+# to unix, to unix_ms
 date("2026-12-25") to unix
 # → 1798178400
+# to date
+"2026-12-25" to date
+# → 2026-12-25
 ```
 
 ## Submodules
@@ -46,7 +58,7 @@ date("2026-12-25") to unix
 | module | about |
 |---|---|
 | [calendar_math](time/calendar_math.md) | periods, weekdays, business days, week numbers, month grids; weeks start Monday |
-| [zones](time/zones.md) | the same moment in UTC, local time or any IANA zone |
+| [zones](time/zones.md) | the same moment in UTC, local time, any IANA zone or a city; world clocks |
 
 ## Functions
 
@@ -72,6 +84,10 @@ date("2026-12-25") to unix
 | [`relative(d: date)`](#relative) | "in 3 days", "2 hours ago" |
 | [`parts(duration: quantity)`](#parts) | duration in up to three of d, h, min, s; or `to d h min` for chosen units |
 | [`unix(d: date)`](#unix) | seconds since 1970-01-01 UTC; same as `d to unix` |
+| [`unix_ms(d: date)`](#unix_ms) | milliseconds since 1970-01-01 UTC; same as `d to unix_ms` |
+| [`date_ms(ms: int)`](#date_ms) | the date from Unix milliseconds, as JavaScript and Java give them |
+| [`timeit(f: fn)`](#timeit) | how long calling f takes |
+| [`stopwatch()`](#stopwatch) | time since the last `stopwatch()` call (0 s the first time) |
 
 ### date
 
@@ -83,7 +99,7 @@ date("2026-12-25")
 date("next friday at 5pm")
 # → 2026-10-09 17:00:00 -05:00
 date("3 days ago")
-# → 2026-10-04 10:22:57 -05:00
+# → 2026-10-04 10:31:47 -05:00
 date("25.12.2026", "%d.%m.%Y")
 # → 2026-12-25
 date(2026, 12, 25, 18, 30)
@@ -144,7 +160,7 @@ See also: [minute](time.md#minute), [second](time.md#second)
 
 ```zil
 now.minute
-# → 22
+# → 31
 ```
 
 See also: [hour](time.md#hour), [second](time.md#second)
@@ -155,7 +171,7 @@ See also: [hour](time.md#hour), [second](time.md#second)
 
 ```zil
 now.second
-# → 57
+# → 47
 ```
 
 See also: [hour](time.md#hour), [minute](time.md#minute)
@@ -179,7 +195,7 @@ See also: [day](time.md#day), [format](time.md#format)
 now.format("%B %d, %Y")
 # → "October 07, 2026"
 now.format("%H:%M")
-# → "10:22"
+# → "10:31"
 format("%5.2f%%", 12.345)
 # → "12.35%"
 ```
@@ -194,7 +210,7 @@ See also: [date](time.md#date), [fixed](math/formatting.md#fixed)
 today.with({day: 1})
 # → 2026-10-01
 now.with({hour: 9, minute: 0})
-# → 2026-10-07 09:00:57 -05:00
+# → 2026-10-07 09:00:47 -05:00
 ```
 
 See also: [start_of](time/calendar_math.md#start_of), [date](time.md#date)
@@ -315,7 +331,51 @@ date(86400) to unix
 # → 86400
 ```
 
-See also: [date](time.md#date)
+See also: [date](time.md#date), [unix_ms](time.md#unix_ms)
+
+### unix_ms
+
+`unix_ms(d: date)`: milliseconds since 1970-01-01 UTC; same as `d to unix_ms`
+
+```zil
+date(1).unix_ms
+# → 1000
+```
+
+See also: [date_ms](time.md#date_ms), [unix](time.md#unix)
+
+### date_ms
+
+`date_ms(ms: int)`: the date from Unix milliseconds, as JavaScript and Java give them
+
+```zil
+date_ms(1798178400000) == date(1798178400)
+# → true
+```
+
+See also: [unix_ms](time.md#unix_ms), [date](time.md#date)
+
+### timeit
+
+`timeit(f: fn)`: how long calling f takes
+
+```zil
+timeit(|| (1..1000).sum) < 1 s
+# → true
+```
+
+See also: [stopwatch](time.md#stopwatch)
+
+### stopwatch
+
+`stopwatch()`: time since the last `stopwatch()` call (0 s the first time)
+
+```zil
+stopwatch() >= 0 s
+# → true
+```
+
+See also: [timeit](time.md#timeit)
 
 ## More examples
 
@@ -333,7 +393,7 @@ date("next friday")
 # → 2026-10-09
 # countdown
 (date("2027-01-01") - now).parts
-# → "85 d 14 h 37 min"
+# → "85 d 14 h 28 min"
 # relative time
 (now - 3 h).relative
 # → "3 hours ago"
@@ -346,4 +406,10 @@ date("next friday")
 # from a Unix timestamp
 date(1798178400)
 # → 2026-12-25
+# compact durations
+1h30m + 2d4h
+# → 3210 min
+# hours worked
+17:00 - 8:45
+# → 8.25 h
 ```

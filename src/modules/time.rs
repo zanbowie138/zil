@@ -26,18 +26,28 @@ pub const MODULE: Module = Module {
             ("first of next month", "(today + 1 mo).with({day: 1})"),
             ("months with a Friday the 13th", r#"(1..=12).filter(|m| date(2026, m, 13).weekday == "Friday")"#),
             ("from a Unix timestamp", "date(1798178400)"),
+            ("compact durations", "1h30m + 2d4h"),
+            ("hours worked", "17:00 - 8:45"),
         ]),
     ],
     #[rustfmt::skip]
     guide: &[
-        ("types", &[("date", r#"date("2026-12-25 18:30")"#)]),
+        ("types", &[
+            ("date", r#"date("2026-12-25 18:30")"#),
+            ("time of day: today at that time", "9:30 + 45 min"),
+            ("duration", "1h30m"),
+        ]),
         ("names", &[("now today tomorrow yesterday", "")]),
         ("operators", &[
             ("date ± time", r#"date("2026-01-31") + 1 mo"#),
             ("date - date", r#"date("2027-01-01") - date("2026-12-25")"#),
+            ("\"time\" - \"time\"", r#""17:00" - "08:45""#),
             ("date < date", "yesterday < now"),
         ]),
-        ("conversions", &[("to unix", r#"date("2026-12-25") to unix"#)]),
+        ("conversions", &[
+            ("to unix, to unix_ms", r#"date("2026-12-25") to unix"#),
+            ("to date", r#""2026-12-25" to date"#),
+        ]),
     ],
     fns: FNS,
     #[rustfmt::skip]
@@ -45,10 +55,11 @@ pub const MODULE: Module = Module {
         ("fields", &["year", "month", "day", "hour", "minute", "second", "weekday"]),
         ("checks", &["is_weekend", "is_weekday", "is_today", "is_past", "is_future"]),
         ("between", &["diff", "age", "relative", "parts"]),
-        ("convert", &["date", "with", "format", "unix"]),
+        ("convert", &["date", "with", "format", "unix", "date_ms", "unix_ms"]),
+        ("timing", &["timeit", "stopwatch"]),
     ],
     call,
-    targets: &[("unix", "unix")],
+    targets: &[("unix", "unix"), ("unix_ms", "unix_ms"), ("date", "date")],
     ident: Some(ident),
     binary: Some(binary),
     compare: Some(compare),
@@ -77,10 +88,18 @@ const FNS: &[Doc] = &[
     doc("diff", "diff(a: date, b: date)", "calendar difference from a to b", &[r#"diff(date("2025-08-03"), date("2026-10-06 04:00"))"#], &["age", "relative", "parts"]),
     doc("relative", "relative(d: date)", "\"in 3 days\", \"2 hours ago\"", &[r#"date("2026-12-25").relative"#, "(now - 3 h).relative"], &["diff", "parts"]),
     doc("parts", "parts(duration: quantity)", "duration in up to three of d, h, min, s; or `to d h min` for chosen units", &[r#"(date("2026-12-25") - date("2026-10-06 14:24")).parts"#, "5000 s.parts"], &["relative", "diff"]),
-    doc("unix", "unix(d: date)", "seconds since 1970-01-01 UTC; same as `d to unix`", &["date(0).unix", "date(86400) to unix"], &["date"]),
+    doc("unix", "unix(d: date)", "seconds since 1970-01-01 UTC; same as `d to unix`", &["date(0).unix", "date(86400) to unix"], &["date", "unix_ms"]),
+    doc("unix_ms", "unix_ms(d: date)", "milliseconds since 1970-01-01 UTC; same as `d to unix_ms`", &["date(1).unix_ms"], &["date_ms", "unix"]),
+    doc("date_ms", "date_ms(ms: int)", "the date from Unix milliseconds, as JavaScript and Java give them", &["date_ms(1798178400000) == date(1798178400)"], &["unix_ms", "date"]),
+    doc("timeit", "timeit(f: fn)", "how long calling f takes", &["timeit(|| (1..1000).sum) < 1 s"], &["stopwatch"]),
+    doc("stopwatch", "stopwatch()", "time since the last `stopwatch()` call (0 s the first time)", &["stopwatch() >= 0 s"], &["timeit"]),
 ];
 
-fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &crate::lexer::Span) -> Call {
+thread_local! {
+    static STOPWATCH: std::cell::Cell<Option<std::time::Instant>> = const { std::cell::Cell::new(None) };
+}
+
+fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &crate::lexer::Span) -> Call {
     use Value::*;
     Ok(match (name, args) {
         ("date", [Str(s)]) => Value::date(parse(s, &Zoned::now()).ok_or_else(|| {
@@ -144,8 +163,24 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &crate::lexer::Sp
         ("format", [Date(z), Str(f)]) => Value::str(jiff::fmt::strtime::format(f.as_bytes(), &**z).map_err(|e| e.to_string())?),
         ("format", [Str(f), rest @ ..]) => Value::str(crate::modules::math::formatting::printf(f, rest)?),
         ("unix", [Date(z)]) => Value::int(z.timestamp().as_second()),
+        ("unix_ms", [Date(z)]) => Value::int(z.timestamp().as_millisecond()),
+        ("date_ms", [Int(n, _)]) => Value::date(Timestamp::from_millisecond(*n).map_err(e)?.to_zoned(TimeZone::system())),
+        ("timeit", [f]) => {
+            let t = std::time::Instant::now();
+            it.call(f, vec![], span)?;
+            seconds(t.elapsed().as_secs_f64())
+        }
+        ("stopwatch", []) => {
+            let now = std::time::Instant::now();
+            seconds(STOPWATCH.replace(Some(now)).map_or(0.0, |t| (now - t).as_secs_f64()))
+        }
         _ => return Err(Fail::BadArgs),
     })
+}
+
+/// Seconds in the unit that reads best: `4.2 ms`, `1.5 s`.
+fn seconds(s: f64) -> Value {
+    units::simplify(s, &units::unit("s").expect("seconds"))
 }
 
 /// `now`, `today`, `tomorrow`, `yesterday`.
@@ -164,16 +199,27 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
         (BinOp::Add, Date(z), Qty(v, u)) | (BinOp::Add, Qty(v, u), Date(z)) => add(z, *v, u).map(Value::date),
         (BinOp::Sub, Date(z), Qty(v, u)) => add(z, -v, u).map(Value::date),
         // Elapsed time, except same-clock-time dates are whole calendar days even across a DST change.
+        // `"17:00" - "08:45"`: two clock times, as today at those times.
+        (BinOp::Sub, Str(x), Str(y)) => {
+            let (x, y) = (time(&x.to_lowercase())?, time(&y.to_lowercase())?);
+            let today = Zoned::now().date();
+            let at = |t| today.to_datetime(t).to_zoned(TimeZone::system()).map(Value::date).map_err(e);
+            return binary(op, &at(x).ok()?, &at(y).ok()?);
+        }
         (BinOp::Sub, Date(x), Date(y)) => {
             // Same zone first: jiff counts days in one calendar (and panics on mixed zones, and on
             // `total` of an empty span, as of 0.2.38).
             let x = x.with_time_zone(y.time_zone().clone());
             let cal = x.since(&**y).and_then(|s| if s.is_zero() { Ok(0.0) } else { s.total((jiff::Unit::Day, &**y)) });
-            let days = match cal {
-                Ok(n) if n.fract() == 0.0 => n,
-                _ => x.duration_since(y).as_secs_f64() / 86400.0,
+            let secs = x.duration_since(y).as_secs_f64();
+            // Whole days stay days; within a day, hours or minutes read better.
+            let (n, u) = match cal {
+                Ok(n) if n.fract() == 0.0 => (n, "d"),
+                _ if secs.abs() < 3600.0 => (secs / 60.0, "min"),
+                _ if secs.abs() < 86400.0 => (secs / 3600.0, "h"),
+                _ => (secs / 86400.0, "d"),
             };
-            units::unit("d").map(|d| Qty(days, d))
+            units::unit(u).map(|u| Qty(n, u))
         }
         _ => return None,
     })
@@ -519,7 +565,7 @@ pub fn relative(z: &Zoned, now: &Zoned) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::calendar_math::{add_workdays, calendar, workdays};
+    use super::calendar_math::{Off, add_workdays, calendar, workdays};
     use super::*;
     use crate::interp::tests::{show, try_eval};
 
@@ -579,12 +625,12 @@ mod tests {
         let z = now();
         assert_eq!(start_of(&z, "quarter").unwrap().date().to_string(), "2026-10-01");
         assert_eq!(end_of(&z, "week").unwrap().strftime("%F %T").to_string(), "2026-10-11 23:59:59");
-        assert_eq!(add_workdays(&z, 4).unwrap().date().to_string(), "2026-10-12");
-        assert_eq!(add_workdays(&z, -2).unwrap().date().to_string(), "2026-10-02");
+        assert_eq!(add_workdays(&z, 4, &Off::Dates(vec![])).unwrap().date().to_string(), "2026-10-12");
+        assert_eq!(add_workdays(&z, -2, &Off::Dates(vec![])).unwrap().date().to_string(), "2026-10-02");
         let fri = parse("2026-10-09", &z).unwrap();
         let mon = parse("2026-10-19", &z).unwrap();
-        assert_eq!(workdays(&fri, &mon).unwrap(), 6);
-        assert_eq!(workdays(&mon, &fri).unwrap(), -6);
+        assert_eq!(workdays(&fri, &mon, &Off::Dates(vec![])).unwrap(), 6);
+        assert_eq!(workdays(&mon, &fri, &Off::Dates(vec![])).unwrap(), -6);
         let birth = parse("1990-10-07", &z).unwrap();
         assert_eq!(age(&birth, &z), 35);
         assert_eq!(diff(&parse("2025-08-03", &z).unwrap(), &parse("2026-10-06 04:00", &z).unwrap()).unwrap(), "1 yr 2 mo 3 d 4 h");
@@ -620,6 +666,27 @@ mod tests {
         assert_eq!(show(&format!("({midnight} + 1 d) - {midnight}")), "1 d");
         assert_eq!(show(&format!("{midnight} + 24 h"))[..16], *"2026-11-01 23:00");
         assert_eq!(show(r#"date("2026-12-25") - (date("2026-12-25") to "Asia/Tokyo")"#), "0 d");
+        // Session 11: compact durations, clock times, cities, holidays, ms timestamps.
+        assert_eq!(show("1h30m"), "90 min");
+        assert_eq!(show("2d4h"), "52 h");
+        assert_eq!(show("1m30s.parts"), "1 min 30 s");
+        assert_eq!(show("17:00 - 8:45"), "8.25 h");
+        assert_eq!(show(r#""17:00" - "08:45""#), "8.25 h");
+        assert_eq!(show("9:30 - 9:15"), "15 min");
+        assert_eq!(show("(9:30 + 45 min).format(\"%H:%M\")"), "10:15");
+        assert_eq!(show("5pm.hour"), "17");
+        assert_eq!(show(r#"(date("2026-12-25T17:00Z") to "tokyo").hour"#), "2");
+        assert_eq!(show(r#"(date("2026-12-25T17:00Z") to "New York").hour"#), "12");
+        assert_eq!(show(r#"clock(["Tokyo", "London"]).keys"#), r#"["Tokyo", "London"]"#);
+        assert!(try_eval(r#"now to "Narnia""#).is_err());
+        assert_eq!(show(r#"holidays(2026, "US").len"#), "11");
+        assert_eq!(show(r#"holidays(2026, "UK")[-1]"#), "2026-12-28");
+        assert_eq!(show(r#"date("2026-12-24").add_workdays(3, "US")"#), "2026-12-30");
+        assert_eq!(show(r#"workdays(date("2026-12-21"), date("2027-01-04"), "UK")"#), "7");
+        assert_eq!(show(r#"date("2026-12-24").add_workdays(1, [date("2026-12-25")])"#), "2026-12-28");
+        assert_eq!(show("date_ms(1500).unix_ms"), "1500");
+        assert_eq!(show("date(1) to unix_ms"), "1000");
+        assert_eq!(show("timeit(|| 1) < 1 s"), "true");
         assert!(try_eval("5 km to h min").is_err());
         assert!(try_eval(r#"now.start_of("fortnight")"#).is_err());
     }

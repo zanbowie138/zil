@@ -73,7 +73,7 @@ date("2026-12-25 18:30") to "Asia/Tokyo"
 | [units.goofy](units/goofy.md) | bananas for scale, smoots, fortnights; every item also works as item_for_scale |
 | [time](time.md) | dates: parsing, fields, date math, durations, relative text |
 | [time.calendar_math](time/calendar_math.md) | periods, weekdays, business days, week numbers, month grids; weeks start Monday |
-| [time.zones](time/zones.md) | the same moment in UTC, local time or any IANA zone |
+| [time.zones](time/zones.md) | the same moment in UTC, local time, any IANA zone or a city; world clocks |
 | [dev](dev.md) | developer tools: IP addresses and subnets, raw bytes, colors |
 | [dev.net](dev/net.md) | IP addresses, CIDR blocks, subnets |
 | [dev.binary](dev/binary.md) | hex dumps and entropy of strings and byte lists |

@@ -276,6 +276,15 @@ impl Parser<'_> {
             Tok::Nil => ExprKind::Nil,
             Tok::True => ExprKind::Bool(true),
             Tok::False => ExprKind::Bool(false),
+            // `1h30m` is `30 min + 1 h`, smallest unit first so the sum stays whole: `90 min`.
+            Tok::Dur(parts) => {
+                let qty = |(n, u): (i64, String)| self.mk(ExprKind::Qty(Box::new(self.mk(ExprKind::Int(n, 10), start)), vec![(u, 1)]), start);
+                let mut it = parts.into_iter().rev().map(qty);
+                let first = it.next().expect("lexer gives two or more parts");
+                return Ok(it.fold(first, |a, b| self.mk(ExprKind::Binary(BinOp::Add, Box::new(a), Box::new(b)), start)));
+            }
+            // `9:30` is `"9:30" to date`: today at that time.
+            Tok::Clock(s) => ExprKind::To(Box::new(self.mk(ExprKind::Str(s.into()), start)), Target::Named("date".into(), None)),
             t @ (Tok::Int(_) | Tok::Based(_) | Tok::Big(_) | Tok::Float(_) | Tok::Dec(_)) => {
                 let kind = match t {
                     Tok::Int(n) => ExprKind::Int(n, 10),
@@ -423,6 +432,8 @@ impl Parser<'_> {
                     | Tok::Big(_)
                     | Tok::Float(_)
                     | Tok::Dec(_)
+                    | Tok::Dur(_)
+                    | Tok::Clock(_)
                     | Tok::Str(_)
                     | Tok::Regex(_)
                     | Tok::LParen
@@ -741,6 +752,8 @@ fn starts_operand(t: &Tok) -> bool {
             | Big(_)
             | Float(_)
             | Dec(_)
+            | Dur(_)
+            | Clock(_)
             | Currency(_)
             | Str(_)
             | Regex(_)

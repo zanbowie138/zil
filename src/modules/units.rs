@@ -86,7 +86,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
 
 /// `x u` in the table unit whose scale is a power of ten times `u`'s (so bytes stay bytes, feet stay feet)
 /// and gives the biggest value of at least 1. Temperatures, money and units with no such family stay as they are.
-fn simplify(x: f64, u: &Unit) -> Value {
+pub fn simplify(x: f64, u: &Unit) -> Value {
     let dim = u.dim();
     if u.offset() != 0.0 || dim[8] != 0 || x == 0.0 {
         return Value::Qty(x, u.clone());
