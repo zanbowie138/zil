@@ -1,7 +1,8 @@
 # zil
 
 [![crates.io](https://img.shields.io/crates/v/zil.svg)](https://crates.io/crates/zil)
-[![docs](https://img.shields.io/badge/docs-reference-blue)](https://zanbowie138.github.io/zil/)
+[![docs](https://img.shields.io/badge/docs-reference-blue)](https://zil.alexander-bui.com/docs/)
+[![sandbox](https://img.shields.io/badge/try_it-sandbox-orange)](https://zil.alexander-bui.com/)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE.md)
 
 zil is a calculator and scripting language that understands units, currencies, dates and time zones.
@@ -21,6 +22,10 @@ date("2026-12-25 18:30") to "Asia/Tokyo" # → 2026-12-26 09:30:00 +09:00
 2 ** 100                                 # → 1267650600228229401496703205376
 "a1b22c333".nums.sum                     # → 356
 ```
+
+## Sandbox
+
+You can try zil in the browser at [zil.alexander-bui.com](https://zil.alexander-bui.com/) without installing anything. 
 
 ## Features
 
@@ -182,7 +187,7 @@ echo "hi there" | zil -e 'input.upper'   # → HI THERE
 
 Most of the documentation is in the help menu: run `help` in the REPL for an overview, or `help(<name>)` for any function or unit.
 
-The full reference is available online at [zanbowie138.github.io/zil](https://zanbowie138.github.io/zil/). To build the reference locally:
+The full reference is available online at [zil.alexander-bui.com/docs](https://zil.alexander-bui.com/docs/). To build the reference locally:
 
 ```sh
 cargo run -- --docs docs/book/src && mdbook serve docs/book
@@ -196,6 +201,9 @@ cd zil
 cargo build --release   # binary at target/release/zil
 cargo test
 ```
+
+To run the whole site locally (the sandbox, plus the reference at `/docs`), install mdbook, the `wasm32-unknown-unknown` target and
+`wasm-bindgen-cli` at the version in Cargo.lock, then run `pnpm install && pnpm serve` and open `localhost:8765`.
 
 ## Data sources
 

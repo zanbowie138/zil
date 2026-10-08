@@ -6,12 +6,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-  pages: write
-  id-token: write
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: github-pages
     env:
       TZ: America/Chicago
     steps:
@@ -26,6 +23,8 @@ jobs:
         with: { node-version: 24, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - uses: actions/upload-pages-artifact@v3
-        with: { path: docs/book/book }
-      - uses: actions/deploy-pages@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site --project-name=zil --branch=main

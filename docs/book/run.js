@@ -1,8 +1,8 @@
-// Makes the book's zil code blocks editable and runnable, on the sandbox's wasm build (../sandbox, from `pnpm build`).
+// Makes the book's zil code blocks editable and runnable, on the sandbox's wasm build (the site root, one level up, from `pnpm build`).
 // Running a block replaces its `# → ` result lines with fresh ones, so edits show their results in place.
 (async () => {
   const here = document.currentScript.src;
-  const sandbox = new URL("sandbox/", here);
+  const sandbox = new URL("../", here);
   const zil = await import(new URL("client.js", sandbox));
 
   // A "Sandbox" link in the top bar, next to mdBook's own buttons.

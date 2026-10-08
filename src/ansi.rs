@@ -72,22 +72,31 @@ pub fn highlight(src: &str) -> String {
     out
 }
 
-/// Remove terminal color and cursor codes.
+/// Terminal codes that take no width: colors and cursor moves (`ESC [ ... X`), and hyperlinks (`ESC ] 8 ; ; url ESC \`).
+pub static ESCAPES: std::sync::LazyLock<regex::Regex> =
+    std::sync::LazyLock::new(|| regex::Regex::new(r"\x1b\[([0-9;?]*)([A-Za-z])|\x1b\]8;;([^\x1b]*)\x1b\\").unwrap());
+
+/// Remove terminal color and cursor codes, and hyperlinks (keeping their text).
 pub fn strip_ansi(s: &str) -> String {
-    let re = regex::Regex::new(r"\x1b\[[0-9;?]*[A-Za-z]").unwrap();
-    re.replace_all(s, "").into_owned()
+    ESCAPES.replace_all(s, "").into_owned()
+}
+
+/// `text` as a terminal hyperlink (OSC 8) to `url`: the sandbox makes its `zil:` links clickable.
+pub fn link(url: &str, text: &str) -> String {
+    format!("\x1b]8;;{url}\x1b\\{text}\x1b]8;;\x1b\\")
 }
 
 /// Terminal text as HTML for the browser build: colors and styles become inline-styled spans, the 16 basic colors
-/// `var(--ansi-N)` so the page can theme them; cursor codes vanish.
+/// `var(--ansi-N)` so the page can theme them, hyperlinks `<a data-zil="url">`; cursor codes vanish.
 #[cfg(any(target_arch = "wasm32", test))]
 pub fn to_html(s: &str) -> String {
-    let re = regex::Regex::new(r"\x1b\[([0-9;?]*)([A-Za-z])").unwrap();
+    let re = &*ESCAPES;
     let basic = |n: u16| format!("var(--ansi-{n})");
     let (mut fg, mut bg, mut flags): (Option<String>, Option<String>, [bool; 5]) = (None, None, [false; 5]);
     // `css` is the style codes asked for, `open` the span written so far: spans change only where text follows,
     // so ariadne's char-by-char colors and reset-then-set pairs collapse into one span.
     let (mut out, mut last, mut open, mut css) = (String::new(), 0, String::new(), String::new());
+    let mut linked = false;
     let text = |out: &mut String, open: &mut String, css: &str, t: &str| {
         if t.is_empty() {
             return;
@@ -130,6 +139,22 @@ pub fn to_html(s: &str) -> String {
         let m = c.get(0).unwrap();
         text(&mut out, &mut open, &css, &s[last..m.start()]);
         last = m.end();
+        // A link closes the span around it, so spans and links nest; the text after opens a fresh one.
+        if let Some(url) = c.get(3) {
+            if !open.is_empty() {
+                out.push_str("</span>");
+                open.clear();
+            }
+            if url.is_empty() {
+                if linked {
+                    out.push_str("</a>");
+                }
+            } else {
+                out += &format!("<a data-zil=\"{}\">", url.as_str().replace(['"', '<', '>', '&'], ""));
+            }
+            linked = !url.is_empty();
+            continue;
+        }
         if &c[2] != "m" {
             continue;
         }
@@ -184,6 +209,9 @@ pub fn to_html(s: &str) -> String {
     if !open.is_empty() {
         out.push_str("</span>");
     }
+    if linked {
+        out.push_str("</a>");
+    }
     out
 }
 
@@ -215,5 +243,8 @@ mod tests {
         );
         assert_eq!(super::to_html("é ｗ𝐛→x"), r#"é <span style="display:inline-block;width:4ch">ｗ𝐛→</span>x"#);
         assert_eq!(super::to_html("\x1b[7mhit\x1b[27m\x1b[2K"), r#"<span style="color:var(--ansi-bg);background:var(--ansi-fg);">hit</span>"#);
+        let link = super::link("zil:help/upper", "\x1b[36mupper\x1b[0m");
+        assert_eq!(super::to_html(&format!("see {link}!")), r#"see <a data-zil="zil:help/upper"><span style="color:var(--ansi-6);">upper</span></a>!"#);
+        assert_eq!(super::width(&link), 5);
     }
 }

@@ -62,21 +62,63 @@ export async function call(fn, src = "") {
 /** Stops a run in progress. */
 export const stop = () => kill("stopped");
 
-const KEYWORDS = "fn|if|else|while|for|in|to|of|return|break|continue|true|false|nil|unit";
-const TOKEN = new RegExp(
-  [
-    /(?<result>^[ \t]*# → .*$)/,
-    /(?<comment>#.*$)/,
-    /(?<string>r?"(?:\\.|[^"\\])*"?)/,
-    /(?<number>\b0[xbo][0-9a-fA-F_]+|\b\d[\d_]*(?:\.\d+)?(?:[eE][+-]?\d+)?)/,
-    new RegExp(`(?<keyword>\\b(?:${KEYWORDS})\\b)`),
-    /(?<call>\b[A-Za-z_]\w*(?=\())/,
-  ]
-    .map((r) => r.source)
-    .join("|"),
-  "gm",
-);
-const CLASS = { result: "zil-result", comment: "hljs-comment", string: "hljs-string", number: "hljs-number", keyword: "hljs-keyword", call: "hljs-title" };
+export const KEYWORDS = ["fn", "if", "else", "while", "for", "in", "to", "of", "return", "break", "continue", "true", "false", "nil"];
+const TOKEN = [
+  /(?<result>^[ \t]*# → .*$)/,
+  // Before comments, so `16#ff` is a number; durations and clock times, then the rest, like the lexer's.
+  /(?<number>\d+#[0-9a-zA-Z_]+|\d+[dhms](?:\d+[dhms])+\b|\d{1,2}:\d{2}(?::\d{2})?(?:[ap]m)?|\d{1,2}[ap]m\b|0[xbo][0-9a-fA-F_]+|\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d+)?)/,
+  /(?<comment>#.*$)/,
+  /(?<string>r?"(?:\\.|[^"\\])*"?)/,
+  /(?<ident>[A-Za-z_ΩµμΩ][\wΩµμΩ]*)/,
+  /(?<op>\|>|±|\+-|\.\.=?|[$€£])/,
+]
+  .map((r) => r.source)
+  .join("|");
+const ALL = new RegExp(TOKEN, "gm");
+const STICKY = new RegExp(TOKEN, "my");
+
+/** Names zil knows, from the wasm's `vocab()`; until `learn` gets them, only calls and keywords stand out. */
+export const vocab = { fns: new Map(), units: new Map(), consts: new Set(), modules: new Map() };
+export function learn(json) {
+  const v = JSON.parse(json);
+  for (const [name, sig, desc, module] of v.fns) vocab.fns.set(name, { name, sig, desc, module });
+  for (const [names, desc] of v.units) for (const n of names.split(" ")) vocab.units.set(n, { name: n, desc, names });
+  for (const c of v.consts) vocab.consts.add(c);
+  for (const [path, about] of v.modules) vocab.modules.set(path, about);
+}
+
+/** What a token is: `result`, `comment`, `string`, `number`, `keyword`, `call`, `unit`, `const`, `op`, or null for a plain name. */
+function kind(m, src) {
+  const k = Object.keys(m.groups).find((k) => m.groups[k] !== undefined);
+  if (k !== "ident") return k;
+  const w = m[0];
+  if (KEYWORDS.includes(w)) return "keyword";
+  // Called, or a method like `"hi".upper`, or piped to like `|> sum`.
+  const before = src.slice(Math.max(0, m.index - 16), m.index);
+  if (src[m.index + w.length] === "(" || (/(\.|\|>\s*)$/.test(before) && vocab.fns.has(w))) return "call";
+  if (vocab.units.has(w)) return "unit";
+  if (vocab.consts.has(w)) return "const";
+  return vocab.fns.has(w) ? "call" : null;
+}
+
+/** The token starting at `at` in `line`, for CodeMirror: `[kind, end]`, or null if none starts there. */
+export function tokenAt(line, at) {
+  STICKY.lastIndex = at;
+  const m = STICKY.exec(line);
+  return m && m[0] ? [kind(m, line), at + m[0].length] : null;
+}
+
+const CLASS = {
+  result: "zil-result",
+  comment: "hljs-comment",
+  string: "hljs-string",
+  number: "hljs-number",
+  keyword: "hljs-keyword",
+  call: "hljs-title",
+  unit: "hljs-type",
+  const: "hljs-literal",
+  op: "hljs-operator",
+};
 
 export const escape = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 
@@ -84,9 +126,10 @@ export const escape = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&
 export function highlight(src) {
   let out = "",
     last = 0;
-  for (const m of src.matchAll(TOKEN)) {
-    const kind = Object.keys(m.groups).find((k) => m.groups[k] !== undefined);
-    out += escape(src.slice(last, m.index)) + `<span class="${CLASS[kind]}">${escape(m[0])}</span>`;
+  for (const m of src.matchAll(ALL)) {
+    const k = kind(m, src);
+    if (!k) continue;
+    out += escape(src.slice(last, m.index)) + `<span class="${CLASS[k]}">${escape(m[0])}</span>`;
     last = m.index + m[0].length;
   }
   return out + escape(src.slice(last));

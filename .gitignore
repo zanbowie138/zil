@@ -6,3 +6,6 @@
 /docs/sandbox/pkg
 /docs/sandbox/examples
 /node_modules
+/site
+/docs/sandbox/app.js
+/docs/sandbox/app.js.map

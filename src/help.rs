@@ -25,6 +25,8 @@ thread_local! {
     static COLOR: Cell<bool> = const { Cell::new(false) };
     /// Set by `live`: help is going straight to a terminal, so color it if `.0` and wrap it to width `.1`.
     static TERM: Cell<Option<(bool, usize)>> = const { Cell::new(None) };
+    /// Set by `linked`: names and examples become `zil:help/...` and `zil:run/...` hyperlinks, for the sandbox to make clickable.
+    static LINKS: Cell<bool> = const { Cell::new(false) };
 }
 
 /// Runs `f` with every help page it renders shaped for a terminal: `Some((color, width))`.
@@ -33,6 +35,26 @@ pub fn live<T>(term: Option<(bool, usize)>, f: impl FnOnce() -> T) -> T {
     let r = f();
     TERM.set(None);
     r
+}
+
+/// Runs `f` with help's names and examples rendered as links if `on`.
+#[cfg(any(target_arch = "wasm32", test))]
+pub fn linked<T>(on: bool, f: impl FnOnce() -> T) -> T {
+    LINKS.set(on);
+    let r = f();
+    LINKS.set(false);
+    r
+}
+
+/// `text` linked to `zil:{kind}/{target}` when links are on: `help` opens a help topic, `run` runs code.
+fn link(kind: &str, target: &str, text: String) -> String {
+    if !LINKS.get() {
+        return text;
+    }
+    // Percent-encoded, so the link holds no spaces for `wrap` to split at.
+    let target: String =
+        target.bytes().map(|b| if b.is_ascii_alphanumeric() || b"-_.".contains(&b) { (b as char).to_string() } else { format!("%{b:02X}") }).collect();
+    crate::ansi::link(&format!("zil:{kind}/{target}"), &text)
 }
 
 /// `println!` into the help buffer.
@@ -67,7 +89,7 @@ pub fn capture(color: bool, render: impl FnOnce() -> bool) -> Result<String, Str
 /// last column starts with under 20 to work with, it moves to the next line, under the second column or the indent + 4.
 /// Escape codes take no width.
 fn wrap(line: &str, width: usize) -> String {
-    let esc = regex::Regex::new("\x1b\\[[0-9;]*m").unwrap();
+    let esc = &*crate::ansi::ESCAPES;
     let vis = |s: &str| esc.replace_all(s, "").chars().count();
     if vis(line) <= width {
         return line.to_string();
@@ -153,7 +175,7 @@ fn render(topic: Option<&str>) -> bool {
     }
     let hits = search(topic);
     if hits.is_empty() {
-        let near: Vec<_> = near(topic).iter().map(|n| paint(NAME, n)).collect();
+        let near: Vec<_> = near(topic).iter().map(|n| link("help", n, paint(NAME, n))).collect();
         let hint = if near.is_empty() { String::new() } else { format!("; did you mean {}?", near.join(", ")) };
         out!("no help for {topic:?}{hint}  help() for an overview");
         return false;
@@ -212,7 +234,7 @@ fn overview() {
         .into_iter()
         .map(|(name, m)| {
             let types = types(m).map_or(String::new(), |t| format!(" {}", paint(DIM, &format!("[{t}]"))));
-            let label = name.replace(m.name, &paint(if name.starts_with(' ') { SUBMODULE } else { MODPATH }, m.name));
+            let label = name.replace(m.name, &link("help", m.name, paint(if name.starts_with(' ') { SUBMODULE } else { MODPATH }, m.name)));
             format!("{label}{}  {}{types}", pad(&name, w), m.about)
         })
         .collect();
@@ -234,7 +256,7 @@ fn advanced() {
     for ((theme, recipes), run) in ADVANCED.iter().map(|t| (*t, true)).chain(unrun) {
         out!("\n{}", paint(HEADING, theme));
         for (title, uses, src) in recipes {
-            let mut lines: Vec<_> = src.lines().map(code).collect();
+            let mut lines: Vec<_> = src.lines().map(|l| snippet(l, src)).collect();
             if run {
                 lines.push(format!("{} {}", paint(DIM, "→"), below(&result(src).1)));
             }
@@ -251,12 +273,13 @@ fn docs() -> impl Iterator<Item = (&'static Module, &'static Doc)> {
 /// A function's page: where it lives, signature, live examples, related functions.
 fn function(m: &Module, f: &Doc) {
     let group = m.groups.iter().find(|g| g.1.contains(&f.name)).map_or(String::new(), |g| format!(" › {}", g.0));
-    framed(&format!("{}{}", paint(MODPATH, modules::path(m)), paint(DIM, &group)), &collected(|| body(m, f, true)));
+    let path = modules::path(m);
+    framed(&format!("{}{}", link("help", path, paint(MODPATH, path)), paint(DIM, &group)), &collected(|| body(m, f, true)));
 }
 
 /// A function's signature, description, live examples and, if `see`, related functions.
 fn body(m: &Module, f: &Doc, see: bool) {
-    out!("{}  {}", sig(f, paint(NAME, f.name)), f.desc);
+    out!("{}  {}", sig(f, link("help", f.name, paint(NAME, f.name))), f.desc);
     show(f.examples.iter().map(|e| e.to_string()).collect());
     for ex in f.shown {
         out!("  {}", code(ex));
@@ -285,12 +308,13 @@ fn listing(hits: Vec<(&Module, &Doc)>, stems: &[String]) {
     let mut last = String::new();
     for (m, f) in hits {
         let group = m.groups.iter().find(|g| g.1.contains(&f.name) && stems.iter().any(|s| s == g.0));
-        let head = mark(modules::path(m), stems, MODPATH) + &group.map_or(String::new(), |g| paint(DIM, " › ") + &mark(g.0, stems, DIM));
+        let head = link("help", modules::path(m), mark(modules::path(m), stems, MODPATH))
+            + &group.map_or(String::new(), |g| paint(DIM, " › ") + &mark(g.0, stems, DIM));
         if head != last {
             out!("{head}");
             last = head;
         }
-        out!("  {}{}  {}", sig(f, mark(f.name, stems, NAME)), pad(f.sig, w), mark(f.desc, stems, ""));
+        out!("  {}{}  {}", sig(f, link("help", f.name, mark(f.name, stems, NAME))), pad(f.sig, w), mark(f.desc, stems, ""));
     }
 }
 
@@ -356,7 +380,7 @@ fn page(m: &Module) {
     }
     if !m.children.is_empty() {
         let w = m.children.iter().map(|c| c.name.chars().count()).max().unwrap_or(0);
-        let rows: Vec<_> = m.children.iter().map(|c| format!("{}{}  {}", paint(SUBMODULE, c.name), pad(c.name, w), c.about)).collect();
+        let rows: Vec<_> = m.children.iter().map(|c| format!("{}{}  {}", link("help", c.name, paint(SUBMODULE, c.name)), pad(c.name, w), c.about)).collect();
         framed(&paint(HEADING, "submodules"), &rows);
     }
     if m.fns.is_empty() {
@@ -430,7 +454,7 @@ pub fn tip(color: bool) -> String {
     let tips: Vec<_> = examples.chain(recipes).filter(|(_, code)| !code.is_empty()).collect();
     let (what, src) = tips[fastrand::usize(..tips.len())];
     capture(color, || {
-        framed(&format!("tip, {what}"), &src.lines().map(code).collect::<Vec<_>>());
+        framed(&format!("tip, {what}"), &src.lines().map(|l| snippet(l, src)).collect::<Vec<_>>());
         true
     })
     .unwrap_or_else(|e| e)
@@ -492,7 +516,7 @@ fn sig(f: &Doc, name: String) -> String {
 
 /// Function or unit names, colored and joined.
 pub fn names(names: &[&str], sep: &str) -> String {
-    names.iter().map(|n| paint(NAME, n)).collect::<Vec<_>>().join(sep)
+    names.iter().map(|n| link("help", n, paint(NAME, n))).collect::<Vec<_>>().join(sep)
 }
 
 pub fn paint(color: &str, s: &str) -> String {
@@ -501,7 +525,12 @@ pub fn paint(color: &str, s: &str) -> String {
 
 /// Code, syntax-highlighted when color is on.
 pub fn code(s: &str) -> String {
-    if COLOR.get() { crate::ansi::highlight(s) } else { s.to_string() }
+    snippet(s, s)
+}
+
+/// A `line` of the code `src`, syntax-highlighted when color is on; clicked, it runs all of `src`.
+fn snippet(line: &str, src: &str) -> String {
+    link("run", src, if COLOR.get() { crate::ansi::highlight(line) } else { line.to_string() })
 }
 
 /// Spaces padding uncolored `s` to width `w`; `{:<w$}` would count escape codes.
@@ -600,6 +629,18 @@ mod tests {
             format!("  {}  one two three four five\n      six seven", red("ab"))
         );
         assert_eq!(wrap("short", 30), "short");
+    }
+
+    #[test]
+    fn links_change_nothing_visible() {
+        for topic in [None, Some("upper"), Some("text"), Some("sorting"), Some("advanced")] {
+            let linked = linked(true, || live(Some((true, 100)), || help(topic, true))).unwrap();
+            let plain = live(Some((true, 100)), || help(topic, true)).unwrap();
+            assert!(linked.contains("\x1b]8;;zil:"), "{topic:?}: no links");
+            assert_eq!(crate::ansi::strip_ansi(&linked), crate::ansi::strip_ansi(&plain), "{topic:?}");
+        }
+        let upper = linked(true, || help(Some("upper"), true)).unwrap();
+        assert!(upper.contains("zil:help/upper") && upper.contains("zil:run/%22hello%22.upper"), "{upper}");
     }
 
     #[test]

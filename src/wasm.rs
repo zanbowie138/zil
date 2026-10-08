@@ -33,15 +33,51 @@ fn shown(v: &Value) -> String {
     }
 }
 
-/// Runs a script in a fresh interpreter: `[printed, result, error]`, each HTML and possibly empty.
+/// Runs a script in a fresh interpreter: `[printed, result, error, lines]`, the first three HTML and possibly empty.
+/// `lines` is JSON `[[line, text], ...]`: each 0-based line ending a statement with a one-line value, and the error's
+/// line, for the editor to show beside the code.
 #[wasm_bindgen]
 pub fn run(src: &str) -> Vec<String> {
     OUT.take();
-    let (result, err) = match crate::run(&mut Interp::new(), src) {
-        Ok(v) => (shown(&v), String::new()),
-        Err(e) => (String::new(), error::render(&e, "sandbox", src, true)),
+    let last_line = |end: usize| src[..end].trim_end().matches('\n').count();
+    let error_line = |e: &crate::Error| src[..e.labels.first().map_or(src.len(), |l| l.0.start).min(src.len())].matches('\n').count();
+    let mut lines: Vec<(usize, String)> = Vec::new();
+    let (result, err) = match parser::parse(src) {
+        Err(e) => {
+            lines.push((error_line(&e), format!("error: {}", e.msg)));
+            (String::new(), error::render(&e, "sandbox", src, true))
+        }
+        Ok(prog) => {
+            let mut interp = Interp::new();
+            let mut out = Ok(Value::Nil);
+            for (i, stmt) in prog.iter().enumerate() {
+                let line = last_line(stmt.span.end);
+                out = interp.run(&prog[i..=i]);
+                // A loop's value is just its last pass; `x = 5; x += 2` on one line shows only the last.
+                lines.retain(|l| l.0 != line);
+                match &out {
+                    Ok(v) if !matches!(stmt.kind, ExprKind::For(..) | ExprKind::While(..)) => {
+                        let text = strip_ansi(&shown(v));
+                        if !text.is_empty() && !text.contains('\n') {
+                            lines.push((line, text));
+                        }
+                    }
+                    Ok(_) => {}
+                    Err(e) => {
+                        lines.push((error_line(e), format!("error: {}", e.msg)));
+                        break;
+                    }
+                }
+            }
+            match out {
+                Ok(v) => (shown(&v), String::new()),
+                Err(e) => (String::new(), error::render(&e, "sandbox", src, true)),
+            }
+        }
     };
-    [OUT.take(), result, err].iter().map(|s| to_html(s.trim_end())).collect()
+    let mut html: Vec<_> = [OUT.take(), result, err].iter().map(|s| to_html(s.trim_end())).collect();
+    html.push(serde_json::to_string(&lines).unwrap());
+    html
 }
 
 /// Runs a docs code block one top-level statement at a time in one interpreter, like typing it into the REPL.
@@ -97,7 +133,7 @@ pub fn repl_reset() -> String {
         "zil {} {DIM}· help for docs{RESET}
 {}",
         env!("CARGO_PKG_VERSION"),
-        help::tip(true)
+        help::linked(true, || help::tip(true))
     ))
 }
 
@@ -111,7 +147,8 @@ pub fn repl_open(src: &str) -> bool {
 #[wasm_bindgen]
 pub fn repl(src: &str) -> Vec<String> {
     OUT.take();
-    let (shown, err) = match session::help_shorthand(src) {
+    // Help shown straight to the screen links its names and examples, for the sandbox to make clickable.
+    let (shown, err) = help::linked(session::help_call(src), || match session::help_shorthand(src) {
         Some(topic) => (help::help(topic, true).unwrap_or_else(|e| e), String::new()),
         // Like the terminal REPL, a bare `help(...)` or `tip()` comes back colored; the log scrolls, so nothing wraps.
         None => SESSION.with_borrow_mut(|(interp, n)| match help::live(session::help_call(src).then_some((true, usize::MAX)), || crate::run(interp, src)) {
@@ -122,6 +159,18 @@ pub fn repl(src: &str) -> Vec<String> {
             },
             Err(e) => (String::new(), error::render(&e, "<repl>", src, true)),
         }),
-    };
+    });
     [OUT.take(), shown, err].iter().map(|s| to_html(s.trim_end())).collect()
+}
+
+/// The sandbox editor's vocabulary, for completion, hover docs and highlighting, as JSON:
+/// `{fns: [[name, sig, desc, module], ...], units: [[names, desc], ...], consts: [name, ...], modules: [[path, about], ...]}`.
+#[wasm_bindgen]
+pub fn vocab() -> String {
+    use crate::modules::{ALL, modules, path, units};
+    let fns: Vec<_> = modules().flat_map(|m| m.fns.iter().map(move |f| (f.name, f.sig, f.desc, path(m)))).collect();
+    let units: Vec<_> = units::rows().map(|r| (r.0, r.4)).collect();
+    let consts: Vec<_> = modules().flat_map(|m| m.consts.iter().map(|c| c.0).chain(m.quantities.iter().map(|q| q.0))).collect();
+    let mods: Vec<_> = ALL.iter().map(|(p, m)| (p, m.about)).collect();
+    serde_json::json!({ "fns": fns, "units": units, "consts": consts, "modules": mods }).to_string()
 }
