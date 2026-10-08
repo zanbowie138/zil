@@ -149,11 +149,17 @@ Download a prebuilt binary from the [latest release](https://github.com/zanbowie
 
 | Platform              | Download                                                                                                                  |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Windows x64 installer | [zil-x86_64-pc-windows-msvc.msi](https://github.com/zanbowie138/zil/releases/latest/download/zil-x86_64-pc-windows-msvc.msi) |
+| Windows x64 portable  | [zil-x86_64-pc-windows-msvc-portable.zip](https://github.com/zanbowie138/zil/releases/latest/download/zil-x86_64-pc-windows-msvc-portable.zip) |
 | Windows x64           | [zil-x86_64-pc-windows-msvc.zip](https://github.com/zanbowie138/zil/releases/latest/download/zil-x86_64-pc-windows-msvc.zip) |
 | macOS (Apple Silicon) | [zil-aarch64-apple-darwin.tar.gz](https://github.com/zanbowie138/zil/releases/latest/download/zil-aarch64-apple-darwin.tar.gz) |
 | macOS (Intel)         | [zil-x86_64-apple-darwin.tar.gz](https://github.com/zanbowie138/zil/releases/latest/download/zil-x86_64-apple-darwin.tar.gz) |
 | Linux x64             | [zil-x86_64-unknown-linux-gnu.tar.gz](https://github.com/zanbowie138/zil/releases/latest/download/zil-x86_64-unknown-linux-gnu.tar.gz) |
 | Linux ARM64           | [zil-aarch64-unknown-linux-gnu.tar.gz](https://github.com/zanbowie138/zil/releases/latest/download/zil-aarch64-unknown-linux-gnu.tar.gz) |
+
+The Windows installer puts `zil` on your PATH and adds a Start menu shortcut to the REPL. The portable zip keeps its history and caches
+in its own `zil-data` folder and writes nothing anywhere else, so it can run from a USB stick. Any zil binary does the same if you make a
+`zil-data` folder next to it. Otherwise zil keeps them in `%LOCALAPPDATA%\zil` on Windows and `~/.cache/zil` elsewhere.
 
 Or build it with Cargo:
 

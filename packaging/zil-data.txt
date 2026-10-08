@@ -1,0 +1,3 @@
+This is the portable build of zil. Its REPL history and caches are kept in this
+folder, so nothing is written anywhere else on the machine. Delete this folder to
+have zil use %LOCALAPPDATA%\zil instead, like the installed version.

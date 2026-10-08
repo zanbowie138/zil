@@ -1,0 +1,30 @@
+<!-- The Windows installer, built by .github/workflows/release.yml:
+     wix build packaging/zil.wxs -arch x64 -d Version=0.2.0 -d Bin=target/release -o zil.msi -->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <!-- Never change the UpgradeCode: it is how a new version finds and replaces the old one. -->
+  <Package Name="zil" Manufacturer="Alexander Bui" Version="$(Version)" UpgradeCode="a4e062b0-216a-4529-a39e-3215e8a4fe28">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of zil is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+    <Icon Id="zil.exe" SourceFile="$(Bin)/zil.exe" />
+    <Property Id="ARPPRODUCTICON" Value="zil.exe" />
+    <Property Id="ARPHELPLINK" Value="https://zil.alexander-bui.com/docs/" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/zanbowie138/zil" />
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="zil">
+        <Component>
+          <File Source="$(Bin)/zil.exe" KeyPath="yes">
+            <Shortcut Name="zil" Description="zil calculator REPL" Directory="ProgramMenuFolder" WorkingDirectory="PersonalFolder" Icon="zil.exe" Advertise="yes" />
+          </File>
+          <!-- Removed again on uninstall. -->
+          <Environment Id="PATH" Name="PATH" Value="[INSTALLFOLDER]" Part="last" Action="set" System="yes" />
+        </Component>
+        <Component>
+          <File Source="LICENSE.md" />
+        </Component>
+        <Component>
+          <File Source="README.md" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+  </Package>
+</Wix>

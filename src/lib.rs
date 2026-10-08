@@ -48,8 +48,12 @@ fn print(s: &str) {
     println!("{s}")
 }
 
-/// Per-user cache for currency rates and REPL history.
+/// Per-user cache for currency rates and REPL history. A `zil-data` folder beside the executable takes its place:
+/// that is the portable build, which leaves nothing behind outside its own folder.
 pub fn cache_dir() -> Option<PathBuf> {
+    if let Some(dir) = std::env::current_exe().ok().and_then(|exe| Some(exe.parent()?.join("zil-data"))).filter(|d| d.is_dir()) {
+        return Some(dir);
+    }
     let env = |k| std::env::var_os(k).map(PathBuf::from);
     let base = env("XDG_CACHE_HOME").or_else(|| env("LOCALAPPDATA")).or_else(|| Some(env("HOME")?.join(".cache")))?;
     Some(base.join("zil"))

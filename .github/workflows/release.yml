@@ -16,10 +16,31 @@ jobs:
           - { target: aarch64-apple-darwin, os: macos-latest }
           - { target: x86_64-pc-windows-msvc, os: windows-latest }
     runs-on: ${{ matrix.os }}
+    env:
+      TZ: America/Chicago # the tests assume it
     steps:
       - uses: actions/checkout@v4
+      - run: cargo test --release
       - uses: taiki-e/upload-rust-binary-action@v1
         with:
           bin: zil
           target: ${{ matrix.target }}
+          include: LICENSE.md,README.md
           token: ${{ secrets.GITHUB_TOKEN }}
+      # The installer (packaging/zil.wxs) and the portable zip, whose zil-data folder keeps zil from writing anywhere else.
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          $bin = "target/${{ matrix.target }}/release"
+          $name = "zil-${{ matrix.target }}"
+          dotnet tool install --global wix --version 5.0.2
+          # MSI versions are plain numbers: v1.2.3-rc.1 installs as 1.2.3.
+          wix build packaging/zil.wxs -arch x64 -d Version=$(($env:TAG.TrimStart('v') -split '-')[0]) -d Bin=$bin -o "$name.msi"
+          New-Item -ItemType Directory zil/zil-data
+          Copy-Item $bin/zil.exe, LICENSE.md, README.md zil
+          Copy-Item packaging/zil-data.txt zil/zil-data/README.txt
+          Compress-Archive zil "$name-portable.zip"
+          gh release upload $env:TAG "$name.msi" "$name-portable.zip"

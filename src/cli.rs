@@ -20,6 +20,9 @@ const USAGE: &str = "usage: zil                        start the REPL
        zil --version             print the version";
 
 pub fn main() {
+    // The legacy console (e.g. a Start menu shortcut) shows ANSI colors as raw codes until asked not to.
+    #[cfg(windows)]
+    crossterm::ansi_support::supports_ansi();
     let t = std::thread::Builder::new().stack_size(STACK).spawn(real_main).expect("spawn interpreter thread");
     if t.join().is_err() {
         exit(101)
