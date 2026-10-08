@@ -6,7 +6,7 @@ use crate::modules::{Call, Doc, Fail, Module, doc};
 use crate::value::Value;
 use indexmap::IndexMap;
 
-/// Whether features that go online on their own (currency rates, translation) may do so.
+/// Whether features that go online on their own (currency rates, translation, zip codes) may do so.
 pub fn network_allowed() -> bool {
     crate::state::with(|s| s.network.get())
 }
@@ -27,7 +27,7 @@ pub const MODULE: Module = Module {
         ("scripts", &[
             ("zil script.zil a b  →  args() is [\"a\", \"b\"]", ""),
             ("sh fails on a non-zero exit; run never does", ""),
-            ("currency rates and translation stay offline until allow_network_access()", ""),
+            ("currency rates, translation and zip codes stay offline until allow_network_access()", ""),
         ]),
     ],
     fns: FNS,
@@ -45,7 +45,7 @@ const FNS: &[Doc] = &[
     doc("run", "run(cmd: str)", "run a shell command and return {code, out, err}; never fails on the exit code", &[], &["sh"]).shown(&[r#"run("git status").code"#]),
     doc("fetch", "fetch(url: str)", "HTTP GET a URL and return the body as a string; errors on a non-2xx status", &[], &["from_json"])
         .shown(&[r#"fetch("https://api.github.com/repos/rust-lang/rust").from_json.stargazers_count"#]),
-    doc("allow_network_access", "allow_network_access()", "let currency rates and translation go online for the rest of the session; until then they only use cached data", &[], &["fetch"])
+    doc("allow_network_access", "allow_network_access()", "let currency rates, translation and zip codes go online for the rest of the session; until then they only use cached data", &[], &["fetch"])
         .shown(&["allow_network_access()"]),
 ];
 
@@ -85,6 +85,24 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         }
         _ => return Err(Fail::BadArgs),
     })
+}
+
+/// `key`'s entry in the disk cache `file`, else `fetch`ed and cached for next time; `fetch` checks `network_allowed` itself.
+// ponytail: rereads and rewrites the whole cache file per call; keep it in memory if it grows large.
+pub fn cached(file: &str, key: &str, fetch: impl FnOnce() -> Result<String, String>) -> Result<String, String> {
+    let path = crate::cache_dir().map(|d| d.join(file));
+    let mut cache: serde_json::Map<String, serde_json::Value> =
+        path.as_ref().and_then(|p| std::fs::read_to_string(p).ok()).and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
+    if let Some(hit) = cache.get(key).and_then(|v| v.as_str()) {
+        return Ok(hit.into());
+    }
+    let out = fetch()?;
+    if let Some(p) = &path {
+        cache.insert(key.into(), out.clone().into());
+        let _ = std::fs::create_dir_all(p.parent().unwrap());
+        let _ = std::fs::write(p, serde_json::to_string(&cache).unwrap());
+    }
+    Ok(out)
 }
 
 /// HTTP GET `url` with `query` parameters, returning the body.

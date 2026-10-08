@@ -69,18 +69,14 @@ fn lang(s: &str) -> Result<&str, String> {
 }
 
 /// From the disk cache, else online if allowed; the result is cached for next time.
-// ponytail: rereads and rewrites the whole cache file per call; keep it in memory if it grows large.
 fn translate(text: &str, from: &str, to: &str) -> Result<String, String> {
     if from == to {
         return Ok(text.into());
     }
-    let path = crate::cache_dir().map(|d| d.join("translations.json"));
-    let mut cache: serde_json::Map<String, serde_json::Value> =
-        path.as_ref().and_then(|p| std::fs::read_to_string(p).ok()).and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
-    let key = format!("{from}|{to}|{text}");
-    if let Some(hit) = cache.get(&key).and_then(|v| v.as_str()) {
-        return Ok(hit.into());
-    }
+    crate::modules::sys::cached("translations.json", &format!("{from}|{to}|{text}"), || online(text, from, to))
+}
+
+fn online(text: &str, from: &str, to: &str) -> Result<String, String> {
     if !crate::modules::sys::network_allowed() {
         return Err("not cached; call allow_network_access() to translate online".into());
     }
@@ -95,13 +91,7 @@ fn translate(text: &str, from: &str, to: &str) -> Result<String, String> {
         }
         return Err(why);
     }
-    let out = json["responseData"]["translatedText"].as_str().ok_or("unexpected response")?.to_string();
-    if let Some(p) = &path {
-        cache.insert(key, out.clone().into());
-        let _ = std::fs::create_dir_all(p.parent().unwrap());
-        let _ = std::fs::write(p, serde_json::to_string(&cache).unwrap());
-    }
-    Ok(out)
+    Ok(json["responseData"]["translatedText"].as_str().ok_or("unexpected response")?.to_string())
 }
 
 #[cfg(test)]

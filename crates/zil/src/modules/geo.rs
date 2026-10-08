@@ -1,6 +1,7 @@
 //! Places: countries and cities from an embedded GeoNames extract (CC-BY 4.0, geonames.org): about 250
 //! countries and 1300 cities (capitals and everything over 500k people). Time zones, currencies and the
-//! sky look places up here, so `5pm to "Seattle"`, `$100 to "Japan"` and `sunset("Oslo")` work.
+//! sky look places up here, so `5pm to "Seattle"`, `$100 to "Japan"` and `sunset("Oslo")` work. Zip codes are
+//! looked up online through Zippopotam.us (zippopotam.us) and cached.
 
 use crate::ast::Target;
 use crate::error::did_you_mean;
@@ -14,7 +15,7 @@ use std::sync::LazyLock;
 
 pub const MODULE: Module = Module {
     name: "geo",
-    about: "countries and cities: lookups, distance, bearing, nearest city",
+    about: "countries, cities and zip codes: lookups, distance, bearing, nearest city",
     #[rustfmt::skip]
     examples: &[
         ("geo", &[
@@ -38,6 +39,7 @@ pub const MODULE: Module = Module {
             ("a place is a city or country name (a country means its capital), or a map with lat and lon", r#"great_circle("Paris", {lat: 0, lon: 0})"#),
         ]),
         ("currencies", &[("$100 to \"Vietnam\" converts into a place's currency (rates load as for 20 USD to EUR)", "")]),
+        ("zip codes", &[("zipcode looks codes up online after allow_network_access(); cached ones work offline", "")]),
         ("data", &[("GeoNames (CC-BY 4.0, geonames.org): capitals and cities over 500k people", "")]),
     ],
     fns: FNS,
@@ -55,6 +57,8 @@ const FNS: &[Doc] = &[
     doc("great_circle", "great_circle(from: str|map, to: str|map)", "great-circle distance between places", &[r#"great_circle("Tokyo", "Paris")"#, r#"great_circle("NYC", "LA") to mi"#], &["bearing", "nearest"]),
     doc("bearing", "bearing(from: str|map, to: str|map)", "initial compass bearing from one place to another, clockwise from north", &[r#"bearing("NYC", "London")"#], &["great_circle"]),
     doc("nearest", "nearest(lat: num, lon: num)", "the known city closest to a point", &["nearest(48.9, 2.3).name"], &["city", "great_circle"]),
+    doc("zipcode", "zipcode(code: str, country?: str)", "a zip or postal code (US unless a country is given): {code, place, state, country, lat, lon}; a place for great_circle", &[], &["city", "allow_network_access"])
+        .shown(&[r#"zipcode("90210").place"#, r#"zipcode("10115", "Germany")"#, r#"great_circle(zipcode("10001"), zipcode("94103")) to mi"#]),
 ];
 
 pub struct Country {
@@ -311,8 +315,34 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             let c = CITIES.iter().min_by(|a, b| haversine(p, (a.lat, a.lon)).total_cmp(&haversine(p, (b.lat, b.lon)))).expect("cities");
             city_map(c)
         }
+        ("zipcode", [Value::Str(code)]) => zipcode(code, "US").map_err(at(0))?,
+        ("zipcode", [Value::Str(code), Value::Str(k)]) => zipcode(code, find_country(k).ok_or_else(|| Fail::Arg(1, unknown(k)))?.code).map_err(at(0))?,
         _ => return Err(Fail::BadArgs),
     })
+}
+
+/// A postal code's first place, from the cache or Zippopotam.us; `country` is an ISO code.
+fn zipcode(code: &str, country: &str) -> Result<Value, String> {
+    let code = code.trim();
+    let body = crate::modules::sys::cached("zipcodes.json", &format!("{country}|{code}"), || {
+        if !crate::modules::sys::network_allowed() {
+            return Err("not cached; call allow_network_access() to look it up online".into());
+        }
+        let url = format!("https://api.zippopotam.us/{country}/{}", code.replace([' ', '/', '?', '#'], ""));
+        crate::modules::sys::get(&url, &[]).map_err(|e| if e.contains("404") { format!("unknown zip code {code:?} in {country}") } else { e })
+    })?;
+    let json: serde_json::Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+    let p = &json["places"][0];
+    let s = |v: &serde_json::Value| Value::str(v.as_str().unwrap_or_default());
+    let f = |v: &serde_json::Value| v.as_str().and_then(|x| x.parse().ok()).map(Value::Float).ok_or("unexpected response");
+    Ok(Value::map(IndexMap::from([
+        ("code".into(), s(&json["post code"])),
+        ("place".into(), s(&p["place name"])),
+        ("state".into(), s(&p["state"])),
+        ("country".into(), s(&json["country"])),
+        ("lat".into(), f(&p["latitude"])?),
+        ("lon".into(), f(&p["longitude"])?),
+    ])))
 }
 
 /// `$100 to "Japan"`: money into a place's currency.
@@ -372,5 +402,11 @@ mod tests {
         assert_eq!(show(r#"(date("2026-12-25T12:00Z") to "India").format("%H:%M")"#), "17:30");
         assert!(err(r#"$1 to "Antarctica""#).contains("has no currency"));
         assert!(err(r#"$1 to "Narnia""#).contains("unknown city or country"));
+    }
+
+    #[test]
+    fn zipcodes_offline_by_default() {
+        assert!(err(r#"zipcode("zil-test-99999")"#).contains("allow_network_access()"));
+        assert!(err(r#"zipcode("10115", "Narnia")"#).contains("unknown city or country"));
     }
 }
