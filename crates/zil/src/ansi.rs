@@ -3,11 +3,58 @@
 use crate::lexer::Tok;
 use crate::value::Value;
 
-pub const DIM: &str = "[2m";
-pub const CYAN: &str = "[36m";
-pub const GREEN: &str = "[32m";
-pub const MAGENTA: &str = "[35m";
-pub const BOLD: &str = "[1m";
+/// What a colored bit of output is: the theme, not the call site, decides how it looks.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Role {
+    /// Uncolored.
+    Plain,
+    Number,
+    Str,
+    Regex,
+    Bool,
+    Nil,
+    Keyword,
+    /// Secondary text: hints, notes, table rules.
+    Dim,
+    Prompt,
+    /// The `_n =` label on a REPL result.
+    ResultLabel,
+    TableHeader,
+    Heading,
+    ModulePath,
+    Submodule,
+    Name,
+    Type,
+    /// Titles of `help("advanced")` recipes.
+    Recipe,
+    /// Function groups on a module page, a step below headings.
+    Group,
+    /// Search matches, added on top of the text's own color.
+    SearchMatch,
+    StatusBar,
+}
+
+impl Role {
+    /// The role's style in the default theme.
+    pub fn code(self) -> &'static str {
+        match self {
+            Role::Plain => "",
+            Role::Number => "[36m",
+            Role::Str | Role::Regex | Role::Type => "[32m",
+            Role::Bool | Role::Nil | Role::Keyword => "[35m",
+            Role::Dim | Role::Prompt | Role::ResultLabel => "[2m",
+            Role::TableHeader => "[1m",
+            Role::Heading => "[1;33m",
+            Role::ModulePath => "[1;34m",
+            Role::Submodule => "[34m",
+            Role::Name => "[1;36m",
+            Role::Recipe => "[1;35m",
+            Role::Group => "[33m",
+            Role::SearchMatch | Role::StatusBar => "[7m",
+        }
+    }
+}
+
 pub const RESET: &str = "[0m";
 
 /// Whether to print colors: stdout is a terminal and `NO_COLOR` is unset.
@@ -25,13 +72,15 @@ pub fn columns() -> usize {
     80
 }
 
-/// A value's color by type, as REPL results and help show it.
-pub fn tint(v: &Value) -> &'static str {
+/// A value's role by type, as REPL results and help color it.
+pub fn tint(v: &Value) -> Role {
     match v {
-        Value::Int(..) | Value::Big(..) | Value::Frac(..) | Value::Float(_) | Value::Qty(..) | Value::Unc(..) | Value::Cplx(..) => CYAN,
-        Value::Str(_) | Value::Regex(_) => GREEN,
-        Value::Bool(_) | Value::Nil => MAGENTA,
-        _ => "",
+        Value::Int(..) | Value::Big(..) | Value::Frac(..) | Value::Float(_) | Value::Qty(..) | Value::Unc(..) | Value::Cplx(..) => Role::Number,
+        Value::Str(_) => Role::Str,
+        Value::Regex(_) => Role::Regex,
+        Value::Bool(_) => Role::Bool,
+        Value::Nil => Role::Nil,
+        _ => Role::Plain,
     }
 }
 
@@ -41,29 +90,17 @@ pub fn highlight(src: &str) -> String {
     let mut out = String::with_capacity(src.len() * 2);
     let mut last = 0;
     for (tok, span) in Tok::lexer(src).spanned() {
-        let color = match tok {
-            Ok(Tok::Int(_) | Tok::Float(_) | Tok::Dec(_) | Tok::Dur(_) | Tok::Clock(_) | Tok::Based(_) | Tok::Currency(_)) => CYAN,
-            Ok(Tok::Str(_) | Tok::Regex(_)) => GREEN,
-            Ok(
-                Tok::Fn
-                | Tok::If
-                | Tok::Else
-                | Tok::While
-                | Tok::For
-                | Tok::In
-                | Tok::To
-                | Tok::Of
-                | Tok::Return
-                | Tok::Break
-                | Tok::Continue
-                | Tok::True
-                | Tok::False
-                | Tok::Nil,
-            ) => MAGENTA,
+        let role = match tok {
+            Ok(Tok::Int(_) | Tok::Float(_) | Tok::Dec(_) | Tok::Dur(_) | Tok::Clock(_) | Tok::Based(_) | Tok::Currency(_)) => Role::Number,
+            Ok(Tok::Str(_)) => Role::Str,
+            Ok(Tok::Regex(_)) => Role::Regex,
+            Ok(Tok::True | Tok::False) => Role::Bool,
+            Ok(Tok::Nil) => Role::Nil,
+            Ok(Tok::Fn | Tok::If | Tok::Else | Tok::While | Tok::For | Tok::In | Tok::To | Tok::Of | Tok::Return | Tok::Break | Tok::Continue) => Role::Keyword,
             _ => continue,
         };
         out.push_str(&src[last..span.start]);
-        out.push_str(color);
+        out.push_str(role.code());
         out.push_str(&src[span.clone()]);
         out.push_str(RESET);
         last = span.end;

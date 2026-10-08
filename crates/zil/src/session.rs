@@ -1,7 +1,7 @@
 //! What a REPL session does with each input, shared by the terminal REPL (`repl`) and the browser's (`wasm`):
 //! when a line continues, `help topic` shorthand, and results saved and labeled as `_n`.
 
-use crate::ansi::{DIM, RESET, tint};
+use crate::ansi::{RESET, Role, tint};
 use crate::interp::Interp;
 use crate::lexer::{self, Tok};
 use crate::value::Value;
@@ -70,13 +70,13 @@ pub fn record(interp: &mut Interp, n: &mut usize, v: &Value) -> Shown {
 /// A numbered result labeled with the `_n` it's saved as, colored by type if `color`.
 pub fn show(n: usize, v: &Value, color: bool) -> String {
     if let Value::Table(t) = v {
-        let label = if color { format!("{DIM} · _{n}{RESET}") } else { format!(" · _{n}") };
+        let label = if color { format!("{} · _{n}{RESET}", Role::ResultLabel.code()) } else { format!(" · _{n}") };
         return crate::modules::data::tables::grid(t, color) + &label;
     }
     if !color {
         return format!("_{n} = {v}");
     }
-    format!("{DIM}_{n} ={RESET} {}{v}{RESET}", tint(v))
+    format!("{}_{n} ={RESET} {}{v}{RESET}", Role::ResultLabel.code(), tint(v).code())
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 //! A full-screen pager for long REPL help and `page(...)`: arrows, PgUp/PgDn, Space, Home/End and the mouse wheel scroll, `/` searches
 //! (`n`/`N` step through matches), `q` or Esc quits and leaves the page being read in the scrollback.
 
-use crate::ansi::strip_ansi;
+use crate::ansi::{Role, strip_ansi};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEventKind};
 use crossterm::{cursor, execute, queue, terminal};
 use std::io::{Write, stdout};
@@ -146,7 +146,7 @@ fn draw(lines: &[&str], top: usize, rows: usize, width: usize, query: &str, typi
     let status: String = status.chars().take(width).collect();
     // Padded to full width, so it covers the old bar without clearing first.
     queue!(out, cursor::MoveTo(0, rows as u16))?;
-    write!(out, "\x1b[7m{status:<width$}\x1b[0m")?;
+    write!(out, "{}{status:<width$}\x1b[0m", Role::StatusBar.code())?;
     if typing.is_some() {
         queue!(out, cursor::MoveTo(status.chars().count() as u16, rows as u16), cursor::Show)?;
     } else {
@@ -178,8 +178,9 @@ fn mark(line: &str, query: &str) -> String {
         if visible[v..v + q.len()] == q[..] {
             let (s, e) = (at[v], at[v + q.len()]);
             out.push_str(&line[last..s]);
-            out.push_str("\x1b[7m");
+            out.push_str(Role::SearchMatch.code());
             out.push_str(&line[s..e]);
+            // ponytail: 27 undoes only reverse; a match style that isn't reverse needs the line's own style re-applied here.
             out.push_str("\x1b[27m");
             last = e;
             v += q.len();

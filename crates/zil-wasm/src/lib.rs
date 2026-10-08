@@ -3,7 +3,7 @@
 
 use std::cell::RefCell;
 use wasm_bindgen::prelude::wasm_bindgen;
-use zil::ansi::{DIM, RESET, strip_ansi, tint, to_html};
+use zil::ansi::{RESET, Role, strip_ansi, tint, to_html};
 use zil::ast::ExprKind;
 use zil::interp::Interp;
 use zil::session::{self, Shown};
@@ -21,7 +21,7 @@ fn shown(v: &Value) -> String {
         Value::Nil | Value::Fn(_) => String::new(),
         Value::Table(t) => zil::modules::data::tables::grid(t, true),
         Value::Str(s) if s.contains(['\n', '\x1b']) => s.to_string(),
-        v => format!("{}{v:?}{RESET}", tint(v)),
+        v => format!("{}{v:?}{RESET}", tint(v).code()),
     }
 }
 
@@ -128,9 +128,10 @@ pub fn tour() -> String {
 pub fn repl_reset() -> String {
     SESSION.set((Interp::new(), 0));
     to_html(&format!(
-        "zil {} {DIM}· help for docs{RESET}
+        "zil {} {}· help for docs{RESET}
 {}",
         env!("CARGO_PKG_VERSION"),
+        Role::Dim.code(),
         help::linked(true, || help::tip(true))
     ))
 }

@@ -4,7 +4,7 @@ use crate::report;
 use rustyline::error::ReadlineError;
 use std::borrow::Cow;
 use std::rc::Rc;
-use zil::ansi::{DIM, RESET, color_on, highlight};
+use zil::ansi::{RESET, Role, color_on, highlight};
 use zil::interp::{self, Interp};
 use zil::lexer::{self, Tok};
 use zil::session::{self, Shown, help_shorthand, unclosed};
@@ -101,10 +101,10 @@ impl rustyline::highlight::Highlighter for Names {
         Cow::Owned(highlight(line))
     }
     fn highlight_prompt<'b, 's: 'b, 'p: 'b>(&'s self, prompt: &'p str, _: bool) -> Cow<'b, str> {
-        Cow::Owned(format!("{DIM}{prompt}{RESET}"))
+        Cow::Owned(format!("{}{prompt}{RESET}", Role::Prompt.code()))
     }
     fn highlight_hint<'h>(&self, hint: &'h str) -> Cow<'h, str> {
-        Cow::Owned(format!("{DIM}{hint}{RESET}"))
+        Cow::Owned(format!("{}{hint}{RESET}", Role::Dim.code()))
     }
     fn highlight_char(&self, _: &str, _: usize, _: rustyline::highlight::CmdKind) -> bool {
         true
@@ -143,7 +143,7 @@ pub fn repl(interp: &mut Interp) {
     if let Some(h) = &history {
         let _ = rl.load_history(h);
     }
-    let (dim, reset) = if color_on() { (DIM, RESET) } else { ("", "") };
+    let (dim, reset) = if color_on() { (Role::Dim.code(), RESET) } else { ("", "") };
     println!("zil {} {dim}· help for docs, Alt-Q to set a line aside, exit or Ctrl-D to quit{reset}", env!("CARGO_PKG_VERSION"));
     println!("{}\n", help::tip(color_on()));
     let mut buf = String::new();
@@ -207,7 +207,6 @@ pub fn repl(interp: &mut Interp) {
 mod tests {
     use super::*;
     use rustyline::completion::Completer;
-    use zil::ansi::{CYAN, GREEN, MAGENTA};
 
     #[test]
     fn completes_names_at_cursor() {
@@ -245,6 +244,6 @@ mod tests {
         assert_eq!(names.hint("x.upp", 5, &ctx).as_deref(), Some("er"));
         assert_eq!(names.hint("x.upp", 3, &ctx), None);
         let line = names.highlight("if x 5 \"s\"", 0);
-        assert_eq!(line, format!("{MAGENTA}if{RESET} x {CYAN}5{RESET} {GREEN}\"s\"{RESET}"));
+        assert_eq!(line, format!("{}if{RESET} x {}5{RESET} {}\"s\"{RESET}", Role::Keyword.code(), Role::Number.code(), Role::Str.code()));
     }
 }

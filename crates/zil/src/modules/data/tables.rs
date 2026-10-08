@@ -1,6 +1,6 @@
 //! Tables: rows under named columns, like nushell's. `ls`, `glob` and `from_csv` make them.
 
-use crate::ansi::{BOLD, DIM, RESET};
+use crate::ansi::{RESET, Role};
 use crate::interp::Interp;
 use crate::lexer::Span;
 use crate::modules::{Call, Doc, Fail, Module, doc};
@@ -157,12 +157,12 @@ pub fn grid(t: &Table, color: bool) -> String {
 
 /// `grid`, with each cell shown by `cell`.
 pub fn grid_with(t: &Table, color: bool, cell: &dyn Fn(&Value) -> String) -> String {
-    let paint = |c: &str, s: &str| if color && !c.is_empty() { format!("{c}{s}{RESET}") } else { s.to_string() };
+    let paint = |r: Role, s: &str| if color && r != Role::Plain { format!("{}{s}{RESET}", r.code()) } else { s.to_string() };
     let n = t.cols.len();
     let numeric: Vec<bool> = (0..n)
         .map(|c| {
             let mut vs = t.rows.iter().map(|r| &r[c]).filter(|v| !matches!(v, Value::Nil)).peekable();
-            vs.peek().is_some() && vs.all(|v| crate::ansi::tint(v) == crate::ansi::CYAN)
+            vs.peek().is_some() && vs.all(|v| crate::ansi::tint(v) == Role::Number)
         })
         .collect();
     // One long cell (a description, a list) would otherwise pad its whole column: text past MAX ends in `…`.
@@ -172,29 +172,29 @@ pub fn grid_with(t: &Table, color: bool, cell: &dyn Fn(&Value) -> String) -> Str
     let width = |c: usize| cells.iter().map(|r| r[c].chars().count()).chain([t.cols[c].chars().count()]).max().unwrap_or(0);
     let widths: Vec<usize> = (0..n).map(width).collect();
     let iw = t.rows.len().saturating_sub(1).to_string().len();
-    let line = |idx: &str, row: &[(String, &str)]| {
-        let mut s = format!(" {}", paint(DIM, &format!("{idx:>iw$}")));
+    let line = |idx: &str, row: &[(String, Role)]| {
+        let mut s = format!(" {}", paint(Role::Dim, &format!("{idx:>iw$}")));
         for (c, (text, tint)) in row.iter().enumerate() {
             let pad = " ".repeat(widths[c] - text.chars().count());
             let last = c + 1 == n;
             s += "  ";
             s += &match numeric[c] {
-                true => format!("{pad}{}", paint(tint, text)),
-                false if last => paint(tint, text),
-                false => format!("{}{pad}", paint(tint, text)),
+                true => format!("{pad}{}", paint(*tint, text)),
+                false if last => paint(*tint, text),
+                false => format!("{}{pad}", paint(*tint, text)),
             };
         }
         s
     };
     let total = 1 + iw + widths.iter().map(|w| w + 2).sum::<usize>();
-    let rule = paint(DIM, &"─".repeat(total));
-    let mut out = vec![line("#", &t.cols.iter().map(|c| (c.clone(), BOLD)).collect::<Vec<_>>()), rule.clone()];
+    let rule = paint(Role::Dim, &"─".repeat(total));
+    let mut out = vec![line("#", &t.cols.iter().map(|c| (c.clone(), Role::TableHeader)).collect::<Vec<_>>()), rule.clone()];
     for (i, (r, cs)) in t.rows.iter().zip(cells).enumerate() {
         out.push(line(&i.to_string(), &cs.into_iter().zip(r.iter().map(crate::ansi::tint)).collect::<Vec<_>>()));
     }
     let plural = |k: usize, w: &str| format!("{k} {w}{}", if k == 1 { "" } else { "s" });
     out.push(rule);
-    out.push(paint(DIM, &format!(" {} · {}", plural(t.rows.len(), "row"), plural(n, "column"))));
+    out.push(paint(Role::Dim, &format!(" {} · {}", plural(t.rows.len(), "row"), plural(n, "column"))));
     out.join("\n")
 }
 

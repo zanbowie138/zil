@@ -1,23 +1,10 @@
 //! `help`: rendered from each module's docs; every example shown is evaluated live in a fresh interpreter.
 
-use crate::ansi::{DIM, RESET};
+use crate::ansi::{RESET, Role};
 use crate::guide::{ADVANCED, ADVANCED_UNRUN, HIGHLIGHTS, SYNTAX};
 use crate::interp::Interp;
 use crate::modules::{self, ALL, Doc, Module, Section, modules, units};
 use std::cell::{Cell, RefCell};
-
-/// Help colors: headings, module paths, function and unit names, parameter types.
-pub const HEADING: &str = "\x1b[1;33m";
-pub const MODPATH: &str = "\x1b[1;34m";
-const SUBMODULE: &str = "\x1b[34m";
-pub const NAME: &str = "\x1b[1;36m";
-const TYPE: &str = "\x1b[32m";
-/// Titles of `help("advanced")` recipes, set apart from the code under them.
-const RECIPE: &str = "\x1b[1;35m";
-/// Function groups on a module page (`shape`, `search`), a step below headings.
-const GROUP: &str = "\x1b[33m";
-/// Search matches, added on top of the text's own color.
-const REVERSE: &str = "\x1b[7m";
 
 thread_local! {
     /// What the page renderers below write to, read back by `capture`.
@@ -175,13 +162,13 @@ fn render(topic: Option<&str>) -> bool {
     }
     let hits = search(topic);
     if hits.is_empty() {
-        let near: Vec<_> = near(topic).iter().map(|n| link("help", n, paint(NAME, n))).collect();
+        let near: Vec<_> = near(topic).iter().map(|n| link("help", n, paint(Role::Name, n))).collect();
         let hint = if near.is_empty() { String::new() } else { format!("; did you mean {}?", near.join(", ")) };
         out!("no help for {topic:?}{hint}  help() for an overview");
         return false;
     }
     let n = hits.len();
-    let head = paint(HEADING, &format!("search {topic:?}: {n} function{}", if n == 1 { "" } else { "s" }));
+    let head = paint(Role::Heading, &format!("search {topic:?}: {n} function{}", if n == 1 { "" } else { "s" }));
     framed(&head, &collected(|| listing(hits, &stems(topic))));
     true
 }
@@ -197,13 +184,13 @@ pub fn type_page(ty: &str) -> bool {
     if hits.is_empty() {
         return false;
     }
-    framed(&format!("functions taking a {} first, so x.f(...) works", paint(TYPE, ty)), &collected(|| listing(hits, &[])));
+    framed(&format!("functions taking a {} first, so x.f(...) works", paint(Role::Type, ty)), &collected(|| listing(hits, &[])));
     true
 }
 
 /// `help()`: what zil is, its module tree, and how to dig deeper.
 fn overview() {
-    out!("{}: a calculator and scripting language.", paint(MODPATH, "zil"));
+    out!("{}: a calculator and scripting language.", paint(Role::ModulePath, "zil"));
     let start = [
         (r#"help("examples")"#, "start here: a few dozen one-liners, module by module"),
         (r#"help("syntax")"#, "the language at a glance"),
@@ -224,7 +211,10 @@ fn overview() {
     // One width across both tables so their descriptions line up.
     let w = start.iter().chain(&usage).map(|r| r.0.chars().count()).max().unwrap_or(0);
     for (title, rows) in [("start", &start[..]), ("help usage", &usage[..])] {
-        framed(&paint(HEADING, title), &rows.iter().map(|(ex, what)| format!("{}{}  {}", code(ex), pad(ex, w), paint(DIM, what))).collect::<Vec<_>>());
+        framed(
+            &paint(Role::Heading, title),
+            &rows.iter().map(|(ex, what)| format!("{}{}  {}", code(ex), pad(ex, w), paint(Role::Dim, what))).collect::<Vec<_>>(),
+        );
     }
     let types = |m: &Module| m.guide.iter().find(|s| s.0 == "types").map(|s| s.1.iter().map(|r| r.0.split(':').next().unwrap()).collect::<Vec<_>>().join(" "));
     // Indented by depth: two spaces per dot in the path.
@@ -233,12 +223,12 @@ fn overview() {
     let rows: Vec<_> = rows
         .into_iter()
         .map(|(name, m)| {
-            let types = types(m).map_or(String::new(), |t| format!(" {}", paint(DIM, &format!("[{t}]"))));
-            let label = name.replace(m.name, &link("help", m.name, paint(if name.starts_with(' ') { SUBMODULE } else { MODPATH }, m.name)));
+            let types = types(m).map_or(String::new(), |t| format!(" {}", paint(Role::Dim, &format!("[{t}]"))));
+            let label = name.replace(m.name, &link("help", m.name, paint(if name.starts_with(' ') { Role::Submodule } else { Role::ModulePath }, m.name)));
             format!("{label}{}  {}{types}", pad(&name, w), m.about)
         })
         .collect();
-    framed(&paint(HEADING, "modules"), &rows);
+    framed(&paint(Role::Heading, "modules"), &rows);
 }
 
 /// `help("examples")`: the highlights, then every module's showcase, aligned per module so one long line doesn't stretch them all.
@@ -247,20 +237,20 @@ fn examples() {
     for m in modules() {
         sections(m.examples);
     }
-    out!("\n{}", paint(DIM, r#"help("time") etc. for a module's full function list"#));
+    out!("\n{}", paint(Role::Dim, r#"help("time") etc. for a module's full function list"#));
 }
 
 /// `help("advanced")`: each recipe's title and modules, its script, then its live result.
 fn advanced() {
     let unrun = std::iter::once((ADVANCED_UNRUN, false));
     for ((theme, recipes), run) in ADVANCED.iter().map(|t| (*t, true)).chain(unrun) {
-        out!("\n{}", paint(HEADING, theme));
+        out!("\n{}", paint(Role::Heading, theme));
         for (title, uses, src) in recipes {
             let mut lines: Vec<_> = src.lines().map(|l| snippet(l, src)).collect();
             if run {
-                lines.push(format!("{} {}", paint(DIM, "→"), below(&result(src).1)));
+                lines.push(format!("{} {}", paint(Role::Dim, "→"), below(&result(src).1)));
             }
-            framed(&format!("{}  {}", paint(RECIPE, title), paint(DIM, &format!("({uses})"))), &lines);
+            framed(&format!("{}  {}", paint(Role::Recipe, title), paint(Role::Dim, &format!("({uses})"))), &lines);
         }
     }
 }
@@ -274,30 +264,30 @@ fn docs() -> impl Iterator<Item = (&'static Module, &'static Doc)> {
 fn function(m: &Module, f: &Doc) {
     let group = m.groups.iter().find(|g| g.1.contains(&f.name)).map_or(String::new(), |g| format!(" › {}", g.0));
     let path = modules::path(m);
-    framed(&format!("{}{}", link("help", path, paint(MODPATH, path)), paint(DIM, &group)), &collected(|| body(m, f, true)));
+    framed(&format!("{}{}", link("help", path, paint(Role::ModulePath, path)), paint(Role::Dim, &group)), &collected(|| body(m, f, true)));
 }
 
 /// A function's signature, description, live examples and, if `see`, related functions.
 fn body(m: &Module, f: &Doc, see: bool) {
-    out!("{}  {}", sig(f, link("help", f.name, paint(NAME, f.name))), f.desc);
+    out!("{}  {}", sig(f, link("help", f.name, paint(Role::Name, f.name))), f.desc);
     show(f.examples.iter().map(|e| e.to_string()).collect());
     for ex in f.shown {
         out!("  {}", code(ex));
     }
     if f.name == "help" {
-        out!("  {}  {}", code("help upper"), paint(DIM, "(REPL shorthand)"));
+        out!("  {}  {}", code("help upper"), paint(Role::Dim, "(REPL shorthand)"));
     }
     // Unboxed: the function is already in a box.
     if f.pretty {
         for (heading, lines) in rows(&m.guide.iter().filter(|s| s.0 == "pretty").copied().collect::<Vec<_>>()) {
-            out!("\n{}", paint(HEADING, heading));
+            out!("\n{}", paint(Role::Heading, heading));
             for line in lines {
                 out!("  {line}");
             }
         }
     }
     if see && !f.see.is_empty() {
-        out!("{} {}", paint(DIM, "see also:"), names(f.see, ", "));
+        out!("{} {}", paint(Role::Dim, "see also:"), names(f.see, ", "));
     }
 }
 
@@ -308,29 +298,30 @@ fn listing(hits: Vec<(&Module, &Doc)>, stems: &[String]) {
     let mut last = String::new();
     for (m, f) in hits {
         let group = m.groups.iter().find(|g| g.1.contains(&f.name) && stems.iter().any(|s| s == g.0));
-        let head = link("help", modules::path(m), mark(modules::path(m), stems, MODPATH))
-            + &group.map_or(String::new(), |g| paint(DIM, " › ") + &mark(g.0, stems, DIM));
+        let head = link("help", modules::path(m), mark(modules::path(m), stems, Role::ModulePath))
+            + &group.map_or(String::new(), |g| paint(Role::Dim, " › ") + &mark(g.0, stems, Role::Dim));
         if head != last {
             out!("{head}");
             last = head;
         }
-        out!("  {}{}  {}", sig(f, link("help", f.name, mark(f.name, stems, NAME))), pad(f.sig, w), mark(f.desc, stems, ""));
+        out!("  {}{}  {}", sig(f, link("help", f.name, mark(f.name, stems, Role::Name))), pad(f.sig, w), mark(f.desc, stems, Role::Plain));
     }
 }
 
 /// `s` painted `color`, with every hit of the longest stem it contains in reverse video.
-fn mark(s: &str, stems: &[String], color: &str) -> String {
+fn mark(s: &str, stems: &[String], role: Role) -> String {
     let lower = s.to_lowercase();
     // Byte offsets in `lower` only line up with `s` when lowercasing kept the length.
     let stem = stems.iter().filter(|t| lower.len() == s.len() && lower.contains(t.as_str())).max_by_key(|t| t.len());
-    let Some(stem) = stem else { return paint(color, s) };
+    let Some(stem) = stem else { return paint(role, s) };
     let (mut out, mut at) = (String::new(), 0);
     for (i, _) in lower.match_indices(stem.as_str()) {
-        out += &paint(color, &s[at..i]);
-        out += &paint(&format!("{color}{REVERSE}"), &s[i..i + stem.len()]);
+        out += &paint(role, &s[at..i]);
+        let hit = &s[i..i + stem.len()];
+        out += &if COLOR.get() { format!("{}{}{hit}{RESET}", role.code(), Role::SearchMatch.code()) } else { hit.to_string() };
         at = i + stem.len();
     }
-    out + &paint(color, &s[at..])
+    out + &paint(role, &s[at..])
 }
 
 /// `topic` lowercased, plus crude suffix stems ("sorting" → "sort").
@@ -361,7 +352,7 @@ fn near(topic: &str) -> Vec<&'static str> {
 
 /// A module's page: what it adds (types, operators, conversions, units...), its submodules, then its functions by group.
 fn page(m: &Module) {
-    out!("{}: {}", paint(MODPATH, modules::path(m)), m.about);
+    out!("{}: {}", paint(Role::ModulePath, modules::path(m)), m.about);
     sections(m.guide);
     let kinds = units::kinds(m.units);
     if !kinds.is_empty() {
@@ -370,18 +361,19 @@ fn page(m: &Module) {
             .iter()
             .map(|(kind, rows)| {
                 let units: Vec<_> = rows.iter().map(|r| r.0.split(' ').next().unwrap()).collect();
-                format!("{}{}  {}", paint(DIM, kind), pad(kind, w), names(&units, " "))
+                format!("{}{}  {}", paint(Role::Dim, kind), pad(kind, w), names(&units, " "))
             })
             .collect();
-        framed(&paint(HEADING, "units"), &rows);
+        framed(&paint(Role::Heading, "units"), &rows);
     }
     if let Some(topic) = m.topic {
         topic(m.name);
     }
     if !m.children.is_empty() {
         let w = m.children.iter().map(|c| c.name.chars().count()).max().unwrap_or(0);
-        let rows: Vec<_> = m.children.iter().map(|c| format!("{}{}  {}", link("help", c.name, paint(SUBMODULE, c.name)), pad(c.name, w), c.about)).collect();
-        framed(&paint(HEADING, "submodules"), &rows);
+        let rows: Vec<_> =
+            m.children.iter().map(|c| format!("{}{}  {}", link("help", c.name, paint(Role::Submodule, c.name)), pad(c.name, w), c.about)).collect();
+        framed(&paint(Role::Heading, "submodules"), &rows);
     }
     if m.fns.is_empty() {
         return;
@@ -397,14 +389,14 @@ fn page(m: &Module) {
                 body(m, f, false);
             }
         });
-        framed(&paint(if m.groups.is_empty() { HEADING } else { GROUP }, name), &lines);
+        framed(&paint(if m.groups.is_empty() { Role::Heading } else { Role::Group }, name), &lines);
     }
 }
 
 /// Help sections, each in its own box of aligned `label  example  → result` rows; an empty example prints the label alone.
 fn sections(guide: &[Section]) {
     for (heading, lines) in rows(guide) {
-        framed(&paint(HEADING, heading), &lines);
+        framed(&paint(Role::Heading, heading), &lines);
     }
 }
 
@@ -415,11 +407,15 @@ fn rows(guide: &[Section]) -> Vec<(&str, Vec<String>)> {
     let ew = rows.iter().map(|r| r.1.chars().count()).max().unwrap_or(0);
     let row = |&(label, ex): &(&str, &str)| {
         if ex.is_empty() {
-            return paint(DIM, label);
+            return paint(Role::Dim, label);
         }
         let (plain, colored) = result(ex);
-        let label = format!("{}{}", paint(DIM, label), pad(label, lw));
-        if plain == ex { format!("{label}  {}", code(ex)) } else { format!("{label}  {}{}  {} {}", code(ex), pad(ex, ew), paint(DIM, "→"), below(&colored)) }
+        let label = format!("{}{}", paint(Role::Dim, label), pad(label, lw));
+        if plain == ex {
+            format!("{label}  {}", code(ex))
+        } else {
+            format!("{label}  {}{}  {} {}", code(ex), pad(ex, ew), paint(Role::Dim, "→"), below(&colored))
+        }
     };
     guide.iter().map(|(heading, rows)| (*heading, rows.iter().map(row).collect())).collect()
 }
@@ -442,7 +438,7 @@ fn framed(label: &str, lines: &[String]) {
         }
         return;
     }
-    let (dim, reset) = if COLOR.get() { (DIM, RESET) } else { ("", "") };
+    let (dim, reset) = if COLOR.get() { (Role::Dim.code(), RESET) } else { ("", "") };
     out!("\n{}", crate::ansi::boxed(label, &body.join("\n"), dim, reset));
 }
 
@@ -471,7 +467,7 @@ fn collected(f: impl FnOnce()) -> Vec<String> {
 pub fn show(examples: Vec<String>) {
     let w = examples.iter().map(|e| e.chars().count()).max().unwrap_or(0);
     for ex in &examples {
-        out!("  {}{}  {} {}", code(ex), pad(ex, w), paint(DIM, "→"), below(&result(ex).1));
+        out!("  {}{}  {} {}", code(ex), pad(ex, w), paint(Role::Dim, "→"), below(&result(ex).1));
     }
 }
 
@@ -508,7 +504,7 @@ fn result(src: &str) -> (String, String) {
 fn sig(f: &Doc, name: String) -> String {
     let types = regex::Regex::new(r": ([^,)]+)").unwrap();
     let form = |form: &str| match form.strip_prefix(f.name) {
-        Some(rest) => format!("{}{}", name, types.replace_all(rest, |c: &regex::Captures| format!(": {}", paint(TYPE, &c[1])))),
+        Some(rest) => format!("{}{}", name, types.replace_all(rest, |c: &regex::Captures| format!(": {}", paint(Role::Type, &c[1])))),
         None => form.to_string(),
     };
     f.sig.split(" / ").map(form).collect::<Vec<_>>().join(" / ")
@@ -516,11 +512,11 @@ fn sig(f: &Doc, name: String) -> String {
 
 /// Function or unit names, colored and joined.
 pub fn names(names: &[&str], sep: &str) -> String {
-    names.iter().map(|n| link("help", n, paint(NAME, n))).collect::<Vec<_>>().join(sep)
+    names.iter().map(|n| link("help", n, paint(Role::Name, n))).collect::<Vec<_>>().join(sep)
 }
 
-pub fn paint(color: &str, s: &str) -> String {
-    if color.is_empty() || !COLOR.get() { s.to_string() } else { format!("{color}{s}{RESET}") }
+pub fn paint(role: Role, s: &str) -> String {
+    if role == Role::Plain || !COLOR.get() { s.to_string() } else { format!("{}{s}{RESET}", role.code()) }
 }
 
 /// Code, syntax-highlighted when color is on.
@@ -564,7 +560,7 @@ mod tests {
             let name = row.0.split(' ').next().unwrap();
             assert!(!help(Some(name), false).unwrap().contains("error:"), "help({name:?})");
         }
-        assert!(help(Some("upper"), true).unwrap().contains(NAME));
+        assert!(help(Some("upper"), true).unwrap().contains(Role::Name.code()));
         assert!(!help(Some("km"), false).unwrap().contains('\x1b'));
         assert!(found("syntax"));
         assert!(found("advanced"));
@@ -594,7 +590,7 @@ mod tests {
     #[test]
     fn search_marks_matches_and_groups() {
         let sorting = help(Some("sorting"), true).unwrap();
-        assert!(sorting.contains(&format!("{REVERSE}sort")), "{sorting}");
+        assert!(sorting.contains(&format!("{}sort", Role::SearchMatch.code())), "{sorting}");
         let spread = crate::ansi::strip_ansi(&help(Some("spread"), false).unwrap());
         assert!(spread.starts_with("╭─ search \"spread\": ") && spread.contains("math.stats › spread"), "{spread}");
     }

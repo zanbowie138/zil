@@ -268,29 +268,29 @@ pub fn unit_of(spec: &UnitSpec) -> Result<Unit, String> {
 
 /// `help("units")`, `help("length")`, `help("km")`, `help("currency")`.
 fn topic(topic: &str) -> bool {
-    use crate::ansi::DIM;
-    use crate::help::{HEADING, NAME, code, eval, names, out, pad, paint, show};
+    use crate::ansi::Role;
+    use crate::help::{code, eval, names, out, pad, paint, show};
     if topic == "units" {
         let w = DIMS.iter().map(|d| d.0.len()).max().unwrap_or(0);
-        out!("  {}{}  3-letter codes (USD EUR GBP ...), live rates fetched when converting", paint(DIM, "currency"), pad("currency", w));
-        out!("{}", paint(DIM, r#"help("length") or help("km") for details"#));
+        out!("  {}{}  3-letter codes (USD EUR GBP ...), live rates fetched when converting", paint(Role::Dim, "currency"), pad("currency", w));
+        out!("{}", paint(Role::Dim, r#"help("length") or help("km") for details"#));
     } else if topic == "currency" {
-        out!("{}: 3-letter codes like USD, EUR, GBP, JPY. Rates by Exchange Rate API (exchangerate-api.com),", paint(NAME, "currency"));
+        out!("{}: 3-letter codes like USD, EUR, GBP, JPY. Rates by Exchange Rate API (exchangerate-api.com),", paint(Role::Name, "currency"));
         out!("are fetched only when two currencies meet, after allow_network_access(), and cached for a day.");
         out!("  {}", code("100 USD to EUR"));
     } else if let Some(kind) = DIMS.iter().map(|d| d.0).find(|k| *k == topic) {
         let units = units_of(kind);
-        out!("{}: {}", paint(HEADING, &format!("{kind} units")), names(&units, " "));
+        out!("{}: {}", paint(Role::Heading, &format!("{kind} units")), names(&units, " "));
         show(vec![format!("1 {} to {}", units[1], units[0]), format!("1 {} to {}", units[0], units[units.len() - 1])]);
-        out!("{}", paint(DIM, r#"help("km") etc. for one unit"#));
+        out!("{}", paint(Role::Dim, r#"help("km") etc. for one unit"#));
     } else if let Some((names, scale, offset, dim, about)) = rows().find(|row| row.0.split(' ').any(|n| n == topic)) {
         let mut names = names.split(' ');
         let name = names.next().unwrap();
         let (full, desc) = about.split_once(": ").expect("unit description is \"full name: description\"");
         let kind = DIMS.iter().find(|d| d.1 == *dim).map(|d| d.0);
-        out!("{}{}", paint(NAME, name), if full == name { String::new() } else { format!(": {full}") });
+        out!("{}{}", paint(Role::Name, name), if full == name { String::new() } else { format!(": {full}") });
         out!("  {desc}");
-        let row = |label: &str, text: String| out!("  {}  {text}", paint(DIM, &format!("{label:<6}")));
+        let row = |label: &str, text: String| out!("  {}  {text}", paint(Role::Dim, &format!("{label:<6}")));
         // A goofy-only kind (gee) has no name and no real units to compare with.
         let Some(kind) = kind else {
             row("equals", code(&format!("1 {name} = {}", eval(&format!("1 {name} to {}", base_name(dim))))));
@@ -313,11 +313,11 @@ fn topic(topic: &str) -> bool {
         let other = others.iter().filter(|r| r.0 != base).min_by(|a, b| closeness(a).total_cmp(&closeness(b))).or(others.first()).unwrap().0;
         out!("");
         show(vec![format!("1 {name} to {other}"), format!("1 {other} to {name}")]);
-        out!("{}", paint(DIM, &format!("all {kind} units: help(\"{kind}\")")));
+        out!("{}", paint(Role::Dim, &format!("all {kind} units: help(\"{kind}\")")));
     } else if let Some((_, desc)) = user_defs(|u| u.borrow().iter().find(|(n, _)| n == topic).cloned()) {
         match desc.as_str() {
-            "" => out!("{}: a base unit you defined with `unit {topic}`", paint(NAME, topic)),
-            _ => out!("{}: a unit you defined, 1 {topic} = {desc}", paint(NAME, topic)),
+            "" => out!("{}: a base unit you defined with `unit {topic}`", paint(Role::Name, topic)),
+            _ => out!("{}: a unit you defined, 1 {topic} = {desc}", paint(Role::Name, topic)),
         }
     } else {
         return false;
