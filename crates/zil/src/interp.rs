@@ -131,10 +131,15 @@ const MAX_DEPTH: usize = 10_000;
 const MAX_DEPTH: usize = 500;
 
 impl Interp {
+    /// A session on the running session's host, or outside any, the thread's default one.
     #[allow(clippy::new_without_default)] // builds a whole unit registry: not a cheap default
     pub fn new() -> Interp {
+        Interp::with_host(crate::host::get())
+    }
+
+    pub fn with_host(host: Rc<dyn crate::host::Host>) -> Interp {
         let globals: Env = Default::default();
-        let state = State::new();
+        let state = State::new(host);
         crate::state::enter(&state, || {
             let mut g = globals.borrow_mut();
             for m in modules::modules() {

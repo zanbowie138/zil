@@ -1,5 +1,6 @@
 //! Files: reading and writing, directories as tables, path pieces, JSON and CSV.
 
+use crate::host::Host;
 use crate::interp::Interp;
 use crate::lexer::Span;
 use crate::modules::{Call, Doc, Fail, Module, doc, units};
@@ -67,57 +68,50 @@ const FNS: &[Doc] = &[
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
+    let host = crate::host::get();
     Ok(match (name, args) {
-        ("read_file", [Str(p)]) => Value::str(std::fs::read_to_string(&**p).map_err(io("read", p))?),
-        ("write_file", [Str(p), v]) => {
-            std::fs::write(&**p, text(v)).map_err(io("write", p))?;
+        ("read_file", [Str(p)]) => {
+            let bytes = host.read(p).map_err(io("read", p))?;
+            Value::str(String::from_utf8(bytes).map_err(|_| Fail::Arg(0, format!("cannot read {p:?}: not UTF-8 text")))?)
+        }
+        ("write_file" | "append_file", [Str(p), v]) => {
+            host.write(p, text(v).as_bytes(), name == "append_file").map_err(io("write", p))?;
             Nil
         }
-        ("append_file", [Str(p), v]) => {
-            use std::io::Write;
-            let mut f = std::fs::OpenOptions::new().append(true).create(true).open(&**p).map_err(io("open", p))?;
-            f.write_all(text(v).as_bytes()).map_err(io("write", p))?;
-            Nil
-        }
-        ("exists", [Str(p)]) => Bool(Path::new(&**p).exists()),
-        ("is_dir", [Str(p)]) => Bool(Path::new(&**p).is_dir()),
+        ("exists", [Str(p)]) => Bool(host.metadata(p).is_ok()),
+        ("is_dir", [Str(p)]) => Bool(host.metadata(p).is_ok_and(|m| m.is_dir)),
         ("ls", [] | [Str(_)]) => {
             let dir = match args {
                 [Str(d)] => &**d,
                 _ => ".",
             };
-            let mut names: Vec<String> =
-                std::fs::read_dir(dir).map_err(io("list", dir))?.filter_map(|e| Some(e.ok()?.file_name().to_string_lossy().into_owned())).collect();
+            let mut names = host.list(dir).map_err(io("list", dir))?;
             names.sort();
             let entries = names.into_iter().map(|n| {
-                let path = Path::new(dir).join(&n);
+                let path = Path::new(dir).join(&n).to_string_lossy().into_owned();
                 (n, path)
             });
             entries_table(entries)?
         }
-        ("glob", [Str(p)]) => entries_table(glob(p).map_err(|e| Fail::Arg(0, e))?.into_iter().map(|s| (s.clone(), PathBuf::from(s))))?,
-        ("file_size", [Str(p)]) => bytes(std::fs::metadata(&**p).map_err(io("read", p))?.len()),
-        ("mtime", [Str(p)]) => modified(&std::fs::metadata(&**p).map_err(io("read", p))?)?,
-        ("rm", [Str(p)]) if Path::new(&**p).is_dir() => {
-            std::fs::remove_dir(&**p).map_err(io("remove", p))?;
-            Nil
-        }
+        ("glob", [Str(p)]) => entries_table(glob(p).map_err(|e| Fail::Arg(0, e))?.into_iter().map(|s| (s.clone(), s)))?,
+        ("file_size", [Str(p)]) => bytes(host.metadata(p).map_err(io("read", p))?.len),
+        ("mtime", [Str(p)]) => Value::date(host.metadata(p).map_err(io("read", p))?.modified.to_zoned(crate::host::tz())),
         ("rm", [Str(p)]) => {
-            std::fs::remove_file(&**p).map_err(io("remove", p))?;
+            host.remove(p).map_err(io("remove", p))?;
             Nil
         }
         ("mv", [Str(a), Str(b)]) => {
             parents(b)?;
-            std::fs::rename(&**a, &**b).map_err(io("move", a))?;
+            host.rename(a, b).map_err(io("move", a))?;
             Nil
         }
         ("cp", [Str(a), Str(b)]) => {
             parents(b)?;
-            std::fs::copy(&**a, &**b).map_err(io("copy", a))?;
+            host.copy(a, b).map_err(io("copy", a))?;
             Nil
         }
         ("mkdir", [Str(p)]) => {
-            std::fs::create_dir_all(&**p).map_err(io("create", p))?;
+            host.mkdir(p).map_err(io("create", p))?;
             Nil
         }
         ("path_join", [Str(_), ..]) => {
@@ -138,15 +132,15 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             };
             part.map_or(Nil, |s| Value::str(s.to_string_lossy()))
         }
-        ("abspath", [Str(p)]) => Value::str(std::path::absolute(&**p).map_err(io("resolve", p))?.to_string_lossy()),
-        ("cwd", []) => Value::str(std::env::current_dir().map_err(|e| io_reason(&e))?.to_string_lossy()),
+        ("abspath", [Str(p)]) => Value::str(Path::new(&host.cwd().map_err(io("resolve", p))?).join(&**p).to_string_lossy()),
+        ("cwd", []) => Value::str(host.cwd().map_err(|e| io_reason(&e))?),
         ("cd", [] | [Str(_)]) => {
             let dir = match args {
                 [Str(p)] => p.to_string(),
-                _ => std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")).map_err(|_| Fail::Msg("no home directory set".into()))?,
+                _ => host.env("USERPROFILE").or_else(|| host.env("HOME")).ok_or_else(|| Fail::Msg("no home directory set".into()))?,
             };
-            std::env::set_current_dir(&dir).map_err(io("enter", &dir))?;
-            Value::str(std::env::current_dir().map_err(|e| io_reason(&e))?.to_string_lossy())
+            host.cd(&dir).map_err(io("enter", &dir))?;
+            Value::str(host.cwd().map_err(|e| io_reason(&e))?)
         }
         ("from_json", [Str(s)]) => from_json(serde_json::from_str(s).map_err(|e| Fail::Arg(0, format!("invalid JSON: {e}")))?),
         ("to_json", [v]) => Value::str(to_json(v).to_string()),
@@ -171,7 +165,9 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
 /// Creates the folders `path` needs, so `mv`/`cp` can land in a new one.
 fn parents(path: &str) -> Result<(), Fail> {
     match Path::new(path).parent() {
-        Some(d) if !d.as_os_str().is_empty() => std::fs::create_dir_all(d).map_err(|e| Fail::Arg(1, format!("cannot create {:?}: {}", d, io_reason(&e)))),
+        Some(d) if !d.as_os_str().is_empty() => {
+            crate::host::get().mkdir(&d.to_string_lossy()).map_err(|e| Fail::Arg(1, format!("cannot create {:?}: {}", d, io_reason(&e))))
+        }
         _ => Ok(()),
     }
 }
@@ -200,22 +196,16 @@ fn bytes(n: u64) -> Value {
     Value::Qty(n as f64, units::terms("B").expect("bytes are a unit"))
 }
 
-fn modified(md: &std::fs::Metadata) -> Result<Value, String> {
-    let t = md.modified().map_err(|e| io_reason(&e))?;
-    let ts = jiff::Timestamp::try_from(t).map_err(|e| e.to_string())?;
-    Ok(Value::date(ts.to_zoned(jiff::tz::TimeZone::system())))
-}
-
 /// The `ls` table for (shown name, path) pairs.
-fn entries_table(entries: impl Iterator<Item = (String, PathBuf)>) -> Result<Value, Fail> {
+fn entries_table(entries: impl Iterator<Item = (String, String)>) -> Result<Value, Fail> {
+    let (host, tz) = (crate::host::get(), crate::host::tz());
     let mut rows = Vec::new();
     for (name, path) in entries {
-        // A broken symlink has no target to describe; describe the link itself.
-        let md = std::fs::metadata(&path).or_else(|_| std::fs::symlink_metadata(&path)).map_err(|e| format!("cannot read {name:?}: {}", io_reason(&e)))?;
-        let kind = if md.is_dir() { "dir" } else { "file" };
+        let md = host.metadata(&path).map_err(|e| format!("cannot read {name:?}: {}", io_reason(&e)))?;
+        let kind = if md.is_dir { "dir" } else { "file" };
         // Directory sizes are filesystem bookkeeping (0 or 4096 B), not contents.
-        let size = if md.is_dir() { 0 } else { md.len() };
-        rows.push(vec![Value::str(name), Value::str(kind), bytes(size), modified(&md)?]);
+        let size = if md.is_dir { 0 } else { md.len };
+        rows.push(vec![Value::str(name), Value::str(kind), bytes(size), Value::date(md.modified.to_zoned(tz.clone()))]);
     }
     Ok(Value::table(Table { cols: ["name", "type", "size", "modified"].map(String::from).to_vec(), rows }))
 }
@@ -227,7 +217,7 @@ fn glob(pat: &str) -> Result<Vec<String>, String> {
     let parts: Vec<&str> = pat.split('/').collect();
     let fixed = parts.iter().take_while(|p| !p.contains(['*', '?'])).count();
     if fixed == parts.len() {
-        return Ok(if Path::new(&pat).exists() { vec![pat] } else { vec![] });
+        return Ok(if crate::host::get().metadata(&pat).is_ok() { vec![pat] } else { vec![] });
     }
     let base = parts[..fixed].join("/");
     let (dir, prefix) = match fixed {
@@ -251,21 +241,21 @@ fn glob(pat: &str) -> Result<Vec<String>, String> {
     let re = Regex::new(&(re + "$")).map_err(|e| e.to_string())?;
     let max = if pat.contains("**") { usize::MAX } else { parts.len() - fixed };
     let mut out = Vec::new();
-    walk(Path::new(&dir), &prefix, max, &re, &mut out);
+    walk(&*crate::host::get(), Path::new(&dir), &prefix, max, &re, &mut out);
     Ok(out)
 }
 
-fn walk(dir: &Path, prefix: &str, depth: usize, re: &Regex, out: &mut Vec<String>) {
-    let Ok(rd) = std::fs::read_dir(dir) else { return };
-    let mut entries: Vec<_> = rd.filter_map(Result::ok).collect();
-    entries.sort_by_key(|e| e.file_name());
-    for e in entries {
-        let path = format!("{prefix}{}", e.file_name().to_string_lossy());
+fn walk(host: &dyn Host, dir: &Path, prefix: &str, depth: usize, re: &Regex, out: &mut Vec<String>) {
+    let Ok(mut names) = host.list(&dir.to_string_lossy()) else { return };
+    names.sort();
+    for name in names {
+        let path = format!("{prefix}{name}");
         if re.is_match(&path) {
             out.push(path.clone());
         }
-        if depth > 1 && e.path().is_dir() {
-            walk(&e.path(), &format!("{path}/"), depth - 1, re, out);
+        let sub = dir.join(&name);
+        if depth > 1 && host.metadata(&sub.to_string_lossy()).is_ok_and(|m| m.is_dir) {
+            walk(host, &sub, &format!("{path}/"), depth - 1, re, out);
         }
     }
 }

@@ -41,7 +41,6 @@ ureq = "3.4.2"
 fastrand = { version = "2.5.0", features = ["js"] }
 getrandom = { version = "0.2", features = ["js"] }
 jiff = { version = "0.2.38", features = ["js", "tzdb-bundle-always"] }
-wasm-bindgen = "0.2"
 
 [lints]
 workspace = true

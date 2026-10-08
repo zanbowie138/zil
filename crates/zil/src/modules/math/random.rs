@@ -57,24 +57,24 @@ const FNS: &[Doc] = &[
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
-    let pick = |list: &[&'static str]| Value::str(list[fastrand::usize(..list.len())]);
+    let pick = |list: &[&'static str]| Value::str(list[crate::host::rng(|r| r.usize(..list.len()))]);
     Ok(match (name, args) {
-        ("rand", []) => Float(fastrand::f64()),
-        ("rand", [Int(a, _), Int(b, _)]) if a <= b => Value::int(fastrand::i64(*a..=*b)),
+        ("rand", []) => Float(crate::host::rng(|r| r.f64())),
+        ("rand", [Int(a, _), Int(b, _)]) if a <= b => Value::int(crate::host::rng(|r| r.i64(*a..=*b))),
         ("rand", [a, b]) if num(a).is_some() && num(b).is_some() => {
             let (a, b) = (num(a).unwrap(), num(b).unwrap());
-            Float(a + fastrand::f64() * (b - a))
+            Float(a + crate::host::rng(|r| r.f64()) * (b - a))
         }
         ("choice", [List(l)]) => {
             let l = l.borrow();
             if l.is_empty() {
                 return Err("empty list".into());
             }
-            l[fastrand::usize(..l.len())].clone()
+            l[crate::host::rng(|r| r.usize(..l.len()))].clone()
         }
         ("shuffle", [List(l)]) => {
             let mut v = l.borrow().clone();
-            fastrand::shuffle(&mut v);
+            crate::host::rng(|r| r.shuffle(&mut v));
             Value::list(v)
         }
         ("roll", []) => roll("1d6")?,
@@ -101,14 +101,14 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("eight_ball", []) => pick(EIGHT_BALL),
         ("eight_ball", [Str(q)]) => {
             let mut h = DefaultHasher::new();
-            (q.trim().to_lowercase(), jiff::Zoned::now().date()).hash(&mut h);
+            (q.trim().to_lowercase(), crate::host::now().date()).hash(&mut h);
             Value::str(EIGHT_BALL[h.finish() as usize % EIGHT_BALL.len()])
         }
         ("coin", []) => pick(&["heads", "tails"]),
         ("coin", [Int(n, _)]) if (0..=10_000).contains(n) => Value::list((0..*n).map(|_| pick(&["heads", "tails"])).collect()),
         ("yes_or_no", [] | [Str(_)]) => {
-            let friday = jiff::Zoned::now().weekday() == jiff::civil::Weekday::Friday;
-            Value::str(if fastrand::f64() < if friday { 0.8 } else { 0.5 } { "yes" } else { "no" })
+            let friday = crate::host::now().weekday() == jiff::civil::Weekday::Friday;
+            Value::str(if crate::host::rng(|r| r.f64()) < if friday { 0.8 } else { 0.5 } { "yes" } else { "no" })
         }
         ("excuse", []) => pick(EXCUSES),
         _ => return Err(Fail::BadArgs),
@@ -139,7 +139,7 @@ fn roll(spec: &str) -> Result<Value, String> {
             if !(1..=1000).contains(&count) || !(1..=1_000_000).contains(&sides) {
                 return Err("dice count must be 1-1000 and sides 1-1000000".into());
             }
-            let mut dice: Vec<i64> = (0..count).map(|_| fastrand::i64(1..=sides)).collect();
+            let mut dice: Vec<i64> = (0..count).map(|_| crate::host::rng(|r| r.i64(1..=sides))).collect();
             rolls.extend(dice.iter().map(|d| Value::int(*d)));
             if let Some(keep) = c.get(5) {
                 let keep: usize = keep.as_str().parse().map_err(|_| bad())?;

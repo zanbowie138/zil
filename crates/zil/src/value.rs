@@ -4,7 +4,7 @@ use crate::ast::Radix;
 use crate::interp::Closure;
 use crate::modules::{self, Module, units::Unit};
 use indexmap::{IndexMap, IndexSet};
-use jiff::{Zoned, tz::TimeZone};
+use jiff::Zoned;
 use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{Signed, ToPrimitive};
@@ -180,7 +180,7 @@ impl Value {
             Value::Str(s) => write!(f, "{s:?}"),
             Value::Regex(r) => write!(f, "r\"{}\"", r.as_str()),
             // Local midnight is just a date.
-            Value::Date(z) if z.time() == jiff::civil::Time::midnight() && z.time_zone().iana_name() == TimeZone::system().iana_name() => {
+            Value::Date(z) if z.time() == jiff::civil::Time::midnight() && z.time_zone().iana_name() == crate::host::tz().iana_name() => {
                 write!(f, "{}", z.date())
             }
             Value::Date(z) => write!(f, "{}", z.strftime("%Y-%m-%d %H:%M:%S %:z")),

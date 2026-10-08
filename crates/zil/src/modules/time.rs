@@ -12,7 +12,7 @@ use crate::modules::units::{self, Unit};
 use crate::modules::{Call, Claim, Doc, Fail, Module, doc};
 use crate::value::Value;
 use jiff::civil::{self, Date, Weekday};
-use jiff::{SignedDuration, Span, Timestamp, Zoned, tz::TimeZone};
+use jiff::{SignedDuration, Span, Timestamp, Zoned};
 use parsing::{parse, time, with_format};
 
 pub const MODULE: Module = Module {
@@ -108,11 +108,11 @@ const FNS: &[Doc] = &[
 fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &crate::lexer::Span) -> Call {
     use Value::*;
     Ok(match (name, args) {
-        ("date", [Str(s)]) => Value::date(parse(s, &Zoned::now()).ok_or_else(|| {
+        ("date", [Str(s)]) => Value::date(parse(s, &crate::host::now()).ok_or_else(|| {
             Fail::Arg(0, format!("cannot read {s:?} as a date\nhelp: try \"2026-12-25 18:30\", \"12/25/2026\", \"Dec 25 2026\" or \"next friday\", or give a format: date(s, \"%d.%m.%Y\")"))
         })?),
         ("date", [Str(s), Str(f)]) => {
-            let z = with_format(s, f, &TimeZone::system());
+            let z = with_format(s, f, &crate::host::tz());
             Value::date(z.ok_or_else(|| Fail::Arg(0, format!("{s:?} does not match the format {f:?}")))?)
         }
         ("date", [Int(y, _), Int(m, _), Int(d, _), rest @ ..]) if rest.len() <= 3 => {
@@ -126,11 +126,11 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &crate::lexer
             let small = |n: i64| i8::try_from(n).map_err(|_| format!("{n} out of range"));
             let year = i16::try_from(*y).map_err(|_| format!("year {y} out of range"))?;
             let dt = civil::DateTime::new(year, small(*m)?, small(*d)?, small(t[0])?, small(t[1])?, small(t[2])?, 0);
-            Value::date(dt.and_then(|dt| dt.to_zoned(TimeZone::system())).map_err(|e| e.to_string())?)
+            Value::date(dt.and_then(|dt| dt.to_zoned(crate::host::tz())).map_err(|e| e.to_string())?)
         }
         ("date", [Int(n, _)]) => {
             let ts = Timestamp::from_second(*n).map_err(|e| e.to_string())?;
-            Value::date(ts.to_zoned(TimeZone::system()))
+            Value::date(ts.to_zoned(crate::host::tz()))
         }
         ("year", [Date(z)]) => Value::int(z.year() as i64),
         ("month", [Date(z)]) => Value::int(z.month() as i64),
@@ -141,9 +141,9 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &crate::lexer
         ("weekday", [Date(z)]) => Value::str(z.strftime("%A").to_string()),
         ("is_weekend", [Date(z)]) => Bool(is_weekend(z.date())),
         ("is_weekday", [Date(z)]) => Bool(!is_weekend(z.date())),
-        ("is_today", [Date(z)]) => Bool(z.date() == Zoned::now().with_time_zone(z.time_zone().clone()).date()),
-        ("is_past", [Date(z)]) => Bool(z.timestamp() < Timestamp::now()),
-        ("is_future", [Date(z)]) => Bool(z.timestamp() > Timestamp::now()),
+        ("is_today", [Date(z)]) => Bool(z.date() == crate::host::now().with_time_zone(z.time_zone().clone()).date()),
+        ("is_past", [Date(z)]) => Bool(z.timestamp() < crate::host::timestamp()),
+        ("is_future", [Date(z)]) => Bool(z.timestamp() > crate::host::timestamp()),
         ("with", [Date(z), Map(m)]) => {
             let mut fields = Vec::new();
             for (k, v) in m.borrow().iter() {
@@ -154,22 +154,22 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &crate::lexer
             }
             Value::date(with(z, &fields)?)
         }
-        ("age", [Date(z)]) => Value::int(age(z, &Zoned::now())),
+        ("age", [Date(z)]) => Value::int(age(z, &crate::host::now())),
         ("diff", [Date(a), Date(b)]) => Value::str(diff(a, b)?),
-        ("relative", [Date(z)]) => Value::str(relative(z, &Zoned::now())),
+        ("relative", [Date(z)]) => Value::str(relative(z, &crate::host::now())),
         ("parts", [Qty(x, u)]) if is_duration(u) => Value::str(parts(u.to_si(*x), 3)),
         ("format", [Date(z), Str(f)]) => Value::str(jiff::fmt::strtime::format(f.as_bytes(), &**z).map_err(|e| e.to_string())?),
         ("format", [Str(f), rest @ ..]) => Value::str(crate::modules::math::formatting::printf(f, rest)?),
         ("unix", [Date(z)]) => Value::int(z.timestamp().as_second()),
         ("unix_ms", [Date(z)]) => Value::int(z.timestamp().as_millisecond()),
-        ("date_ms", [Int(n, _)]) => Value::date(Timestamp::from_millisecond(*n).map_err(msg)?.to_zoned(TimeZone::system())),
+        ("date_ms", [Int(n, _)]) => Value::date(Timestamp::from_millisecond(*n).map_err(msg)?.to_zoned(crate::host::tz())),
         ("timeit", [f]) => {
-            let t = Timestamp::now();
+            let t = crate::host::timestamp();
             it.call(f, vec![], span)?;
-            seconds(Timestamp::now().duration_since(t).as_secs_f64())
+            seconds(crate::host::timestamp().duration_since(t).as_secs_f64())
         }
         ("stopwatch", []) => {
-            let now = Timestamp::now();
+            let now = crate::host::timestamp();
             seconds(crate::state::with(|s| s.stopwatch.replace(Some(now))).map_or(0.0, |t| now.duration_since(t).as_secs_f64()))
         }
         _ => return Err(Fail::BadArgs),
@@ -184,8 +184,8 @@ fn seconds(s: f64) -> Value {
 /// `now`, `today`, `tomorrow`, `yesterday`.
 fn ident(_: &mut Interp, name: &str) -> Claim {
     match name {
-        "now" => Some(Ok(Value::date(Zoned::now()))),
-        "today" | "tomorrow" | "yesterday" => Some(Ok(Value::date(parse(name, &Zoned::now()).unwrap()))),
+        "now" => Some(Ok(Value::date(crate::host::now()))),
+        "today" | "tomorrow" | "yesterday" => Some(Ok(Value::date(parse(name, &crate::host::now()).unwrap()))),
         _ => None,
     }
 }
@@ -200,8 +200,8 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
         // `"17:00" - "08:45"`: two clock times, as today at those times.
         (BinOp::Sub, Str(x), Str(y)) => {
             let (x, y) = (time(&x.to_lowercase())?, time(&y.to_lowercase())?);
-            let today = Zoned::now().date();
-            let at = |t| today.to_datetime(t).to_zoned(TimeZone::system()).map(Value::date).map_err(msg);
+            let today = crate::host::now().date();
+            let at = |t| today.to_datetime(t).to_zoned(crate::host::tz()).map(Value::date).map_err(msg);
             return binary(op, &at(x).ok()?, &at(y).ok()?);
         }
         (BinOp::Sub, Date(x), Date(y)) => {

@@ -53,18 +53,14 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
     Ok(match (name, args) {
         ("args", []) => Value::list(it.args.iter().map(|a| Value::str(a.as_str())).collect()),
-        // The browser has no environment, and std panics asking for one.
-        ("env", []) if cfg!(target_arch = "wasm32") => Value::map(IndexMap::new()),
-        ("env", []) => Value::map(std::env::vars().map(|(k, v)| (k, Value::str(v))).collect()),
-        ("env", [Str(k)]) => std::env::var(&**k).map_or(Nil, Value::str),
-        ("exit", _) if cfg!(target_arch = "wasm32") => return Err("there's no process to exit in the browser".into()),
-        ("exit", []) => std::process::exit(0),
-        ("exit", [Int(n, _)]) => std::process::exit(*n as i32),
+        ("env", []) => Value::map(crate::host::get().env_all().into_iter().map(|(k, v)| (k, Value::str(v))).collect()),
+        ("env", [Str(k)]) => crate::host::get().env(k).map_or(Nil, Value::str),
+        ("exit", []) => return Err(crate::host::get().exit(0).into()),
+        ("exit", [Int(n, _)]) => return Err(crate::host::get().exit(*n as i32).into()),
         ("sh" | "run", [Str(cmd)]) => {
-            let out = shell(cmd).output().map_err(|e| format!("cannot run {cmd:?}: {e}"))?;
-            let text = |b: &[u8]| String::from_utf8_lossy(b).trim_end_matches(['\n', '\r']).to_string();
-            let (out_s, err_s) = (text(&out.stdout), text(&out.stderr));
-            let code = out.status.code().unwrap_or(-1);
+            let out = crate::host::get().run(cmd).map_err(|e| format!("cannot run {cmd:?}: {}", super::fs::io_reason(&e)))?;
+            let text = |s: &str| s.trim_end_matches(['\n', '\r']).to_string();
+            let (out_s, err_s, code) = (text(&out.out), text(&out.err), out.code);
             if name == "run" {
                 let m: IndexMap<_, _> = [("code", Value::int(code.into())), ("out", Value::str(out_s)), ("err", Value::str(err_s))]
                     .into_iter()
@@ -72,7 +68,7 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
                     .collect();
                 return Ok(Value::map(m));
             }
-            if !out.status.success() {
+            if code != 0 {
                 return Err(format!("{cmd:?} exited with {code}{}", if err_s.is_empty() { String::new() } else { format!("\n{err_s}") }).into());
             }
             Value::str(out_s)
@@ -87,45 +83,23 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     })
 }
 
-/// `key`'s entry in the disk cache `file`, else `fetch`ed and cached for next time; `fetch` checks `network_allowed` itself.
+/// `key`'s entry in the host's cache `file`, else `fetch`ed and cached for next time; `fetch` checks `network_allowed` itself.
 // ponytail: rereads and rewrites the whole cache file per call; keep it in memory if it grows large.
 pub fn cached(file: &str, key: &str, fetch: impl FnOnce() -> Result<String, String>) -> Result<String, String> {
-    let path = crate::cache_dir().map(|d| d.join(file));
-    let mut cache: serde_json::Map<String, serde_json::Value> =
-        path.as_ref().and_then(|p| std::fs::read_to_string(p).ok()).and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
+    let host = crate::host::get();
+    let mut cache: serde_json::Map<String, serde_json::Value> = host.cache_get(file).and_then(|(s, _)| serde_json::from_str(&s).ok()).unwrap_or_default();
     if let Some(hit) = cache.get(key).and_then(|v| v.as_str()) {
         return Ok(hit.into());
     }
     let out = fetch()?;
-    if let Some(p) = &path {
-        cache.insert(key.into(), out.clone().into());
-        let _ = std::fs::create_dir_all(p.parent().unwrap());
-        let _ = std::fs::write(p, serde_json::to_string(&cache).unwrap());
-    }
+    cache.insert(key.into(), out.clone().into());
+    host.cache_put(file, &serde_json::to_string(&cache).unwrap());
     Ok(out)
 }
 
 /// HTTP GET `url` with `query` parameters, returning the body.
 pub fn get(url: &str, query: &[(&str, &str)]) -> Result<String, String> {
-    #[cfg(not(target_arch = "wasm32"))]
-    return ureq::get(url).query_pairs(query.iter().copied()).call().and_then(|mut r| r.body_mut().read_to_string()).map_err(|e| e.to_string());
-    #[cfg(target_arch = "wasm32")]
-    return zil_get(url, &serde_json::to_string(query).unwrap()).map_err(|e| e.as_string().unwrap_or_else(|| "network error".into()));
-}
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen::prelude::wasm_bindgen]
-extern "C" {
-    /// A blocking GET, defined by `docs/sandbox/worker.js`: `query` is JSON `[[key, value], ...]`, and failures throw a message.
-    #[wasm_bindgen(catch, js_name = zilGet)]
-    fn zil_get(url: &str, query: &str) -> Result<String, wasm_bindgen::JsValue>;
-}
-
-fn shell(cmd: &str) -> std::process::Command {
-    let (sh, flag) = if cfg!(windows) { ("cmd", "/C") } else { ("sh", "-c") };
-    let mut c = std::process::Command::new(sh);
-    c.args([flag, cmd]);
-    c
+    crate::host::get().http_get(url, query)
 }
 
 #[cfg(test)]

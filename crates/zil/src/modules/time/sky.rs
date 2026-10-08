@@ -64,7 +64,7 @@ fn sun(lat: f64, lon: f64, day: &Zoned) -> Sun {
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
     let day = |v: Option<&Value>| match v {
-        None => Ok(Zoned::now()),
+        None => Ok(crate::host::now()),
         Some(Date(z)) => Ok((**z).clone()),
         Some(_) => Err(Fail::BadArgs),
     };
@@ -75,7 +75,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
                 (Str(_) | Map(_), [] | [Date(_)]) => {
                     let (lat, lon, zone) = crate::modules::geo::place(first).map_err(|m| Fail::Arg(0, m))?;
                     let z = match (rest.first(), zone) {
-                        (None, Some(zone)) => Zoned::now().with_time_zone(jiff::tz::db().get(zone).map_err(|e| e.to_string())?),
+                        (None, Some(zone)) => crate::host::now().with_time_zone(jiff::tz::db().get(zone).map_err(|e| e.to_string())?),
                         (d, _) => day(d)?,
                     };
                     (lat, lon, z)

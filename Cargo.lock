@@ -1512,7 +1512,6 @@ dependencies = [
  "terminal_size",
  "unicode-width",
  "ureq",
- "wasm-bindgen",
 ]
 
 [[package]]
@@ -1531,6 +1530,8 @@ dependencies = [
 name = "zil-wasm"
 version = "0.2.0"
 dependencies = [
+ "fastrand",
+ "jiff",
  "serde_json",
  "wasm-bindgen",
  "zil",

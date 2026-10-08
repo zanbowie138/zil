@@ -5,7 +5,6 @@ use crate::ast::Target;
 use crate::interp::Interp;
 use crate::modules::{Call, Claim, Doc, Fail, Module, doc};
 use crate::value::Value;
-use jiff::Zoned;
 use jiff::tz::TimeZone;
 
 pub const MODULE: Module = Module {
@@ -45,15 +44,15 @@ const FNS: &[Doc] = &[
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &crate::lexer::Span) -> Call {
     Ok(match (name, args) {
         ("utc", [Value::Date(z)]) => Value::date(z.with_time_zone(TimeZone::UTC)),
-        ("local", [Value::Date(z)]) => Value::date(z.with_time_zone(TimeZone::system())),
-        ("clock", [Value::Str(p)]) => Value::date(Zoned::now().with_time_zone(zone(p).map_err(|m| Fail::Arg(0, m))?)),
+        ("local", [Value::Date(z)]) => Value::date(z.with_time_zone(crate::host::tz())),
+        ("clock", [Value::Str(p)]) => Value::date(crate::host::now().with_time_zone(zone(p).map_err(|m| Fail::Arg(0, m))?)),
         ("clock", [Value::List(l)]) => {
             let mut m = indexmap::IndexMap::new();
             for (i, p) in l.borrow().iter().enumerate() {
                 let Value::Str(p) = p else {
                     return Err(Fail::Arg(0, format!("item {i} must be a str, got {}", p.type_name())));
                 };
-                m.insert(p.to_string(), Value::date(Zoned::now().with_time_zone(zone(p).map_err(|m| Fail::Arg(0, m))?)));
+                m.insert(p.to_string(), Value::date(crate::host::now().with_time_zone(zone(p).map_err(|m| Fail::Arg(0, m))?)));
             }
             Value::map(m)
         }
@@ -67,7 +66,7 @@ fn convert(v: &Value, t: &Target) -> Claim {
         return None;
     };
     Some(match name.as_str() {
-        "local" => Ok(Value::date(z.with_time_zone(TimeZone::system()))),
+        "local" => Ok(Value::date(z.with_time_zone(crate::host::tz()))),
         _ => zone(name).map(|tz| Value::date(z.with_time_zone(tz))),
     })
 }

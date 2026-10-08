@@ -52,24 +52,22 @@ fn fetch_rates() -> Result<String, String> {
     crate::modules::sys::get("https://open.er-api.com/v6/latest/EUR", &[])
 }
 
-/// Units per 1 EUR from open.er-api.com (about 160 currencies, updated daily), cached on disk for a day.
+/// Units per 1 EUR from open.er-api.com (about 160 currencies, updated daily), kept in the host's cache for a day.
 fn load_rates() -> Result<Vec<(String, f64)>, String> {
-    let cache = crate::cache_dir().map(|d| d.join("er-rates.json"));
-    let age = cache.as_ref().and_then(|p| p.metadata().ok()?.modified().ok()?.elapsed().ok());
-    let body = match &cache {
-        Some(p) if age.is_some_and(|a| a.as_secs() < 24 * 3600) => std::fs::read_to_string(p).map_err(|e| e.to_string())?,
+    let host = crate::host::get();
+    let cache = host.cache_get("er-rates.json");
+    let age = cache.as_ref().map(|(_, at)| host.now().duration_since(*at).as_secs());
+    let body = match cache {
+        Some((body, _)) if age.is_some_and(|a| a < 24 * 3600) => body,
         _ => match fetch_rates() {
             Ok(body) => {
-                if let Some(p) = &cache {
-                    let _ = std::fs::create_dir_all(p.parent().unwrap());
-                    let _ = std::fs::write(p, &body);
-                }
+                host.cache_put("er-rates.json", &body);
                 body
             }
             // Offline or not allowed online: fall back to a stale cache if there is one.
-            Err(e) => match cache.as_ref().and_then(|p| std::fs::read_to_string(p).ok()) {
-                Some(body) => {
-                    let days = age.map_or(0, |a| a.as_secs() / 86400);
+            Err(e) => match cache {
+                Some((body, _)) => {
+                    let days = age.map_or(0, |a| a.max(0) / 86400);
                     eprintln!("note: using currency rates cached {days} day{} ago", if days == 1 { "" } else { "s" });
                     body
                 }

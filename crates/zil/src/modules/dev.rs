@@ -13,7 +13,7 @@ use crate::modules::{Call, Doc, Fail, Module, doc};
 use crate::value::Value;
 use base64::Engine;
 use indexmap::IndexMap;
-use jiff::{Timestamp, tz::TimeZone};
+use jiff::Timestamp;
 use std::cmp::Ordering;
 
 pub const MODULE: Module = Module {
@@ -88,7 +88,7 @@ fn jwt(s: &str) -> Result<Value, &'static str> {
             if let ("exp" | "iat" | "nbf", Value::Int(n, _)) = (k.as_str(), &*v)
                 && let Ok(ts) = Timestamp::from_second(*n)
             {
-                *v = Value::date(ts.to_zoned(TimeZone::system()));
+                *v = Value::date(ts.to_zoned(crate::host::tz()));
             }
         }
     }

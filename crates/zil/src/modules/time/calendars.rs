@@ -98,7 +98,7 @@ note: ask for 1 to 1000 runs"
                 }
                 _ => return Err(Fail::BadArgs),
             };
-            let runs = Cron::parse(c).map_err(|m| Fail::Arg(0, m))?.next(&Zoned::now(), n)?;
+            let runs = Cron::parse(c).map_err(|m| Fail::Arg(0, m))?.next(&crate::host::now(), n)?;
             let mut runs = runs.into_iter().map(Value::date);
             if rest.is_empty() { runs.next().expect("asked for one") } else { Value::list(runs.collect()) }
         }
@@ -114,14 +114,14 @@ note: ask for 1 to 1000 runs"
         ("holidays", [Int(y, _), Str(c)]) => {
             let y = i16::try_from(*y).map_err(|_| Fail::Arg(0, format!("year {y} out of range")))?;
             let c = Off::Country(country(c).ok_or_else(|| Fail::Arg(1, unknown_country(c)))?);
-            Value::list(c.dates(y).into_iter().map(|d| Value::date(d.to_zoned(jiff::tz::TimeZone::system()).expect("holiday in range"))).collect())
+            Value::list(c.dates(y).into_iter().map(|d| Value::date(d.to_zoned(crate::host::tz()).expect("holiday in range"))).collect())
         }
         ("calendar", [Date(z)]) => Value::str(calendar(z.year() as i64, z.month() as i64)?),
         ("calendar", [Int(y, _), Int(m, _)]) => Value::str(calendar(*y, *m)?),
         ("zodiac", [] | [Date(_)]) => {
             let d = match args {
                 [Date(z)] => z.date(),
-                _ => jiff::Zoned::now().date(),
+                _ => crate::host::now().date(),
             };
             let md = d.month() as i32 * 100 + d.day() as i32;
             // Each sign starts on the given month/day; Capricorn wraps over New Year.

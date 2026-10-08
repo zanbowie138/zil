@@ -160,7 +160,7 @@ fn pretty(v: &Value, short: bool, depth: usize, top: bool) -> String {
         }
         Date(z) => {
             let f = if short { "%b %-d, %Y, %-I:%M %p" } else { "%A, %B %-d, %Y at %-I:%M %p" };
-            let zone = if z.time_zone().iana_name() == jiff::tz::TimeZone::system().iana_name() { "" } else { " %Z" };
+            let zone = if z.time_zone().iana_name() == crate::host::tz().iana_name() { "" } else { " %Z" };
             z.strftime(&format!("{f}{zone}")).to_string()
         }
         List(l) => items(l.borrow().iter().map(inner).collect(), "[", "]"),
@@ -209,11 +209,10 @@ fn ident(it: &mut Interp, name: &str) -> Claim {
         return None;
     }
     if it.input.is_none() {
-        let mut s = String::new();
-        if let Err(e) = std::io::Read::read_to_string(&mut std::io::stdin(), &mut s) {
-            return Some(Err(e.to_string()));
+        match crate::host::get().stdin() {
+            Ok(s) => it.input = Some(s.into()),
+            Err(e) => return Some(Err(super::fs::io_reason(&e))),
         }
-        it.input = Some(s.into());
     }
     Some(Ok(Value::Str(it.input.clone().unwrap())))
 }

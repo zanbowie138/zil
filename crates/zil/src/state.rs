@@ -1,6 +1,7 @@
-//! What a session owns beyond its variables: units, currency rates, the network switch, the stopwatch. Each `Interp`
-//! has its own, and code deep in units or rates reaches the running session's through `with`.
+//! What a session owns beyond its variables: its host, random numbers, units, currency rates, the network switch, the
+//! stopwatch. Each `Interp` has its own, and code deep in units or rates reaches the running session's through `with`.
 
+use crate::host::{self, Host};
 use crate::modules::units::{UnitDef, builtin_units};
 use jiff::Timestamp;
 use std::cell::{Cell, RefCell};
@@ -8,6 +9,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 pub struct State {
+    pub host: Rc<dyn Host>,
+    pub rng: RefCell<fastrand::Rng>,
     pub units: RefCell<HashMap<String, Rc<UnitDef>>>,
     /// Units made with `unit`: name and what it was defined as, for `help`.
     pub user_units: RefCell<Vec<(String, String)>>,
@@ -19,8 +22,10 @@ pub struct State {
 }
 
 impl State {
-    pub fn new() -> Rc<State> {
+    pub fn new(host: Rc<dyn Host>) -> Rc<State> {
         Rc::new(State {
+            rng: RefCell::new(fastrand::Rng::with_seed(host.seed())),
+            host,
             units: RefCell::new(builtin_units()),
             user_units: Default::default(),
             rates_loaded: Cell::new(false),
@@ -33,7 +38,12 @@ impl State {
 
 thread_local! {
     /// The session running now; outside any, a throwaway one.
-    static CURRENT: RefCell<Rc<State>> = RefCell::new(State::new());
+    static CURRENT: RefCell<Rc<State>> = RefCell::new(State::new(host::default()));
+}
+
+/// Gives the code outside any session, and so every `Interp::new` after, this `host`.
+pub fn set_default_host(host: Rc<dyn Host>) {
+    CURRENT.set(State::new(host));
 }
 
 /// The running session's state.

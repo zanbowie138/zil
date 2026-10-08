@@ -90,7 +90,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             for c in s.chars() {
                 out.push(c);
                 if !c.is_whitespace() {
-                    out.extend((0..n).map(|_| char::from_u32(fastrand::u32(0x300..0x370)).unwrap()));
+                    out.extend((0..n).map(|_| char::from_u32(crate::host::rng(|r| r.u32(0x300..0x370))).unwrap()));
                 }
             }
             Value::str(out)

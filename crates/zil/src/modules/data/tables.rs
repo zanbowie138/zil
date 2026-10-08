@@ -141,7 +141,7 @@ fn column(t: &Table, name: &str, arg: usize) -> Result<usize, Fail> {
 pub fn cell(v: &Value) -> String {
     match v {
         Value::Nil => String::new(),
-        Value::Date(z) if z.time_zone().iana_name() == jiff::tz::TimeZone::system().iana_name() && z.time() != jiff::civil::Time::midnight() => {
+        Value::Date(z) if z.time_zone().iana_name() == crate::host::tz().iana_name() && z.time() != jiff::civil::Time::midnight() => {
             z.strftime("%Y-%m-%d %H:%M").to_string()
         }
         v => v.to_string(),

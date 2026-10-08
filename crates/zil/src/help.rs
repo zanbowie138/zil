@@ -448,7 +448,7 @@ pub fn tip(color: bool) -> String {
     let recipes = ADVANCED.iter().chain([&ADVANCED_UNRUN]).flat_map(|t| t.1).map(|&(what, _, code)| (what, code));
     // The highlights end on a syntax note with no code.
     let tips: Vec<_> = examples.chain(recipes).filter(|(_, code)| !code.is_empty()).collect();
-    let (what, src) = tips[fastrand::usize(..tips.len())];
+    let (what, src) = tips[crate::host::rng(|r| r.usize(..tips.len()))];
     capture(color, || {
         framed(&format!("tip, {what}"), &src.lines().map(|l| snippet(l, src)).collect::<Vec<_>>());
         true

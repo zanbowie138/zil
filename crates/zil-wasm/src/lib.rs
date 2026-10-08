@@ -2,17 +2,66 @@
 #![cfg(target_arch = "wasm32")]
 
 use std::cell::RefCell;
+use std::rc::Rc;
 use wasm_bindgen::prelude::wasm_bindgen;
 use zil::ansi::{RESET, Role, strip_ansi, tint, to_html};
 use zil::ast::ExprKind;
+use zil::host::Host;
 use zil::interp::Interp;
 use zil::session::{self, Shown};
 use zil::value::Value;
-use zil::{error, help, parser, take_output};
+use zil::{error, help, parser};
 
 thread_local! {
+    /// What the program printed, since the last `take_output`.
+    static OUT: RefCell<String> = const { RefCell::new(String::new()) };
     /// The sandbox's REPL: one interpreter for the whole session, and how many results it has numbered.
     static SESSION: RefCell<(Interp, usize)> = RefCell::new((Interp::new(), 0));
+}
+
+/// The browser: output collects for the page to take, the clock and randomness come from JS, and HTTP goes through the
+/// worker's `zilGet`. No files, processes or environment.
+struct JsHost;
+
+impl Host for JsHost {
+    fn print(&self, text: &str) {
+        OUT.with_borrow_mut(|o| {
+            o.push_str(text);
+            o.push('\n');
+        })
+    }
+    fn now(&self) -> jiff::Timestamp {
+        jiff::Timestamp::now()
+    }
+    fn time_zone(&self) -> jiff::tz::TimeZone {
+        jiff::tz::TimeZone::system()
+    }
+    fn seed(&self) -> u64 {
+        fastrand::u64(..)
+    }
+    fn http_get(&self, url: &str, query: &[(&str, &str)]) -> Result<String, String> {
+        zil_get(url, &serde_json::to_string(query).unwrap()).map_err(|e| e.as_string().unwrap_or_else(|| "network error".into()))
+    }
+    fn exit(&self, _: i32) -> String {
+        "there's no process to exit in the browser".into()
+    }
+}
+
+#[wasm_bindgen]
+extern "C" {
+    /// A blocking GET, defined by `docs/sandbox/worker.js`: `query` is JSON `[[key, value], ...]`, and failures throw a message.
+    #[wasm_bindgen(catch, js_name = zilGet)]
+    fn zil_get(url: &str, query: &str) -> Result<String, wasm_bindgen::JsValue>;
+}
+
+#[wasm_bindgen(start)]
+fn start() {
+    zil::state::set_default_host(Rc::new(JsHost));
+}
+
+/// Everything printed since the last call.
+fn take_output() -> String {
+    OUT.take()
 }
 
 /// A value as the REPL shows it, in color; nothing for nil and functions.

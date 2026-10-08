@@ -55,7 +55,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             let src = match FONTS.iter().find(|x| x.0 == f.as_ref()) {
                 Some(x) => x.1.to_string(),
                 None if f.ends_with(".flf") => {
-                    let bytes = std::fs::read(&**f).map_err(|e| Fail::Arg(1, format!("can't read {f}: {e}")))?;
+                    let bytes = crate::host::get().read(f).map_err(|e| Fail::Arg(1, format!("can't read {f}: {}", crate::modules::fs::io_reason(&e))))?;
                     // Older fonts are Latin-1, whose bytes are exactly the first 256 code points.
                     String::from_utf8(bytes).unwrap_or_else(|e| e.into_bytes().iter().map(|&b| b as char).collect())
                 }

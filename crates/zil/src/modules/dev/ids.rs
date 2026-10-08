@@ -5,7 +5,7 @@ use crate::lexer::Span;
 use crate::modules::{Call, Doc, Fail, Module, doc, text::encoding::hex};
 use crate::value::Value;
 use indexmap::IndexMap;
-use jiff::{Timestamp, tz::TimeZone};
+use jiff::Timestamp;
 
 pub const MODULE: Module = Module {
     name: "ids",
@@ -40,7 +40,8 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
     Ok(match (name, args) {
         ("uuid", []) => {
-            let mut b: [u8; 16] = std::array::from_fn(|_| fastrand::u8(..));
+            let mut b = [0u8; 16];
+            crate::host::rng(|r| r.fill(&mut b));
             b[6] = (b[6] & 0x0f) | 0x40; // version 4
             b[8] = (b[8] & 0x3f) | 0x80; // RFC 4122 variant
             let h = hex(&b);
@@ -57,7 +58,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("passphrase", [Int(n, _)]) if (1..=100).contains(n) => passphrase(*n as usize)?,
         ("passphrase", [Int(n, _)]) => return Err(Fail::Arg(0, format!("word count must be from 1 to 100, got {n}"))),
         ("ulid", []) => {
-            let ms = jiff::Timestamp::now().as_millisecond() as u128;
+            let ms = crate::host::timestamp().as_millisecond() as u128;
             let mut r = [0u8; 10];
             getrandom::getrandom(&mut r).map_err(|e| e.to_string())?;
             let n = (ms << 80) | r.iter().fold(0u128, |acc, b| acc << 8 | *b as u128);
@@ -90,7 +91,7 @@ fn uuid_info(s: &str) -> Option<Value> {
     };
     let mut m = IndexMap::from([("version".to_string(), Value::int(version as i64)), ("variant".to_string(), Value::str(variant))]);
     if let Some(t) = time {
-        m.insert("timestamp".to_string(), Value::date(t.to_zoned(TimeZone::system())));
+        m.insert("timestamp".to_string(), Value::date(t.to_zoned(crate::host::tz())));
     }
     Some(Value::map(m))
 }

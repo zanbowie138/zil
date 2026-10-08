@@ -11,6 +11,7 @@ pub mod error;
 pub mod guide;
 #[doc(hidden)]
 pub mod help;
+pub mod host;
 #[doc(hidden)]
 pub mod interp;
 #[doc(hidden)]
@@ -47,31 +48,8 @@ use value::Value;
 pub use error::Error;
 
 /// A line of program output, from `print` and friends.
-#[cfg(not(target_arch = "wasm32"))]
 fn print(s: &str) {
-    println!("{s}")
-}
-
-#[cfg(target_arch = "wasm32")]
-thread_local! {
-    /// What the program printed, since the last `take_output`.
-    static OUT: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
-}
-
-/// The browser has no stdout: output collects here for the page to take.
-#[cfg(target_arch = "wasm32")]
-fn print(s: &str) {
-    OUT.with_borrow_mut(|o| {
-        o.push_str(s);
-        o.push('\n');
-    })
-}
-
-/// Everything printed since the last call.
-#[cfg(target_arch = "wasm32")]
-#[doc(hidden)]
-pub fn take_output() -> String {
-    OUT.take()
+    host::get().print(s)
 }
 
 /// Per-user cache for currency rates and REPL history. A `zil-data` folder beside the executable takes its place:

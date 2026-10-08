@@ -265,7 +265,7 @@ const LAST_NAMES: &[&str] = &[
 ];
 
 fn pick(list: &[&'static str]) -> &'static str {
-    list[fastrand::usize(..list.len())]
+    list[crate::host::rng(|r| r.usize(..list.len()))]
 }
 
 const GROUPS: &[&str] =
@@ -281,7 +281,7 @@ fn team_name() -> String {
         let same: Vec<_> = words.iter().copied().filter(|w| w.chars().next() == noun.chars().next()).collect();
         pick(if same.is_empty() { &words } else { &same })
     };
-    match fastrand::u8(..8) {
+    match crate::host::rng(|r| r.u8(..8)) {
         0 => format!("The {adj} {noun}"),
         1 => format!("The {} {noun}", rhyme(TEAM_ADJECTIVES.to_vec())),
         2 => format!("{} {noun}", rhyme(crate::modules::geo::city_names().collect())),

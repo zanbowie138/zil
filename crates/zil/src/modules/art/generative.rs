@@ -130,7 +130,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("starfield", [Int(..), Int(..), rest @ ..]) if rest.len() <= 1 => {
             let (w, h) = (int(0, 0, 1, 1000)?, int(1, 0, 1, 1000)?);
             let mut rng = match rest {
-                [] => fastrand::Rng::new(),
+                [] => crate::host::rng(|r| r.fork()),
                 [Int(s, _)] => fastrand::Rng::with_seed(*s as u64),
                 _ => return Err(Fail::BadArgs),
             };
@@ -290,7 +290,7 @@ fn toys(name: &'static str, args: &[Value]) -> Call {
                     stack.pop();
                     continue;
                 }
-                fastrand::shuffle(&mut next);
+                crate::host::rng(|r| r.shuffle(&mut next));
                 let (nx, ny) = next[0];
                 open[y + ny + 1][x + nx + 1] = true;
                 open[2 * ny + 1][2 * nx + 1] = true;
