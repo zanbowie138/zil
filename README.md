@@ -164,13 +164,13 @@ in its own `zil-data` folder and writes nothing anywhere else, so it can run fro
 Or build it with Cargo:
 
 ```sh
-cargo install zil
+cargo install zil-cli
 ```
 
 To install the latest version from git:
 
 ```sh
-cargo install --git https://github.com/zanbowie138/zil
+cargo install --git https://github.com/zanbowie138/zil zil-cli
 ```
 
 ## Usage
@@ -213,7 +213,7 @@ To run the whole site locally (the sandbox, plus the reference at `/docs`), inst
 
 ## Data sources
 
-Country and city data in `src/modules/geo/` comes from [GeoNames](https://www.geonames.org/) under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/),
+Country and city data in `crates/zil/src/modules/geo/` comes from [GeoNames](https://www.geonames.org/) under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/),
 trimmed to capitals and cities with more than 500,000 people.
 
 Currency rates are provided by [Exchange Rate API](https://www.exchangerate-api.com).

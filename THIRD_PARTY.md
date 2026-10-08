@@ -4,7 +4,7 @@ zil embeds the following data in its binaries and wasm build.
 
 ## FIGlet fonts
 
-`src/modules/art/fonts/*.flf` (banner, big, bubble, digital, lean, mini, script, shadow, slant, small, smscript,
+`crates/zil/src/modules/art/fonts/*.flf` (banner, big, bubble, digital, lean, mini, script, shadow, slant, small, smscript,
 smshadow, smslant, standard) come unmodified from the [FIGlet 2.2.5](http://www.figlet.org/) distribution, under the
 New BSD License:
 
@@ -43,7 +43,7 @@ SUCH DAMAGE.
 
 ## GeoNames
 
-`src/modules/geo/cities.tsv` and `src/modules/geo/countries.tsv` are extracts of [GeoNames](https://www.geonames.org/)
+`crates/zil/src/modules/geo/cities.tsv` and `crates/zil/src/modules/geo/countries.tsv` are extracts of [GeoNames](https://www.geonames.org/)
 data, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changes: cities are filtered to
 capitals and places over 500,000 people, and both files keep only a subset of the columns.
 

@@ -1,35 +1,40 @@
-//! zil: an expression calculator and scripting language. The CLI lives in `cli`, the browser build in `wasm`.
-// The browser build has no REPL, so helpers only it uses go unused there.
-#![cfg_attr(target_arch = "wasm32", allow(dead_code))]
+//! zil: an expression calculator and scripting language. The CLI is the `zil-cli` crate, the browser build `zil-wasm`.
 
-mod ansi;
-mod ast;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod cli;
-#[cfg(not(target_arch = "wasm32"))]
-mod docs;
-mod error;
-mod guide;
-mod help;
-mod interp;
-mod lexer;
-mod modules;
+// Internals the CLI and the browser build reach into, until the Session API (roadmap Phase 3a) replaces them.
+#[doc(hidden)]
+pub mod ansi;
+#[doc(hidden)]
+pub mod ast;
+#[doc(hidden)]
+pub mod error;
+#[doc(hidden)]
+pub mod guide;
+#[doc(hidden)]
+pub mod help;
+#[doc(hidden)]
+pub mod interp;
+#[doc(hidden)]
+pub mod lexer;
+#[doc(hidden)]
+pub mod modules;
 mod ops;
 #[cfg(not(target_arch = "wasm32"))]
-mod pager;
-mod parser;
-#[cfg(not(target_arch = "wasm32"))]
-mod repl;
-mod session;
+#[doc(hidden)]
+pub mod pager;
+#[doc(hidden)]
+pub mod parser;
+#[doc(hidden)]
+pub mod session;
 mod signature;
-mod state;
-mod value;
-#[cfg(target_arch = "wasm32")]
-mod wasm;
+#[doc(hidden)]
+pub mod state;
+#[doc(hidden)]
+pub mod value;
 
 /// No terminal to page in the browser: `page(...)` just prints.
 #[cfg(target_arch = "wasm32")]
-mod pager {
+#[doc(hidden)]
+pub mod pager {
     pub fn page(text: &str) {
         crate::print(text)
     }
@@ -40,13 +45,33 @@ use std::path::PathBuf;
 use value::Value;
 
 pub use error::Error;
-#[cfg(target_arch = "wasm32")]
-use wasm::print;
 
 /// A line of program output, from `print` and friends.
 #[cfg(not(target_arch = "wasm32"))]
 fn print(s: &str) {
     println!("{s}")
+}
+
+#[cfg(target_arch = "wasm32")]
+thread_local! {
+    /// What the program printed, since the last `take_output`.
+    static OUT: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+}
+
+/// The browser has no stdout: output collects here for the page to take.
+#[cfg(target_arch = "wasm32")]
+fn print(s: &str) {
+    OUT.with_borrow_mut(|o| {
+        o.push_str(s);
+        o.push('\n');
+    })
+}
+
+/// Everything printed since the last call.
+#[cfg(target_arch = "wasm32")]
+#[doc(hidden)]
+pub fn take_output() -> String {
+    OUT.take()
 }
 
 /// Per-user cache for currency rates and REPL history. A `zil-data` folder beside the executable takes its place:
@@ -60,15 +85,9 @@ pub fn cache_dir() -> Option<PathBuf> {
     Some(base.join("zil"))
 }
 
-fn run(interp: &mut Interp, src: &str) -> Result<Value, Error> {
+#[doc(hidden)]
+pub fn run(interp: &mut Interp, src: &str) -> Result<Value, Error> {
     interp.run(&parser::parse(src)?)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn report(name: &str, src: &str, e: Error) {
-    use std::io::IsTerminal;
-    let color = std::io::stderr().is_terminal() && std::env::var_os("NO_COLOR").is_none();
-    eprint!("{}", error::render(&e, name, src, color));
 }
 
 /// Interpreter thread stack: deep enough for `interp::MAX_DEPTH` nested calls in a debug build.

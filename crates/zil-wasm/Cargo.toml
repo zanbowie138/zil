@@ -1,0 +1,19 @@
+[package]
+name = "zil-wasm"
+description = "The browser build of zil, for the sandbox and the docs' run buttons"
+publish = false
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+zil = { path = "../zil" }
+serde_json = { version = "1.0.151", features = ["preserve_order"] }
+wasm-bindgen = "0.2"
+
+[lints]
+workspace = true

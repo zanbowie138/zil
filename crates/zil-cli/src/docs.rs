@@ -1,11 +1,11 @@
 //! `zil --docs <dir>`: the mdBook reference, rendered from the same module tree as `help`, one page per module.
 //! Example results are evaluated live, so the pages are build output: CI regenerates them on deploy.
 
-use crate::guide::{ADVANCED, ADVANCED_UNRUN, HIGHLIGHTS};
-use crate::help::eval;
-use crate::modules::{ALL, Doc, Module, Section, modules, units};
 use std::fmt::Write;
 use std::path::Path;
+use zil::guide::{ADVANCED, ADVANCED_UNRUN, HIGHLIGHTS};
+use zil::help::eval;
+use zil::modules::{ALL, Doc, Module, Section, modules, units};
 
 /// Prefix of the line holding an example's result.
 const RESULT: &str = "# → ";
@@ -117,7 +117,7 @@ fn function(s: &mut String, f: &Doc, root: &str) {
         s.push_str("```\n");
     }
     if !f.see.is_empty() {
-        let home = |n: &str| modules().find(|m| m.fns.iter().any(|g| g.name == n)).map_or(String::new(), |m| file(crate::modules::path(m)));
+        let home = |n: &str| modules().find(|m| m.fns.iter().any(|g| g.name == n)).map_or(String::new(), |m| file(zil::modules::path(m)));
         let links: Vec<_> = f.see.iter().map(|n| format!("[{n}]({root}{}#{n})", home(n))).collect();
         writeln!(s, "\nSee also: {}", links.join(", ")).unwrap();
     }

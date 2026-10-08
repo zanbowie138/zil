@@ -1,13 +1,16 @@
 //! The `zil` command line: REPL, `-e`, scripts and `--docs`.
 
-use crate::interp::Interp;
-use crate::value::Value;
-use crate::{Error, STACK, ansi, docs, help, modules, repl, report};
+mod docs;
+mod repl;
+
 use std::process::exit;
+use zil::interp::Interp;
+use zil::value::Value;
+use zil::{Error, STACK, ansi, help, modules};
 
 /// Run `src` and exit with status 1 on error.
 fn run_or_exit(interp: &mut Interp, name: &str, src: &str) -> Value {
-    crate::run(interp, src).unwrap_or_else(|e: Error| {
+    zil::run(interp, src).unwrap_or_else(|e: Error| {
         report(name, src, e);
         exit(1)
     })
@@ -19,7 +22,7 @@ const USAGE: &str = "usage: zil                        start the REPL
        zil --docs <dir>          write the mdBook reference into dir
        zil --version             print the version";
 
-pub fn main() {
+fn main() {
     // The legacy console (e.g. a Start menu shortcut) shows ANSI colors as raw codes until asked not to.
     #[cfg(windows)]
     crossterm::ansi_support::supports_ansi();
@@ -61,4 +64,11 @@ fn real_main() {
             exit(2)
         }
     }
+}
+
+/// Prints `e` to stderr, colored when stderr is a terminal.
+fn report(name: &str, src: &str, e: Error) {
+    use std::io::IsTerminal;
+    let color = std::io::stderr().is_terminal() && std::env::var_os("NO_COLOR").is_none();
+    eprint!("{}", zil::error::render(&e, name, src, color));
 }

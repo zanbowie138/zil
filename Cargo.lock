@@ -1506,7 +1506,6 @@ dependencies = [
  "num-traits",
  "qrcode",
  "regex",
- "rustyline",
  "serde_json",
  "sha1",
  "sha2",
@@ -1514,7 +1513,27 @@ dependencies = [
  "unicode-width",
  "ureq",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "zil-cli"
+version = "0.2.0"
+dependencies = [
+ "crossterm",
+ "jiff",
+ "rustyline",
+ "terminal_size",
  "winresource",
+ "zil",
+]
+
+[[package]]
+name = "zil-wasm"
+version = "0.2.0"
+dependencies = [
+ "serde_json",
+ "wasm-bindgen",
+ "zil",
 ]
 
 [[package]]

@@ -2,7 +2,7 @@ name: docs
 on:
   push:
     branches: [main]
-    paths: [src/**, docs/**, examples/**, Cargo.*, package.json, pnpm-lock.yaml]
+    paths: [crates/**, docs/**, examples/**, Cargo.*, package.json, pnpm-lock.yaml]
   workflow_dispatch:
 permissions:
   contents: read

@@ -131,6 +131,7 @@ const MAX_DEPTH: usize = 10_000;
 const MAX_DEPTH: usize = 500;
 
 impl Interp {
+    #[allow(clippy::new_without_default)] // builds a whole unit registry: not a cheap default
     pub fn new() -> Interp {
         let globals: Env = Default::default();
         let state = State::new();

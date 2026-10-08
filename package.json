@@ -9,7 +9,7 @@
     "serve": "pnpm build && sirv site --dev --port 8765",
     "sandbox": "pnpm wasm && pnpm js && sirv docs/sandbox --dev --port 8765",
     "book": "cargo run --release -- --docs docs/book/src",
-    "wasm": "cargo wasm && wasm-bindgen --target web --no-typescript --out-dir docs/sandbox/pkg target/wasm32-unknown-unknown/wasm/zil.wasm && node docs/stage.mjs examples",
+    "wasm": "cargo wasm && wasm-bindgen --target web --no-typescript --out-dir docs/sandbox/pkg --out-name zil target/wasm32-unknown-unknown/wasm/zil_wasm.wasm && node docs/stage.mjs examples",
     "js": "esbuild docs/editor/app.js --bundle --format=esm --minify --sourcemap --outfile=docs/sandbox/app.js"
   },
   "devDependencies": {

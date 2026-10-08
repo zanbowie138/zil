@@ -1,15 +1,16 @@
 //! The REPL: line editing with completion, hints and syntax colors, multi-line input, `help` shorthand and numbered results.
 
-use crate::ansi::{DIM, RESET, color_on, highlight};
-use crate::interp::{self, Interp};
-use crate::lexer::{self, Tok};
-use crate::session::{self, Shown, help_shorthand, unclosed};
-use crate::state::{self, State};
-use crate::value::Value;
-use crate::{ast, cache_dir, help, modules, pager, parser, report, run};
+use crate::report;
 use rustyline::error::ReadlineError;
 use std::borrow::Cow;
 use std::rc::Rc;
+use zil::ansi::{DIM, RESET, color_on, highlight};
+use zil::interp::{self, Interp};
+use zil::lexer::{self, Tok};
+use zil::session::{self, Shown, help_shorthand, unclosed};
+use zil::state::{self, State};
+use zil::value::Value;
+use zil::{ast, cache_dir, help, modules, pager, parser, run};
 
 /// REPL tab completion over builtins, constants, `to` targets, units, help topics and
 /// variables in scope. After `.`, only functions; after `to`, every unit the left side converts to.
@@ -205,8 +206,8 @@ pub fn repl(interp: &mut Interp) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ansi::{CYAN, GREEN, MAGENTA};
     use rustyline::completion::Completer;
+    use zil::ansi::{CYAN, GREEN, MAGENTA};
 
     #[test]
     fn completes_names_at_cursor() {

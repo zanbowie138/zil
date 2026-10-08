@@ -1,48 +1,16 @@
-[package]
-name = "zil"
+[workspace]
+members = ["crates/*"]
+default-members = ["crates/zil", "crates/zil-cli"]
+resolver = "3"
+
+[workspace.package]
 version = "0.2.0"
 edition = "2024"
-description = "An expression calculator and scripting language with units, dates, exact fractions and big ints"
 repository = "https://github.com/zanbowie138/zil"
-readme = "README.md"
 license = "MIT"
-keywords = ["calculator", "units", "repl", "scripting", "language"]
-categories = ["command-line-utilities", "mathematics"]
 
-[dependencies]
-ariadne = "0.6.0"
-base64 = "0.23.1"
-fastrand = "2.5.0"
-getrandom = "0.2"
-image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "gif"] }
-indexmap = "2.14.2"
-jiff = "0.2.38"
-logos = "0.16.1"
-md-5 = "0.11.0"
-num-bigint = "0.4"
-num-integer = "0.1.47"
-num-rational = "0.4.2"
-num-traits = "0.2.19"
-qrcode = { version = "0.14.1", default-features = false }
-regex = "1.13.1"
-unicode-width = "0.2.2"
-serde_json = { version = "1.0.151", features = ["preserve_order"] }
-sha1 = "0.11"
-sha2 = "0.11.0"
-
-# The terminal and the network: the CLI only, not the browser build.
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-crossterm = "0.29.0"
-rustyline = "18.0.1"
-terminal_size = "0.4.4"
-ureq = "3.4.2"
-
-# The browser build (`pnpm wasm`): randomness, clock and time zones come from JS and a bundled tzdb.
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-fastrand = { version = "2.5.0", features = ["js"] }
-getrandom = { version = "0.2", features = ["js"] }
-jiff = { version = "0.2.38", features = ["js", "tzdb-bundle-always"] }
-wasm-bindgen = "0.2"
+[workspace.lints.clippy]
+mod_module_files = "deny"
 
 # The browser build (`cargo wasm`): smallest download over speed. The CLI keeps the plain release profile.
 [profile.wasm]
@@ -52,9 +20,3 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
-
-[build-dependencies]
-winresource = "0.1.31"
-
-[lints.clippy]
-mod_module_files = "deny"
