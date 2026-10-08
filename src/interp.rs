@@ -5,6 +5,7 @@ use crate::ast::{BinOp, Expr, ExprKind, FnDef, Pat, Radix, Target, UnOp};
 use crate::lexer::Span;
 use crate::modules::{self, data::tables, math::complex, math::uncertainty, units};
 use crate::ops::{binary, verb};
+use crate::state::State;
 use crate::value::{Value, exact, num};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
@@ -118,6 +119,7 @@ pub struct Interp {
     pub args: Vec<String>,
     /// Nested user fn calls, capped at `MAX_DEPTH` so runaway recursion errors instead of overflowing.
     depth: usize,
+    state: Rc<State>,
 }
 
 /// Fits in `crate::STACK` with room to spare in release; debug frames are ~10x bigger, so heavy bodies can still overflow there.
@@ -131,7 +133,8 @@ const MAX_DEPTH: usize = 500;
 impl Interp {
     pub fn new() -> Interp {
         let globals: Env = Default::default();
-        {
+        let state = State::new();
+        crate::state::enter(&state, || {
             let mut g = globals.borrow_mut();
             for m in modules::modules() {
                 for f in m.fns {
@@ -144,8 +147,13 @@ impl Interp {
                     g.vars.insert(name.to_string(), Value::Qty(*x, units::terms(terms).expect("checked by modules::tests::registry")));
                 }
             }
-        }
-        Interp { globals, input: None, args: vec![], depth: 0 }
+        });
+        Interp { globals, input: None, args: vec![], depth: 0, state }
+    }
+
+    /// Shared handle to this session's units, rates and switches, for code that runs outside `run`, like completion.
+    pub fn state(&self) -> Rc<State> {
+        self.state.clone()
     }
 
     /// Shared handle to the global scope, so the REPL completer can peek at variables.
@@ -158,16 +166,19 @@ impl Interp {
     }
 
     pub fn run(&mut self, prog: &[Expr]) -> Result<Value, Error> {
-        let globals = self.globals.clone();
-        let mut last = Value::Nil;
-        for stmt in prog {
-            last = self.eval(stmt, &globals).or_else(Ctl::finish)?;
-        }
-        Ok(last)
+        let (globals, state) = (self.globals.clone(), self.state.clone());
+        crate::state::enter(&state, || {
+            let mut last = Value::Nil;
+            for stmt in prog {
+                last = self.eval(stmt, &globals).or_else(Ctl::finish)?;
+            }
+            Ok(last)
+        })
     }
 
     pub fn call(&mut self, f: &Value, args: Vec<Value>, span: &Span) -> Result<Value, Error> {
-        self.call_at(f, args, span, &[], None)
+        let state = self.state.clone();
+        crate::state::enter(&state, || self.call_at(f, args, span, &[], None))
     }
 
     /// `call` with each argument's span and the callee's name as written, for sharper errors.

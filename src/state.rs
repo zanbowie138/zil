@@ -1,0 +1,69 @@
+//! What a session owns beyond its variables: units, currency rates, the network switch, the stopwatch. Each `Interp`
+//! has its own, and code deep in units or rates reaches the running session's through `with`.
+
+use crate::modules::units::{UnitDef, builtin_units};
+use jiff::Timestamp;
+use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
+use std::rc::Rc;
+
+pub struct State {
+    pub units: RefCell<HashMap<String, Rc<UnitDef>>>,
+    /// Units made with `unit`: name and what it was defined as, for `help`.
+    pub user_units: RefCell<Vec<(String, String)>>,
+    pub rates_loaded: Cell<bool>,
+    pub rates_error: RefCell<String>,
+    /// Off in every new session; `allow_network_access()` turns it on for good.
+    pub network: Cell<bool>,
+    pub stopwatch: Cell<Option<Timestamp>>,
+}
+
+impl State {
+    pub fn new() -> Rc<State> {
+        Rc::new(State {
+            units: RefCell::new(builtin_units()),
+            user_units: Default::default(),
+            rates_loaded: Cell::new(false),
+            rates_error: Default::default(),
+            network: Cell::new(false),
+            stopwatch: Cell::new(None),
+        })
+    }
+}
+
+thread_local! {
+    /// The session running now; outside any, a throwaway one.
+    static CURRENT: RefCell<Rc<State>> = RefCell::new(State::new());
+}
+
+/// The running session's state.
+pub fn with<T>(f: impl FnOnce(&State) -> T) -> T {
+    f(&CURRENT.with_borrow(Rc::clone))
+}
+
+/// Runs `f` with `state` as the running session's, then puts back the one before.
+pub fn enter<T>(state: &Rc<State>, f: impl FnOnce() -> T) -> T {
+    struct Restore(Option<Rc<State>>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            CURRENT.set(self.0.take().unwrap());
+        }
+    }
+    let _restore = Restore(Some(CURRENT.replace(state.clone())));
+    f()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Interp, run};
+
+    #[test]
+    fn sessions_keep_their_own_state() {
+        let (mut a, mut b) = (Interp::new(), Interp::new());
+        run(&mut a, "unit pizza; allow_network_access()").unwrap();
+        assert_eq!(run(&mut a, "2 pizza").unwrap().to_string(), "2 pizza");
+        assert!(run(&mut b, "2 pizza").is_err());
+        assert!(a.state().network.get() && !b.state().network.get());
+        assert!(!super::with(|s| s.network.get()), "no session leaks into the code outside one");
+    }
+}

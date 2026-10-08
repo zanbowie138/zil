@@ -22,6 +22,7 @@ mod parser;
 mod repl;
 mod session;
 mod signature;
+mod state;
 mod value;
 #[cfg(target_arch = "wasm32")]
 mod wasm;

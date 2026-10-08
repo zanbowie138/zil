@@ -4,17 +4,19 @@ use crate::ansi::{DIM, RESET, color_on, highlight};
 use crate::interp::{self, Interp};
 use crate::lexer::{self, Tok};
 use crate::session::{self, Shown, help_shorthand, unclosed};
+use crate::state::{self, State};
 use crate::value::Value;
 use crate::{ast, cache_dir, help, modules, pager, parser, report, run};
 use rustyline::error::ReadlineError;
 use std::borrow::Cow;
+use std::rc::Rc;
 
 /// REPL tab completion over builtins, constants, `to` targets, units, help topics and
 /// variables in scope. After `.`, only functions; after `to`, every unit the left side converts to.
-struct Names(Vec<String>, interp::Env);
+struct Names(Vec<String>, interp::Env, Rc<State>);
 
 impl Names {
-    fn new(globals: interp::Env) -> Names {
+    fn new(interp: &Interp) -> Names {
         let mut v: Vec<String> = modules::ALL.iter().map(|(path, _)| path.clone()).collect();
         v.extend(
             modules::modules()
@@ -26,7 +28,7 @@ impl Names {
         v.extend(["syntax", "examples", "advanced"].map(String::from));
         v.sort();
         v.dedup();
-        Names(v, globals)
+        Names(v, interp.globals(), interp.state())
     }
 
     /// Units convertible from the expression before a trailing `to`, read from literals and
@@ -59,15 +61,18 @@ impl rustyline::completion::Completer for Names {
     fn complete(&self, line: &str, pos: usize, _: &rustyline::Context<'_>) -> rustyline::Result<(usize, Vec<String>)> {
         let start = pos - line[..pos].chars().rev().take_while(|c| c.is_alphanumeric() || *c == '_').map(char::len_utf8).sum::<usize>();
         let word = &line[start..pos];
-        let mut hits: Vec<String> = if let Some(units) = self.conversions(&line[..start]) {
-            units
-        } else if line[..start].ends_with('.') {
-            interp::methods(&self.1)
-        } else if word.is_empty() {
-            vec![]
-        } else {
-            self.0.iter().cloned().chain(interp::names(&self.1)).chain(modules::units::user_units()).collect()
-        };
+        // Units come from this session's own, user-made ones included.
+        let mut hits: Vec<String> = state::enter(&self.2, || {
+            if let Some(units) = self.conversions(&line[..start]) {
+                units
+            } else if line[..start].ends_with('.') {
+                interp::methods(&self.1)
+            } else if word.is_empty() {
+                vec![]
+            } else {
+                self.0.iter().cloned().chain(interp::names(&self.1)).chain(modules::units::user_units()).collect()
+            }
+        });
         hits.retain(|n| n.starts_with(word));
         hits.sort();
         hits.dedup();
@@ -127,7 +132,7 @@ impl rustyline::ConditionalEventHandler for Stash {
 pub fn repl(interp: &mut Interp) {
     let config = rustyline::Config::builder().completion_type(rustyline::CompletionType::List).build();
     let mut rl = rustyline::Editor::with_config(config).expect("terminal");
-    rl.set_helper(Some(Names::new(interp.globals())));
+    rl.set_helper(Some(Names::new(interp)));
     let stashed = std::sync::Arc::default();
     rl.bind_sequence(
         rustyline::KeyEvent(rustyline::KeyCode::Char('q'), rustyline::Modifiers::ALT),
@@ -208,7 +213,7 @@ mod tests {
         let history = rustyline::history::DefaultHistory::new();
         let ctx = rustyline::Context::new(&history);
         let mut interp = Interp::new();
-        let names = Names::new(interp.globals());
+        let names = Names::new(&interp);
         assert_eq!(names.complete("x.upp", 5, &ctx).unwrap(), (2, vec!["upper".to_string()]));
         assert!(names.complete("5 kilo", 6, &ctx).unwrap().1.contains(&"kilometers".to_string()));
         assert!(names.complete("x ", 2, &ctx).unwrap().1.is_empty());
@@ -235,7 +240,7 @@ mod tests {
         use rustyline::hint::Hinter;
         let history = rustyline::history::DefaultHistory::new();
         let ctx = rustyline::Context::new(&history);
-        let names = Names::new(Interp::new().globals());
+        let names = Names::new(&Interp::new());
         assert_eq!(names.hint("x.upp", 5, &ctx).as_deref(), Some("er"));
         assert_eq!(names.hint("x.upp", 3, &ctx), None);
         let line = names.highlight("if x 5 \"s\"", 0);

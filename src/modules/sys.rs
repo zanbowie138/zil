@@ -5,16 +5,10 @@ use crate::lexer::Span;
 use crate::modules::{Call, Doc, Fail, Module, doc};
 use crate::value::Value;
 use indexmap::IndexMap;
-use std::cell::Cell;
-
-thread_local! {
-    /// Off in every new session; `allow_network_access()` turns it on for good.
-    static NETWORK: Cell<bool> = const { Cell::new(false) };
-}
 
 /// Whether features that go online on their own (currency rates, translation) may do so.
 pub fn network_allowed() -> bool {
-    NETWORK.get()
+    crate::state::with(|s| s.network.get())
 }
 
 pub const MODULE: Module = Module {
@@ -85,7 +79,7 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         }
         ("fetch", [Str(url)]) => Value::str(get(url, &[]).map_err(|e| format!("{url}: {e}"))?),
         ("allow_network_access", []) => {
-            NETWORK.set(true);
+            crate::state::with(|s| s.network.set(true));
             crate::modules::units::retry_rates();
             Nil
         }
@@ -126,9 +120,7 @@ mod tests {
         assert_eq!(show(r#"env("ZIL_SURELY_UNSET")"#), "nil");
         assert_eq!(show(r#"sh("echo hi")"#), "hi");
         assert_eq!(show(r#"run("exit 3").code"#), "3");
-        assert!(!super::network_allowed());
         assert_eq!(show("allow_network_access()"), "nil");
-        assert!(super::network_allowed());
         assert!(try_eval(r#"sh("exit 3")"#).is_err());
     }
 }

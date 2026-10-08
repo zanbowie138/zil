@@ -11,7 +11,7 @@ mod table;
 
 pub use dims::*;
 pub use rates::retry_rates;
-use rates::{CURRENCIES, RATES_ERROR, RATES_LOADED, currency, load_rates_once, rate_error};
+use rates::{CURRENCIES, currency, load_rates_once, rate_error};
 pub use table::{Row, TABLE};
 
 use crate::ast::{BinOp, Target, UnitSpec};
@@ -314,7 +314,7 @@ fn topic(topic: &str) -> bool {
         out!("");
         show(vec![format!("1 {name} to {other}"), format!("1 {other} to {name}")]);
         out!("{}", paint(DIM, &format!("all {kind} units: help(\"{kind}\")")));
-    } else if let Some((_, desc)) = USER.with(|u| u.borrow().iter().find(|(n, _)| n == topic).cloned()) {
+    } else if let Some((_, desc)) = user_defs(|u| u.borrow().iter().find(|(n, _)| n == topic).cloned()) {
         match desc.as_str() {
             "" => out!("{}: a base unit you defined with `unit {topic}`", paint(NAME, topic)),
             _ => out!("{}: a unit you defined, 1 {topic} = {desc}", paint(NAME, topic)),
@@ -365,10 +365,11 @@ fn all_units() -> Value {
             maps.push(entry(name, full, desc, names.collect(), *scale, dim, source));
         }
     }
-    let user = USER.with(|u| u.borrow().clone());
+    let user = user_defs(|u| u.borrow().clone());
     // A currency is registered under its code and its lowercase alias; user units can be money too.
-    let mut codes: Vec<_> = REGISTRY
-        .with(|r| r.borrow().iter().filter(|(k, u)| u.dim == MONEY && **k == u.name && !user.iter().any(|(n, _)| n == *k)).map(|(_, u)| u.clone()).collect());
+    let mut codes: Vec<_> = registry(|r| {
+        r.borrow().iter().filter(|(k, u)| u.dim == MONEY && **k == u.name && !user.iter().any(|(n, _)| n == *k)).map(|(_, u)| u.clone()).collect()
+    });
     codes.sort_by(|a, b| a.name.cmp(&b.name));
     for def in codes {
         maps.push(entry(&def.name, &def.name, "currency", vec![&def.name.to_lowercase()], def.scale.get(), &def.dim, "currency"));
@@ -387,7 +388,7 @@ fn base_terms(dim: &Dim) -> Vec<(String, i8)> {
     }
     const BASES: [&str; 11] = ["m", "kg", "s", "A", "K", "mol", "cd", "bit", "EUR", "rad", "Sv"];
     // User bases take slots in the order they were made.
-    let user = USER.with(|u| u.borrow().iter().filter(|(_, d)| d.is_empty()).map(|(n, _)| n.clone()).collect::<Vec<_>>());
+    let user = user_defs(|u| u.borrow().iter().filter(|(_, d)| d.is_empty()).map(|(n, _)| n.clone()).collect::<Vec<_>>());
     BASES.iter().map(|n| n.to_string()).chain(user).zip(dim).filter(|(_, p)| **p != 0).map(|(n, p)| (n, *p)).collect()
 }
 
@@ -523,24 +524,28 @@ impl fmt::Display for Unit {
     }
 }
 
-thread_local! {
-    static REGISTRY: RefCell<HashMap<String, Rc<UnitDef>>> = RefCell::new(builtin_units());
-    /// Units made with `unit`: name and what it was defined as, for `help`.
-    static USER: RefCell<Vec<(String, String)>> = const { RefCell::new(Vec::new()) };
+/// The running session's units, built-in and user-made, by every name.
+fn registry<T>(f: impl FnOnce(&RefCell<HashMap<String, Rc<UnitDef>>>) -> T) -> T {
+    crate::state::with(|s| f(&s.units))
+}
+
+/// The running session's units made with `unit`: name and what it was defined as, for `help`.
+fn user_defs<T>(f: impl FnOnce(&RefCell<Vec<(String, String)>>) -> T) -> T {
+    crate::state::with(|s| f(&s.user_units))
 }
 
 /// `unit pizza` (no value) makes a new base unit; `unit slice = pizza / 8` or `unit dozen = 12` one
 /// in terms of others. Built-in units can't be redefined; user ones can.
 pub fn define(name: &str, value: Option<&Value>) -> Result<(), String> {
-    let user = USER.with(|u| u.borrow().iter().position(|(n, _)| n == name));
+    let user = user_defs(|u| u.borrow().iter().position(|(n, _)| n == name));
     if user.is_none() && lookup(name).is_ok() {
         return Err(format!("`{name}` is already a unit"));
     }
     let (scale, dim, desc) = match value {
         // Redefining a base keeps its slot, so values made with it still convert.
-        None if user.is_some_and(|i| USER.with(|u| u.borrow()[i].1.is_empty())) => return Ok(()),
+        None if user.is_some_and(|i| user_defs(|u| u.borrow()[i].1.is_empty())) => return Ok(()),
         None => {
-            let used = USER.with(|u| u.borrow().iter().filter(|(_, d)| d.is_empty()).count());
+            let used = user_defs(|u| u.borrow().iter().filter(|(_, d)| d.is_empty()).count());
             // ponytail: fixed slots in Dim; widen Dim if 6 user bases ever feels tight.
             if FIRST_USER_BASE + used >= NONE.len() {
                 return Err(format!("too many base units: at most {}", NONE.len() - FIRST_USER_BASE));
@@ -557,8 +562,8 @@ pub fn define(name: &str, value: Option<&Value>) -> Result<(), String> {
         return Err(rate_error());
     }
     let def = Rc::new(UnitDef { name: name.into(), scale: Cell::new(scale), offset: 0.0, dim });
-    REGISTRY.with(|r| r.borrow_mut().insert(name.into(), def));
-    USER.with(|u| {
+    registry(|r| r.borrow_mut().insert(name.into(), def));
+    user_defs(|u| {
         let mut u = u.borrow_mut();
         u.retain(|(n, _)| n != name);
         u.push((name.into(), desc));
@@ -568,7 +573,7 @@ pub fn define(name: &str, value: Option<&Value>) -> Result<(), String> {
 
 /// Names of units made with `unit`, for completion.
 pub fn user_units() -> Vec<String> {
-    USER.with(|u| u.borrow().iter().map(|(n, _)| n.clone()).collect())
+    user_defs(|u| u.borrow().iter().map(|(n, _)| n.clone()).collect())
 }
 
 /// Every unit row: the real ones, then those children add.
@@ -576,7 +581,7 @@ pub fn rows() -> impl Iterator<Item = &'static Row> {
     TABLE.iter().chain(goofy::TABLE)
 }
 
-fn builtin_units() -> HashMap<String, Rc<UnitDef>> {
+pub fn builtin_units() -> HashMap<String, Rc<UnitDef>> {
     let mut map = HashMap::new();
     for (names, scale, offset, dim, _) in rows() {
         let primary = names.split(' ').next().unwrap();
@@ -599,27 +604,27 @@ fn builtin_units() -> HashMap<String, Rc<UnitDef>> {
 }
 
 pub fn lookup(name: &str) -> Result<Rc<UnitDef>, String> {
-    if let Some(u) = REGISTRY.with(|r| r.borrow().get(name).cloned()) {
+    if let Some(u) = registry(|r| r.borrow().get(name).cloned()) {
         return Ok(u);
     }
     // Any other code the rate source has (VND, ARS, ...): load the rates to find out.
     let looks_like_currency = name.len() == 3 && name.bytes().all(|b| b.is_ascii_uppercase());
-    if looks_like_currency && !RATES_LOADED.with(|l| *l.borrow()) {
+    if looks_like_currency && !crate::state::with(|s| s.rates_loaded.get()) {
         load_rates_once();
         return lookup(name);
     }
     // Rates failed to load, so a real code like VND isn't registered: say why, not just "unknown".
-    if looks_like_currency && RATES_ERROR.with(|e| !e.borrow().is_empty()) {
+    if looks_like_currency && crate::state::with(|s| !s.rates_error.borrow().is_empty()) {
         return Err(format!("unknown unit `{name}` ({})", rate_error()));
     }
-    let known: Vec<String> = REGISTRY.with(|r| r.borrow().keys().cloned().collect());
+    let known: Vec<String> = registry(|r| r.borrow().keys().cloned().collect());
     let targets = crate::modules::modules().flat_map(|m| m.targets.iter().map(|t| t.0));
     Err(format!("unknown unit `{name}`{}", crate::error::did_you_mean(name, known.iter().map(String::as_str).chain(targets))))
 }
 
 /// Dimension of `spec` from already-loaded units only, so REPL completion never fetches rates.
 pub fn known_dim(spec: &UnitSpec) -> Option<Dim> {
-    REGISTRY.with(|r| {
+    registry(|r| {
         let r = r.borrow();
         let mut dim = NONE;
         for (name, p) in spec {
@@ -633,7 +638,7 @@ pub fn known_dim(spec: &UnitSpec) -> Option<Dim> {
 
 /// Display names of every loaded unit of dimension `dim`, sorted.
 pub fn names_with_dim(dim: Dim) -> Vec<String> {
-    let mut v: Vec<String> = REGISTRY.with(|r| r.borrow().values().filter(|u| u.dim == dim).map(|u| u.name.clone()).collect());
+    let mut v: Vec<String> = registry(|r| r.borrow().values().filter(|u| u.dim == dim).map(|u| u.name.clone()).collect());
     v.sort();
     v.dedup();
     v
@@ -670,13 +675,12 @@ mod tests {
 
     #[test]
     fn units_lists_every_source() {
-        try_eval("unit widget").unwrap();
         for source in ["units", "goofy", "currency", "user"] {
-            assert_eq!(show(&format!(r#"all_units().filter(|u| u.source == "{source}").len > 0"#)), "true", "{source}");
+            assert_eq!(show(&format!(r#"unit widget; all_units().filter(|u| u.source == "{source}").len > 0"#)), "true", "{source}");
         }
         assert_eq!(show(r#"all_units().filter(|u| u.name == "mi")[0].si"#), "1609.34 m");
         assert_eq!(show(r#"all_units().filter(|u| u.name == "USD")[0].kind"#), "money");
-        assert_eq!(show(r#"all_units().filter(|u| u.name == "widget")[0].kind"#), "widget");
+        assert_eq!(show(r#"unit widget; all_units().filter(|u| u.name == "widget")[0].kind"#), "widget");
     }
 
     #[test]

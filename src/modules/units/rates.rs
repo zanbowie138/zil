@@ -1,13 +1,9 @@
 //! Currencies: the common codes known offline, and exchange rates loaded once from cache or open.er-api.com.
 
-use super::{MONEY, REGISTRY, UnitDef};
-use std::cell::{Cell, RefCell};
+use super::{MONEY, UnitDef, registry};
+use crate::state;
+use std::cell::Cell;
 use std::rc::Rc;
-
-thread_local! {
-    pub static RATES_LOADED: RefCell<bool> = const { RefCell::new(false) };
-    pub static RATES_ERROR: RefCell<String> = const { RefCell::new(String::new()) };
-}
 
 /// Common currencies, known without fetching, so `25 USD/h * 40 h` stays offline.
 pub const CURRENCIES: &str = "AUD BGN BRL CAD CHF CNY CZK DKK EUR GBP HKD HUF IDR ILS INR ISK JPY KRW MXN MYR NOK NZD PHP PLN RON SEK SGD THB TRY USD ZAR";
@@ -17,17 +13,17 @@ pub fn currency(code: &str, scale: f64) -> Rc<UnitDef> {
 }
 
 pub fn rate_error() -> String {
-    RATES_ERROR.with(|e| format!("cannot load currency rates: {}", e.borrow()))
+    state::with(|s| format!("cannot load currency rates: {}", s.rates_error.borrow()))
 }
 
 /// Fills in every currency's rate, once; on failure their scales stay NaN and `rate_error` says why.
 pub fn load_rates_once() {
-    if RATES_LOADED.with(|l| l.replace(true)) {
+    if state::with(|s| s.rates_loaded.replace(true)) {
         return;
     }
-    RATES_ERROR.with(|e| e.borrow_mut().clear());
+    state::with(|s| s.rates_error.borrow_mut().clear());
     match load_rates() {
-        Ok(rates) => REGISTRY.with(|r| {
+        Ok(rates) => registry(|r| {
             let mut r = r.borrow_mut();
             for (code, per_eur) in rates {
                 match r.get(&code) {
@@ -40,13 +36,13 @@ pub fn load_rates_once() {
                 }
             }
         }),
-        Err(e) => RATES_ERROR.with(|x| *x.borrow_mut() = e),
+        Err(e) => state::with(|s| *s.rates_error.borrow_mut() = e),
     }
 }
 
 /// Lets the next currency conversion try loading rates again, now that it may go online.
 pub fn retry_rates() {
-    RATES_LOADED.with(|l| *l.borrow_mut() = false);
+    state::with(|s| s.rates_loaded.set(false));
 }
 
 fn fetch_rates() -> Result<String, String> {

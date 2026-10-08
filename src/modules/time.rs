@@ -105,10 +105,6 @@ const FNS: &[Doc] = &[
     doc("stopwatch", "stopwatch()", "time since the last `stopwatch()` call (0 s the first time)", &["stopwatch() >= 0 s"], &["timeit"]),
 ];
 
-thread_local! {
-    static STOPWATCH: std::cell::Cell<Option<Timestamp>> = const { std::cell::Cell::new(None) };
-}
-
 fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &crate::lexer::Span) -> Call {
     use Value::*;
     Ok(match (name, args) {
@@ -174,7 +170,7 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &crate::lexer
         }
         ("stopwatch", []) => {
             let now = Timestamp::now();
-            seconds(STOPWATCH.replace(Some(now)).map_or(0.0, |t| now.duration_since(t).as_secs_f64()))
+            seconds(crate::state::with(|s| s.stopwatch.replace(Some(now))).map_or(0.0, |t| now.duration_since(t).as_secs_f64()))
         }
         _ => return Err(Fail::BadArgs),
     })
