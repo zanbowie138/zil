@@ -51,7 +51,8 @@ fn run_or_exit(interp: &mut Interp, name: &str, src: &str) -> Value {
 const USAGE: &str = "usage: zil                        start the REPL
        zil -e <code> [args...]   evaluate code and print the result
        zil <file.zil> [args...]  run a script; args() lists the extra arguments
-       zil --docs <dir>          write the mdBook reference into dir";
+       zil --docs <dir>          write the mdBook reference into dir
+       zil --version             print the version";
 
 /// Interpreter thread stack: deep enough for `interp::MAX_DEPTH` nested calls in a debug build.
 /// Only reserved, not committed, so the size costs nothing until used.
@@ -82,6 +83,7 @@ fn real_main() {
             exit(1)
         }),
         [flag] if flag == "-h" || flag == "--help" => println!("{USAGE}"),
+        [flag] if flag == "-V" || flag == "--version" => println!("zil {}", env!("CARGO_PKG_VERSION")),
         [path, rest @ ..] if !path.starts_with('-') => {
             interp.args = rest.to_vec();
             let src = std::fs::read_to_string(path).unwrap_or_else(|e| {

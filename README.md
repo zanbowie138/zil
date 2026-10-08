@@ -28,6 +28,18 @@ date("2026-12-25 18:30") to "Asia/Tokyo" # → 2026-12-26 09:30:00 +09:00
 
 ## Install
 
+Download a prebuilt binary from the [latest release](https://github.com/zanbowie138/zil/releases/latest):
+
+| Platform              | Download                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Windows x64           | [zil-x86_64-pc-windows-msvc.zip](https://github.com/zanbowie138/zil/releases/latest/download/zil-x86_64-pc-windows-msvc.zip) |
+| macOS (Apple Silicon) | [zil-aarch64-apple-darwin.tar.gz](https://github.com/zanbowie138/zil/releases/latest/download/zil-aarch64-apple-darwin.tar.gz) |
+| macOS (Intel)         | [zil-x86_64-apple-darwin.tar.gz](https://github.com/zanbowie138/zil/releases/latest/download/zil-x86_64-apple-darwin.tar.gz) |
+| Linux x64             | [zil-x86_64-unknown-linux-gnu.tar.gz](https://github.com/zanbowie138/zil/releases/latest/download/zil-x86_64-unknown-linux-gnu.tar.gz) |
+| Linux ARM64           | [zil-aarch64-unknown-linux-gnu.tar.gz](https://github.com/zanbowie138/zil/releases/latest/download/zil-aarch64-unknown-linux-gnu.tar.gz) |
+
+Or build it with Cargo:
+
 ```sh
 cargo install zil
 ```
@@ -45,6 +57,7 @@ zil                        start the REPL
 zil -e <code> [args...]    evaluate code and print the result
 zil <file.zil> [args...]   run a script; args() lists the extra arguments
 zil --docs <dir>           write the mdBook reference into dir
+zil --version              print the version
 ```
 
 The REPL keeps history, accepts multi-line input, and stores the last result in `_`. Piped input is available as `input`:
@@ -62,6 +75,7 @@ echo "hi there" | zil -e 'input.upper'   # → HI THERE
 4.7 GB / 50 Mbps to min         # → 12.5333 min
 9.81 m/s^2 * 70 kg to N         # → 686.7 N
 (5 m ± 0.2 m) * (3 m ± 0.1 m)   # → 15 ± 0.781025 m^2
+allow_network_access()          # rates are fetched online, so opt in first
 100 USD to EUR                  # → €88.87
 ```
 

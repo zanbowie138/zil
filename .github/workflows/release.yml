@@ -1,0 +1,25 @@
+name: release
+on:
+  release:
+    types: [published]
+permissions:
+  contents: write
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          # ponytail: glibc builds on 22.04 run on glibc 2.35+; switch to musl if older distros need them
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-22.04 }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-22.04-arm }
+          - { target: x86_64-apple-darwin, os: macos-latest }
+          - { target: aarch64-apple-darwin, os: macos-latest }
+          - { target: x86_64-pc-windows-msvc, os: windows-latest }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          bin: zil
+          target: ${{ matrix.target }}
+          token: ${{ secrets.GITHUB_TOKEN }}
