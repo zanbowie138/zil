@@ -5,6 +5,7 @@ edition = "2024"
 description = "An expression calculator and scripting language with units, dates, exact fractions and big ints"
 repository = "https://github.com/zanbowie138/zil"
 readme = "README.md"
+license = "MIT"
 keywords = ["calculator", "units", "repl", "scripting", "language"]
 categories = ["command-line-utilities", "mathematics"]
 
