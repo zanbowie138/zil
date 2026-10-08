@@ -515,4 +515,9 @@ warm()
     run();
     if (mode === "repl") ensureSession().then(() => tour.hidden && input.focus());
   })
-  .catch((e) => (out.innerHTML = `<div class="error"><pre>${escape(e.message)}</pre></div>`));
+  // Shown in both modes, since either may be the one open.
+  .catch((e) => {
+    const html = `<div class="error"><pre>${escape(e.message)}</pre></div>`;
+    out.innerHTML = html;
+    entry(html);
+  });

@@ -12,8 +12,15 @@ function spawn() {
   generation++;
   worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
   ready = new Promise((resolve, reject) => {
+    // Most load failures are a cached zil.js or worker.js that doesn't match a newer zil_bg.wasm.
+    const failed = (why) => {
+      why = `couldn't load zil: ${why}\nReload the page without the cache (Ctrl+Shift+R, or ⌘⇧R on a Mac) to fetch a fresh copy.`;
+      kill(why);
+      reject(new Error(why));
+    };
     worker.onmessage = ({ data }) => {
       if (data.ready) return resolve();
+      if ("fail" in data) return failed(data.fail);
       const p = pending.get(data.id);
       if (!p) return;
       pending.delete(data.id);
@@ -23,11 +30,7 @@ function spawn() {
         p.reject(new Error(`zil crashed: ${data.crash}`));
       } else p.resolve(data.result);
     };
-    worker.onerror = (e) => {
-      const why = `couldn't load zil: ${e.message || "network error"}`;
-      kill(why);
-      reject(new Error(why));
-    };
+    worker.onerror = (e) => failed(e.message || "network error");
   });
 }
 
