@@ -1,0 +1,17 @@
+{
+  "name": "zil-site",
+  "private": true,
+  "description": "The docs site: the mdBook reference, the sandbox, and the wasm build both run. Needs mdbook, the wasm32-unknown-unknown target and wasm-bindgen-cli at Cargo.lock's wasm-bindgen version.",
+  "type": "module",
+  "packageManager": "pnpm@12.6.0",
+  "scripts": {
+    "build": "pnpm book && pnpm wasm && mdbook build docs/book && node docs/stage.mjs site",
+    "serve": "pnpm build && sirv docs/book/book --dev --port 8765",
+    "sandbox": "pnpm wasm && sirv docs/sandbox --dev --port 8765",
+    "book": "cargo run --release -- --docs docs/book/src",
+    "wasm": "cargo wasm && wasm-bindgen --target web --no-typescript --out-dir docs/sandbox/pkg target/wasm32-unknown-unknown/release/zil.wasm && node docs/stage.mjs examples"
+  },
+  "devDependencies": {
+    "sirv-cli": "^3.0.1"
+  }
+}

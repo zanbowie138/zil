@@ -53,7 +53,7 @@ fn fetch_rates() -> Result<String, String> {
     if !crate::modules::sys::network_allowed() {
         return Err("not cached; call allow_network_access() to fetch them".into());
     }
-    ureq::get("https://open.er-api.com/v6/latest/EUR").call().and_then(|mut r| r.body_mut().read_to_string()).map_err(|e| e.to_string())
+    crate::modules::sys::get("https://open.er-api.com/v6/latest/EUR", &[])
 }
 
 /// Units per 1 EUR from open.er-api.com (about 160 currencies, updated daily), cached on disk for a day.

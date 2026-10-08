@@ -1,0 +1,58 @@
+/* Runnable zil blocks (run.js). Colors come from mdBook's theme variables, so every theme works. */
+pre:has(> code.language-zil) { padding-bottom: 2.6em; }
+code.language-zil[contenteditable] { outline: none; caret-color: var(--fg); }
+pre:has(> code.language-zil:focus) { box-shadow: 0 0 0 1px var(--icons); }
+.zil-result { color: var(--fg); opacity: 0.68; }
+
+.zil-run {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 12px 3px 24px;
+  font: 500 1.25rem/1.6 var(--mono-font, monospace);
+  color: var(--icons);
+  background: var(--bg);
+  border: 1px solid var(--icons);
+  border-radius: 999px;
+  cursor: pointer;
+}
+/* A play triangle in the button's own color. */
+.zil-run::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  translate: 0 -50%;
+  border: 0.42em solid transparent;
+  border-left: 0.6em solid currentColor;
+  border-right: 0;
+}
+pre:hover > .zil-run, pre:focus-within > .zil-run { color: var(--fg); }
+.zil-run:hover, .zil-run:focus-visible { color: var(--sidebar-active); border-color: var(--sidebar-active); }
+
+/* An arrow out of a box, matching mdBook's copy button. */
+pre > .buttons button.zil-open { padding: 2px 4px 0 5px; }
+pre > .buttons button.zil-open::before {
+  content: "";
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  -webkit-mask: var(--zil-open) center / contain no-repeat;
+  mask: var(--zil-open) center / contain no-repeat;
+}
+:root {
+  --zil-open: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5'/%3E%3C/svg%3E");
+}
+
+.zil-sandbox-link {
+  align-self: center;
+  margin-right: 10px;
+  padding: 2px 10px;
+  font-size: 1.4rem;
+  text-decoration: none;
+  color: var(--icons);
+  border: 1px solid var(--icons);
+  border-radius: 999px;
+}
+.zil-sandbox-link:hover { color: var(--sidebar-active); border-color: var(--sidebar-active); text-decoration: none; }

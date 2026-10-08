@@ -120,8 +120,13 @@ pub struct Interp {
     depth: usize,
 }
 
-/// Fits in `main::STACK` with room to spare in release; debug frames are ~10x bigger, so heavy bodies can still overflow there.
+/// Fits in `crate::STACK` with room to spare in release; debug frames are ~10x bigger, so heavy bodies can still overflow there.
+#[cfg(not(target_arch = "wasm32"))]
 const MAX_DEPTH: usize = 10_000;
+/// The browser's own stack (about 1 MB in Chrome) holds wasm frames too, and no page can raise it: ~1000 simple calls fit.
+/// Heavier bodies can still overflow it, which kills the worker; the page then starts a new one.
+#[cfg(target_arch = "wasm32")]
+const MAX_DEPTH: usize = 500;
 
 impl Interp {
     pub fn new() -> Interp {

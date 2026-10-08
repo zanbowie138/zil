@@ -3,3 +3,6 @@
 /docs/book/book
 /install.cmd
 /docs/book/src
+/docs/sandbox/pkg
+/docs/sandbox/examples
+/node_modules

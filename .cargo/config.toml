@@ -1,0 +1,7 @@
+# The browser build: wasm's default 1 MB stack can overflow, silently corrupting memory, before interp::MAX_DEPTH stops recursion.
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "link-arg=-zstack-size=16777216"]
+
+[alias]
+# The browser build's wasm (`pnpm wasm` runs wasm-bindgen on it).
+wasm = "rustc --lib --release --target wasm32-unknown-unknown --crate-type cdylib"

@@ -40,6 +40,10 @@ pub fn animate(it: &mut Interp, args: &[Value], span: &Span) -> Call {
             continue;
         }
         let text = frame.to_string();
+        if !tty {
+            crate::print(&text);
+            continue;
+        }
         if shown > 0 {
             // Back up over the previous frame and clear from there down.
             _ = write!(out, "\x1b[{shown}F\x1b[J");

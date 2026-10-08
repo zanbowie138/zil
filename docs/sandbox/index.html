@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zil sandbox</title>
+<meta name="description" content="Run zil, a calculator language with units, dates and exact math, in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="modulepreload" href="pkg/zil.js">
+<style>
+:root {
+  --bg: #f6f5f1; --panel: #fffefb; --sunk: #efede7; --ink: #1d1c1a; --muted: #6e6a62; --faint: #a6a196; --line: #e3e0d8;
+  --accent: #c8440f; --accent-ink: #fff; --accent-soft: #fbe9df; --bad: #b42318; --bad-soft: #fdecea;
+  --k: #b3420e; --s: #3f7a12; --n: #0f6e76; --f: #2849b8; --c: #9b968b;
+  --ansi-fg: var(--ink); --ansi-bg: var(--panel);
+  --ansi-0: #1d1c1a; --ansi-1: #c4281c; --ansi-2: #3f7a12; --ansi-3: #a86a00; --ansi-4: #2849b8; --ansi-5: #9c2f8f; --ansi-6: #0f6e76; --ansi-7: #6e6a62;
+  --ansi-8: #8a857b; --ansi-9: #e0442f; --ansi-10: #58a11e; --ansi-11: #c99400; --ansi-12: #4469e0; --ansi-13: #c044b0; --ansi-14: #1693a0; --ansi-15: #1d1c1a;
+  --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Menlo, monospace;
+  /* Output: Google's Plex Mono subsets lack box drawing and arrows, and fallback glyphs of another width skew boxes. */
+  --term: "Cascadia Mono", Menlo, "DejaVu Sans Mono", Consolas, ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131312; --panel: #1a1a18; --sunk: #222220; --ink: #ebe9e3; --muted: #9a958b; --faint: #67635b; --line: #2d2c29;
+    --accent: #ff7b3f; --accent-ink: #1a0d06; --accent-soft: #3a2116; --bad: #ff7a6b; --bad-soft: #3a1c18;
+    --k: #ff9a62; --s: #a5d46a; --n: #5ccfd6; --f: #8fb0ff; --c: #6f6b62;
+    --ansi-0: #3a3935; --ansi-1: #ff7a6b; --ansi-2: #a5d46a; --ansi-3: #e8c45a; --ansi-4: #8fb0ff; --ansi-5: #e39ad8; --ansi-6: #5ccfd6; --ansi-7: #c9c5bb;
+    --ansi-8: #77736b; --ansi-9: #ff9d91; --ansi-10: #c4ec8f; --ansi-11: #f5d97f; --ansi-12: #b3c9ff; --ansi-13: #f0b8e8; --ansi-14: #8ae4e9; --ansi-15: #ffffff;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--sans); display: flex; flex-direction: column; }
+button, select { font: inherit; color: inherit; }
+a { color: inherit; }
+kbd { font: 500 11px var(--mono); padding: 1px 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); background: var(--panel); }
+
+/* top bar */
+.bar { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: baseline; gap: 8px; text-decoration: none; }
+.brand b { font: 600 20px var(--mono); letter-spacing: -0.02em; }
+.brand b::after { content: ""; display: inline-block; width: 7px; height: 7px; margin-left: 2px; border-radius: 2px; background: var(--accent); }
+.brand span { color: var(--muted); }
+.bar nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.bar nav a { text-decoration: none; color: var(--muted); padding: 6px 10px; border-radius: 6px; }
+.bar nav a:hover { color: var(--ink); background: var(--sunk); }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--sunk); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 500; }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.primary kbd { background: transparent; color: inherit; border-color: color-mix(in srgb, currentColor 35%, transparent); }
+.btn:focus-visible, select:focus-visible, .try:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+select.btn { appearance: none; padding-right: 28px; background: var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center; }
+
+/* layout */
+.app { flex: 1; min-height: 0; display: grid; grid-template-columns: 272px minmax(0, 1fr) minmax(0, 1fr); }
+.pane { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.pane + .pane { border-left: 1px solid var(--line); }
+.head { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.head .title { font-weight: 500; color: var(--ink); }
+.head .spacer { flex: 1; }
+
+/* left rail: things to try */
+.rail { background: var(--bg); overflow: auto; }
+.rail h2 { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink); }
+.rail section { padding: 18px 12px 8px; }
+.rail section > h2, .rail section > p { padding: 0 8px; }
+.rail p { margin: 2px 0 10px; color: var(--muted); font-size: 12.5px; }
+.try { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 7px 8px; border-radius: 7px; cursor: pointer; }
+.try:hover { background: var(--sunk); }
+.try[aria-current] { background: var(--accent-soft); }
+.try span { display: block; font-size: 13px; }
+.try code { display: block; font: 12px/1.5 var(--mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rail select.pick { width: 100%; margin-bottom: 12px; font-weight: 500; }
+.rail p.start { margin: 0 0 12px; padding: 10px 12px; border-radius: 8px; background: var(--accent-soft); color: var(--ink); }
+.link { border: 0; background: none; padding: 0; font: 500 12px var(--mono); color: var(--accent); text-decoration: underline; cursor: pointer; }
+.basics { list-style: none; margin: 0; padding: 0 8px 20px; display: grid; gap: 8px; font-size: 12.5px; color: var(--muted); }
+.basics code { font: 12px var(--mono); color: var(--ink); background: var(--sunk); padding: 1px 5px; border-radius: 4px; }
+
+/* editor: a transparent textarea over its highlighted copy */
+.editor { position: relative; flex: 1; min-height: 0; display: flex; background: var(--panel); }
+.gutter, .code { font: 13.5px/1.65 var(--mono); tab-size: 2; padding: 16px 0; margin: 0; }
+.gutter { flex: none; width: 44px; padding-right: 12px; text-align: right; color: var(--faint); user-select: none; overflow: hidden; white-space: pre; }
+.layers { position: relative; flex: 1; min-width: 0; }
+.code { position: absolute; inset: 0; padding-right: 20px; white-space: pre; overflow: auto; border: 0; }
+pre.code { pointer-events: none; overflow: hidden; color: var(--ink); }
+textarea.code { resize: none; background: transparent; color: transparent; caret-color: var(--ink); outline: none; }
+textarea.code::selection { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.hljs-keyword { color: var(--k); } .hljs-string { color: var(--s); } .hljs-number { color: var(--n); } .hljs-title { color: var(--f); }
+.hljs-comment, .zil-result { color: var(--c); font-style: italic; }
+
+/* output */
+.out { flex: 1; overflow: auto; padding: 16px 20px; background: var(--panel); font: 13.5px/1.65 var(--term); }
+.out pre { margin: 0; font: inherit; white-space: pre; }
+.out .printed + .result, .out .printed + .error { margin-top: 12px; }
+.result { display: flex; gap: 10px; }
+.result::before { content: "→"; color: var(--accent); font-weight: 500; }
+.error { color: var(--ink); background: var(--bad-soft); border-radius: 8px; padding: 12px 14px; overflow: auto; }
+.error pre { --ansi-1: var(--bad); }
+.note { color: var(--muted); font-family: var(--sans); }
+.status { font-variant-numeric: tabular-nums; }
+.status.busy::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+
+/* mode switch */
+.modes { display: inline-flex; gap: 2px; padding: 3px; background: var(--sunk); border-radius: 9px; }
+.modes button { border: 0; background: none; padding: 3px 12px; border-radius: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.modes button:hover { color: var(--ink); }
+.modes button[aria-selected="true"] { background: var(--panel); color: var(--ink); font-weight: 500; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
+.modes button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.app:not(.repl) .repl-only, .app.repl .editor-only { display: none; }
+.app.repl { grid-template-columns: 272px minmax(0, 1fr); }
+
+/* REPL: a transcript with the prompt as its last line */
+.log { flex: 1; overflow: auto; padding: 16px 20px 32px; background: var(--panel); font: 13.5px/1.65 var(--term); cursor: text; }
+.log pre { margin: 0; font: inherit; white-space: pre; }
+.entry { margin-bottom: 12px; }
+.entry > * + * { margin-top: 2px; }
+.entry .error { margin-top: 6px; }
+.line { display: flex; gap: 10px; }
+.line > pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ps { flex: none; color: var(--accent); font-weight: 500; user-select: none; }
+.input { position: relative; flex: 1; min-width: 0; }
+.input pre, .input textarea { display: block; width: 100%; margin: 0; padding: 0; border: 0; font: inherit; tab-size: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
+.input pre { position: absolute; inset: 0; pointer-events: none; color: var(--ink); }
+.input textarea { resize: none; overflow: hidden; background: transparent; color: transparent; caret-color: var(--ink); outline: none; }
+.input textarea::selection { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.input textarea:focus-visible { outline: none; }
+.input textarea::placeholder { color: var(--faint); }
+.log .note { margin: 0 0 12px; font-size: 13px; }
+
+@media (max-width: 1100px) {
+  .app { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .rail { grid-column: 1 / -1; grid-row: 2; border-top: 1px solid var(--line); max-height: 34vh; }
+  .rail .tries, .rail .basics { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .pane + .pane { border-left: 1px solid var(--line); }
+  .rail.pane { border-left: 0; }
+  .app.repl { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  body { height: auto; }
+  .bar { padding: 10px 16px; flex-wrap: wrap; }
+  .brand span { display: none; }
+  .app { display: flex; flex-direction: column; }
+  .pane + .pane { border-left: 0; border-top: 1px solid var(--line); }
+  .editor { min-height: 46vh; }
+  .out { min-height: 28vh; }
+  .log { min-height: 60vh; }
+  .rail { order: 3; max-height: none; }
+  .head { padding-left: 16px; }
+  .hide-sm { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .status.busy::before { animation: none; } }
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="../"><b>zil</b><span>sandbox</span></a>
+  <div class="modes" role="tablist" aria-label="Mode">
+    <button role="tab" data-mode="repl" aria-selected="true">REPL</button>
+    <button role="tab" data-mode="editor" aria-selected="false">Script</button>
+  </div>
+  <nav>
+    <a href="../">Docs</a>
+    <a href="https://github.com/zanbowie138/zil">GitHub</a>
+  </nav>
+</header>
+
+<main class="app">
+  <aside class="rail pane" aria-label="Things to try">
+    <section>
+      <select class="btn pick" id="category" aria-label="Example category"></select>
+      <div class="tries" id="tries"></div>
+    </section>
+    <section>
+      <h2>The basics</h2>
+      <ul class="basics">
+        <li><code>x.f(y)</code> is <code>f(x, y)</code>, and <code>"hi".upper</code> needs no parens</li>
+        <li><code>|x| x * 2</code> is a function; <code>xs |&gt; sum</code> pipes</li>
+        <li><code>to</code> converts: <code>5 km to mi</code>, <code>255 to hex</code></li>
+        <li><code>help("text")</code> lists a module; <code>help(upper)</code> explains a function</li>
+        <li><code>tip()</code> suggests something to try</li>
+      </ul>
+      <p class="start">New here? Run <button class="link" id="help">help()</button> first: its start section shows what to run to explore.</p>
+    </section>
+  </aside>
+
+  <section class="pane editor-only">
+    <div class="head">
+      <span class="title">Editor</span>
+      <span class="spacer"></span>
+      <button class="btn" id="share" title="Copy a link to this code">Share</button>
+      <button class="btn primary" id="run">Run <kbd class="hide-sm" id="key">Ctrl ↵</kbd></button>
+    </div>
+    <div class="editor">
+      <div class="gutter" id="gutter" aria-hidden="true">1</div>
+      <div class="layers">
+        <pre class="code" id="hl" aria-hidden="true"></pre>
+        <textarea class="code" id="src" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="zil code"></textarea>
+      </div>
+    </div>
+  </section>
+
+  <section class="pane editor-only">
+    <div class="head">
+      <span class="title">Output</span>
+      <span class="spacer"></span>
+      <span class="status" id="status" role="status"></span>
+    </div>
+    <div class="out" id="out" aria-live="polite"><p class="note">Loading zil…</p></div>
+  </section>
+
+  <section class="pane repl-only" aria-label="REPL">
+    <div class="head">
+      <span class="title">REPL</span>
+      <span class="hide-sm"><kbd>↑</kbd> <kbd>↓</kbd> history · <kbd>Shift ↵</kbd> new line · <kbd>Ctrl L</kbd> clear</span>
+      <span class="spacer"></span>
+      <span class="status" id="rstatus" role="status"></span>
+      <button class="btn" id="reset" title="Forget every variable and start over">Reset</button>
+    </div>
+    <div class="log" id="log" aria-live="polite">
+      <div class="line" id="prompt">
+        <span class="ps" aria-hidden="true">›</span>
+        <div class="input">
+          <pre id="rhl" aria-hidden="true"></pre>
+          <textarea id="rsrc" rows="1" placeholder="try help()" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="REPL input"></textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+import { call, warm, stop, generation, highlight, escape, encode, decode } from "./client.js";
+
+const START = `# zil: a calculator language with units, dates and exact math.
+# Edit anything and press Ctrl+Enter, or pick something on the left.
+
+trip = 42 km
+print("{trip to mi} at 65 mph takes {trip / 65 mph to min}")
+print("Christmas dinner in Tokyo: {date("2026-12-25 18:30") to "Tokyo"}")
+print("0.1 + 0.2 == 0.3 is {0.1 + 0.2 == 0.3}")
+
+[3, 1, 2] |> sort |> map(|x| x ** 2)
+`;
+const SAVED = "zil.sandbox";
+const $ = (id) => document.getElementById(id);
+const src = $("src"), hl = $("hl"), gutter = $("gutter"), out = $("out"), status = $("status"), runBtn = $("run");
+const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+if (mac) $("key").textContent = "⌘ ↵";
+
+function paint() {
+  // The trailing newline keeps a last empty line as tall as the textarea's.
+  hl.innerHTML = highlight(src.value) + "\n";
+  const lines = src.value.split("\n").length;
+  gutter.textContent = Array.from({ length: lines }, (_, i) => i + 1).join("\n");
+  sync();
+}
+function sync() {
+  hl.scrollTop = gutter.scrollTop = src.scrollTop;
+  hl.scrollLeft = src.scrollLeft;
+}
+
+/** Replaces the editor's text in a way Ctrl+Z can undo. */
+function load(code) {
+  src.focus();
+  src.select();
+  if (!document.execCommand("insertText", false, code)) src.value = code;
+  src.setSelectionRange(0, 0);
+  src.scrollTop = 0;
+  paint();
+  run();
+}
+
+let running = false;
+async function run() {
+  if (running) return stop();
+  running = true;
+  runBtn.firstChild.textContent = "Stop ";
+  status.classList.add("busy");
+  status.textContent = "Running";
+  const t0 = performance.now();
+  try {
+    const [printed, result, error] = await call("run", src.value);
+    out.innerHTML =
+      (printed ? `<pre class="printed">${printed}</pre>` : "") +
+      (result ? `<div class="result"><pre>${result}</pre></div>` : "") +
+      (error ? `<div class="error"><pre>${error}</pre></div>` : "") ||
+      `<p class="note">Nothing to show. The last line's value appears here, and so does anything you <code>print</code>.</p>`;
+    status.textContent = `${Math.max(1, Math.round(performance.now() - t0))} ms`;
+  } catch (e) {
+    out.innerHTML = `<div class="error"><pre>${escape(e.message)}</pre></div>`;
+    status.textContent = "";
+  } finally {
+    running = false;
+    status.classList.remove("busy");
+    runBtn.firstChild.textContent = "Run ";
+  }
+}
+
+src.addEventListener("input", () => {
+  paint();
+  for (const b of document.querySelectorAll(".try[aria-current]")) b.removeAttribute("aria-current");
+  try { localStorage.setItem(SAVED, src.value); } catch {}
+});
+src.addEventListener("scroll", sync);
+src.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    run();
+  } else if (e.key === "Tab" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    document.execCommand("insertText", false, "  ");
+  } else if (e.key === "Escape") {
+    src.blur(); // so Tab can leave the editor
+  }
+});
+runBtn.addEventListener("click", run);
+
+$("share").addEventListener("click", async (e) => {
+  const url = `${location.origin}${location.pathname}#code=${encode(src.value)}`;
+  history.replaceState(null, "", url);
+  try {
+    await navigator.clipboard.writeText(url);
+    e.target.textContent = "Link copied";
+  } catch {
+    e.target.textContent = "Link in address bar";
+  }
+  setTimeout(() => (e.target.textContent = "Share"), 1600);
+});
+
+// REPL mode: one session in the worker, like the terminal REPL, with the prompt as the transcript's last line.
+const log = $("log"), prompt = $("prompt"), rsrc = $("rsrc"), rhl = $("rhl"), rstatus = $("rstatus");
+const PAST = "zil.history";
+let past = [];
+try { past = JSON.parse(localStorage.getItem(PAST)) ?? []; } catch {}
+let pos = past.length, draft = "", busy = false;
+/** The worker generation whose session we greeted; another one means the session was lost. */
+let session = 0;
+
+function setInput(code) {
+  rsrc.value = code;
+  paintInput();
+  rsrc.setSelectionRange(code.length, code.length);
+}
+function paintInput() {
+  rhl.innerHTML = highlight(rsrc.value) + "\n";
+  rsrc.style.height = "auto";
+  rsrc.style.height = `${rsrc.scrollHeight}px`;
+}
+function entry(html) {
+  const div = document.createElement("div");
+  div.className = "entry";
+  div.innerHTML = html;
+  prompt.before(div);
+  return div;
+}
+const bottom = () => (log.scrollTop = log.scrollHeight);
+
+/** Greets a new session, saying so if one was lost: a runaway loop or a crash replaces the worker. */
+let greeting = null;
+const ensureSession = () =>
+  (greeting ??= (async () => {
+    await warm();
+    if (session === generation) return;
+    const lost = session !== 0;
+    const banner = await call("repl_reset");
+    session = generation;
+    entry((lost ? `<p class="note">zil restarted, so earlier variables are gone.</p>` : "") + `<pre>${banner}</pre>`);
+    bottom();
+  })().finally(() => (greeting = null)));
+
+async function submit() {
+  const code = rsrc.value.replace(/\s+$/, "");
+  if (!code.trim()) return;
+  if (past.at(-1) !== code) past.push(code);
+  past = past.slice(-200);
+  pos = past.length;
+  draft = "";
+  try { localStorage.setItem(PAST, JSON.stringify(past)); } catch {}
+  setInput("");
+  if (code === "clear") return clearLog();
+  if (code === "exit" || code === "quit") return reset();
+  busy = true;
+  // Greet first, so a "session lost" note lands above this input. A load failure shows up from the call below.
+  await ensureSession().catch(() => {});
+  const div = entry(`<div class="line"><span class="ps">›</span><pre>${highlight(code)}</pre></div>`);
+  bottom();
+  rstatus.classList.add("busy");
+  rstatus.textContent = "Running";
+  const t0 = performance.now();
+  try {
+    const [printed, shown, error] = await call("repl", code);
+    div.insertAdjacentHTML(
+      "beforeend",
+      (printed ? `<pre>${printed}</pre>` : "") + (shown ? `<pre>${shown}</pre>` : "") + (error ? `<div class="error"><pre>${error}</pre></div>` : ""),
+    );
+    rstatus.textContent = `${Math.max(1, Math.round(performance.now() - t0))} ms`;
+  } catch (e) {
+    div.insertAdjacentHTML("beforeend", `<div class="error"><pre>${escape(e.message)}</pre></div>`);
+    rstatus.textContent = "";
+  } finally {
+    busy = false;
+    rstatus.classList.remove("busy");
+    bottom();
+    rsrc.focus();
+  }
+}
+
+function clearLog() {
+  for (const e of log.querySelectorAll(".entry")) e.remove();
+}
+async function reset() {
+  clearLog();
+  await warm();
+  const banner = await call("repl_reset");
+  session = generation;
+  entry(`<pre>${banner}</pre>`);
+  rsrc.focus();
+}
+
+rsrc.addEventListener("input", paintInput);
+rsrc.addEventListener("keydown", async (e) => {
+  const before = rsrc.value.slice(0, rsrc.selectionStart), after = rsrc.value.slice(rsrc.selectionEnd);
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    if (busy) return;
+    // Like the terminal: Enter inside an open ( [ { starts a new line. Ctrl+Enter always runs.
+    if (e.ctrlKey || e.metaKey || !(await call("repl_open", rsrc.value))) submit();
+    else document.execCommand("insertText", false, "\n");
+  } else if (e.key === "ArrowUp" && !before.includes("\n") && pos > 0) {
+    e.preventDefault();
+    if (pos === past.length) draft = rsrc.value;
+    setInput(past[--pos]);
+  } else if (e.key === "ArrowDown" && !after.includes("\n") && pos < past.length) {
+    e.preventDefault();
+    setInput(++pos === past.length ? draft : past[pos]);
+  } else if (e.key === "l" && e.ctrlKey) {
+    e.preventDefault();
+    clearLog();
+  } else if (e.key === "c" && e.ctrlKey && busy && rsrc.selectionStart === rsrc.selectionEnd) {
+    stop();
+  } else if (e.key === "Tab" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    document.execCommand("insertText", false, "  ");
+  } else if (e.key === "Escape") {
+    rsrc.blur();
+  }
+});
+// Clicking the transcript types at the prompt, unless it was to select text to copy.
+log.addEventListener("click", () => getSelection().isCollapsed && rsrc.focus());
+$("reset").addEventListener("click", reset);
+
+const MODE = "zil.mode";
+let mode = "editor";
+function setMode(m) {
+  mode = m;
+  document.querySelector(".app").classList.toggle("repl", m === "repl");
+  for (const b of document.querySelectorAll(".modes button")) b.setAttribute("aria-selected", String(b.dataset.mode === m));
+  showCategory();
+  if (m === "repl") paintInput(); // a hidden textarea measures 0 tall
+  try { localStorage.setItem(MODE, m); } catch {}
+}
+for (const b of document.querySelectorAll(".modes button")) {
+  b.addEventListener("click", () => {
+    setMode(b.dataset.mode);
+    if (mode === "repl") ensureSession().then(() => rsrc.focus());
+    else src.focus();
+  });
+}
+
+// The sidebar: a menu of example categories, then the chosen one's snippets. Snippets run where you are; whole scripts open in the script editor.
+const CATEGORY = "zil.category";
+const categories = new Map(), category = $("category"), tries = $("tries");
+function showCategory() {
+  const rows = categories.get(category.value) ?? [];
+  tries.replaceChildren(
+    ...rows.map(([label, code, file]) => {
+      const b = document.createElement("button");
+      b.className = "try";
+      b.innerHTML = `<span>${escape(label)}</span><code>${escape(code)}</code>`;
+      b.title = code;
+      b.addEventListener("click", async () => {
+        if (file) {
+          const res = await fetch(`examples/${file}`);
+          if (!res.ok) return;
+          setMode("editor");
+          load((await res.text()).replace(/^# Run: .*\n/, ""));
+        } else if (mode === "repl") {
+          if (busy) return;
+          setInput(code);
+          return submit();
+        } else load(code);
+        b.setAttribute("aria-current", "true");
+      });
+      return b;
+    }),
+  );
+}
+category.addEventListener("change", () => {
+  showCategory();
+  try { localStorage.setItem(CATEGORY, category.value); } catch {}
+});
+$("help").addEventListener("click", async () => {
+  if (busy) return;
+  setMode("repl");
+  await ensureSession().catch(() => {});
+  setInput("help()");
+  submit();
+});
+
+// Start: shared code, else what was here last time, else the welcome script.
+let saved = null;
+try { saved = localStorage.getItem(SAVED); } catch {}
+const shared = location.hash.match(/^#code=([\w-]*)/);
+src.value = shared ? decode(shared[1]) : saved ?? START;
+paint();
+paintInput();
+// Mode: #repl links open the REPL, shared code opens the editor, else whichever was used last.
+let lastMode = null;
+try { lastMode = localStorage.getItem(MODE); } catch {}
+setMode(location.hash !== "#repl" && (shared || lastMode === "editor") ? "editor" : "repl");
+
+warm()
+  .then(async () => {
+    const groups = {};
+    for (const [module, title, rows] of JSON.parse(await call("examples"))) {
+      categories.set(title, rows);
+      groups[module] ??= category.appendChild(Object.assign(document.createElement("optgroup"), { label: module }));
+      groups[module].append(new Option(title, title));
+    }
+    const names = await fetch("examples/index.txt").then((r) => (r.ok ? r.text() : "")).catch(() => "");
+    categories.set("whole scripts", names.split("\n").filter(Boolean).map((n) => [n.replace(/\.zil$/, ""), `examples/${n}`, n]));
+    groups.start.append(new Option("whole scripts", "whole scripts"));
+    let last = null;
+    try { last = localStorage.getItem(CATEGORY); } catch {}
+    if (categories.has(last)) category.value = last;
+    showCategory();
+    run();
+    if (mode === "repl") ensureSession().then(() => rsrc.focus());
+  })
+  .catch((e) => (out.innerHTML = `<div class="error"><pre>${escape(e.message)}</pre></div>`));
+</script>
+</body>
+</html>

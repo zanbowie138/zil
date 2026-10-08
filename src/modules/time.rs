@@ -106,7 +106,7 @@ const FNS: &[Doc] = &[
 ];
 
 thread_local! {
-    static STOPWATCH: std::cell::Cell<Option<std::time::Instant>> = const { std::cell::Cell::new(None) };
+    static STOPWATCH: std::cell::Cell<Option<Timestamp>> = const { std::cell::Cell::new(None) };
 }
 
 fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &crate::lexer::Span) -> Call {
@@ -168,13 +168,13 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &crate::lexer
         ("unix_ms", [Date(z)]) => Value::int(z.timestamp().as_millisecond()),
         ("date_ms", [Int(n, _)]) => Value::date(Timestamp::from_millisecond(*n).map_err(msg)?.to_zoned(TimeZone::system())),
         ("timeit", [f]) => {
-            let t = std::time::Instant::now();
+            let t = Timestamp::now();
             it.call(f, vec![], span)?;
-            seconds(t.elapsed().as_secs_f64())
+            seconds(Timestamp::now().duration_since(t).as_secs_f64())
         }
         ("stopwatch", []) => {
-            let now = std::time::Instant::now();
-            seconds(STOPWATCH.replace(Some(now)).map_or(0.0, |t| (now - t).as_secs_f64()))
+            let now = Timestamp::now();
+            seconds(STOPWATCH.replace(Some(now)).map_or(0.0, |t| now.duration_since(t).as_secs_f64()))
         }
         _ => return Err(Fail::BadArgs),
     })

@@ -4,3 +4,8 @@ src = "src"
 
 [build]
 build-dir = "book"
+
+[output.html]
+# Run buttons on zil code blocks; `pnpm build` puts the wasm they use in sandbox/.
+additional-js = ["run.js"]
+additional-css = ["run.css"]

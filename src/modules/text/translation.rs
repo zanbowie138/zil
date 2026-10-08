@@ -84,12 +84,7 @@ fn translate(text: &str, from: &str, to: &str) -> Result<String, String> {
     if !crate::modules::sys::network_allowed() {
         return Err("not cached; call allow_network_access() to translate online".into());
     }
-    let body = ureq::get("https://api.mymemory.translated.net/get")
-        .query("q", text)
-        .query("langpair", format!("{from}|{to}"))
-        .call()
-        .and_then(|mut r| r.body_mut().read_to_string())
-        .map_err(|e| e.to_string())?;
+    let body = crate::modules::sys::get("https://api.mymemory.translated.net/get", &[("q", text), ("langpair", &format!("{from}|{to}"))])?;
     let json: serde_json::Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
     // Errors arrive as HTTP 200 with a string status like "403" and a shouted message.
     if json["responseStatus"] != 200 {

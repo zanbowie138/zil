@@ -59,8 +59,11 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
     Ok(match (name, args) {
         ("args", []) => Value::list(it.args.iter().map(|a| Value::str(a.as_str())).collect()),
+        // The browser has no environment, and std panics asking for one.
+        ("env", []) if cfg!(target_arch = "wasm32") => Value::map(IndexMap::new()),
         ("env", []) => Value::map(std::env::vars().map(|(k, v)| (k, Value::str(v))).collect()),
         ("env", [Str(k)]) => std::env::var(&**k).map_or(Nil, Value::str),
+        ("exit", _) if cfg!(target_arch = "wasm32") => return Err("there's no process to exit in the browser".into()),
         ("exit", []) => std::process::exit(0),
         ("exit", [Int(n, _)]) => std::process::exit(*n as i32),
         ("sh" | "run", [Str(cmd)]) => {
@@ -80,10 +83,7 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             }
             Value::str(out_s)
         }
-        ("fetch", [Str(url)]) => {
-            let body = ureq::get(&**url).call().and_then(|mut r| r.body_mut().read_to_string()).map_err(|e| format!("{url}: {e}"))?;
-            Value::str(body)
-        }
+        ("fetch", [Str(url)]) => Value::str(get(url, &[]).map_err(|e| format!("{url}: {e}"))?),
         ("allow_network_access", []) => {
             NETWORK.set(true);
             crate::modules::units::retry_rates();
@@ -91,6 +91,15 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         }
         _ => return Err(Fail::BadArgs),
     })
+}
+
+/// HTTP GET `url` with `query` parameters, returning the body.
+#[cfg_attr(target_arch = "wasm32", allow(unused_variables))]
+pub fn get(url: &str, query: &[(&str, &str)]) -> Result<String, String> {
+    #[cfg(not(target_arch = "wasm32"))]
+    return ureq::get(url).query_pairs(query.iter().copied()).call().and_then(|mut r| r.body_mut().read_to_string()).map_err(|e| e.to_string());
+    #[cfg(target_arch = "wasm32")]
+    return Err("no network access in the browser".into());
 }
 
 fn shell(cmd: &str) -> std::process::Command {

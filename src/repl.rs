@@ -1,39 +1,13 @@
 //! The REPL: line editing with completion, hints and syntax colors, multi-line input, `help` shorthand and numbered results.
 
-use crate::ansi::{DIM, RESET, color_on, highlight, tint};
+use crate::ansi::{DIM, RESET, color_on, highlight};
 use crate::interp::{self, Interp};
 use crate::lexer::{self, Tok};
+use crate::session::{self, Shown, help_shorthand, unclosed};
 use crate::value::Value;
 use crate::{ast, cache_dir, help, modules, pager, parser, report, run};
 use rustyline::error::ReadlineError;
 use std::borrow::Cow;
-
-/// More `(`/`[`/`{` than closers: the REPL keeps reading lines.
-fn unclosed(src: &str) -> bool {
-    let Ok(toks) = lexer::lex(src) else {
-        return false;
-    };
-    let depth: i32 = toks
-        .iter()
-        .map(|(t, _)| match t {
-            Tok::LParen | Tok::LBracket | Tok::LBrace => 1,
-            Tok::RParen | Tok::RBracket | Tok::RBrace => -1,
-            _ => 0,
-        })
-        .sum();
-    depth > 0
-}
-
-/// REPL `help` / `help topic`: the topic (`None` for the overview); `None` for ordinary code.
-fn help_shorthand(src: &str) -> Option<Option<&str>> {
-    let rest = src.trim().strip_prefix("help")?;
-    let topic = rest.trim_start();
-    if topic.is_empty() {
-        return Some(None);
-    }
-    let word = topic.chars().all(|c| c.is_alphanumeric() || c == '_');
-    (rest.starts_with(char::is_whitespace) && word).then_some(Some(topic))
-}
 
 /// REPL tab completion over builtins, constants, `to` targets, units, help topics and
 /// variables in scope. After `.`, only functions; after `to`, every unit the left side converts to.
@@ -131,26 +105,12 @@ impl rustyline::highlight::Highlighter for Names {
     }
 }
 
-/// Help shaped for stdout, `(color, width)`, if `src` is help printed straight to it: `help upper`,
-/// or a line that is just `help(...)`. Help inside a bigger expression stays plain text for piping.
+/// Help shaped for stdout, `(color, width)`, if `src` is help printed straight to it (see `session::help_call`).
 pub fn help_term(src: &str) -> Option<(bool, usize)> {
-    use ast::ExprKind::{Call, Ident};
-    let call = matches!(parser::parse(src).as_deref(), Ok([e]) if matches!(&e.kind, Call(f, _) if matches!(&f.kind, Ident(n) if n == "help" || n == "tip")));
     let (terminal_size::Width(w), _) = terminal_size::terminal_size_of(std::io::stdout())?;
-    (call || help_shorthand(src).is_some()).then_some((color_on(), w as usize))
+    session::help_call(src).then_some((color_on(), w as usize))
 }
 
-/// A REPL result labeled with the `_n` it's saved as, colored by type when `color_on`.
-fn show(n: usize, v: &Value) -> String {
-    if let Value::Table(t) = v {
-        let label = if color_on() { format!("{DIM} · _{n}{RESET}") } else { format!(" · _{n}") };
-        return modules::data::tables::grid(t, color_on()) + &label;
-    }
-    if !color_on() {
-        return format!("_{n} = {v}");
-    }
-    format!("{DIM}_{n} ={RESET} {}{v}{RESET}", tint(v))
-}
 impl rustyline::validate::Validator for Names {}
 impl rustyline::Helper for Names {}
 
@@ -221,21 +181,12 @@ pub fn repl(interp: &mut Interp) {
             continue;
         }
         match help::live(help_term(&src), || run(interp, &src)) {
-            Ok(Value::Nil | Value::Fn(_)) => {}
-            // Multi-line text, like `help(upper)`, reads better bare and unnumbered.
-            Ok(v) if matches!(&v, Value::Str(s) if s.contains('\n')) => {
-                match help_term(&src) {
-                    Some(_) => pager::page(&v.to_string()),
-                    None => println!("{v}"),
-                }
-                interp.set_global("_", v);
-            }
-            Ok(v) => {
-                n += 1;
-                println!("{}", show(n, &v));
-                interp.set_global(&format!("_{n}"), v.clone());
-                interp.set_global("_", v);
-            }
+            Ok(v) => match session::record(interp, &mut n, &v) {
+                Shown::Hidden => {}
+                Shown::Bare if help_term(&src).is_some() => pager::page(&v.to_string()),
+                Shown::Bare => println!("{v}"),
+                Shown::Numbered(k) => println!("{}", session::show(k, &v, color_on())),
+            },
             Err(e) => report("<repl>", &src, e),
         }
         println!();

@@ -11,7 +11,7 @@ pub fn img(args: &[Value]) -> Call {
     Ok(match args {
         [Str(path), rest @ ..] if rest.len() <= 2 => {
             let width = match rest.first() {
-                None => terminal_size::terminal_size().map_or(80, |(w, _)| w.0 as usize),
+                None => crate::ansi::columns(),
                 Some(Int(w, _)) if (1..=1000).contains(w) => *w as usize,
                 Some(_) => return Err(Fail::Arg(1, "width must be an int from 1 to 1000".into())),
             };
