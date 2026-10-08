@@ -94,12 +94,19 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
 }
 
 /// HTTP GET `url` with `query` parameters, returning the body.
-#[cfg_attr(target_arch = "wasm32", allow(unused_variables))]
 pub fn get(url: &str, query: &[(&str, &str)]) -> Result<String, String> {
     #[cfg(not(target_arch = "wasm32"))]
     return ureq::get(url).query_pairs(query.iter().copied()).call().and_then(|mut r| r.body_mut().read_to_string()).map_err(|e| e.to_string());
     #[cfg(target_arch = "wasm32")]
-    return Err("no network access in the browser".into());
+    return zil_get(url, &serde_json::to_string(query).unwrap()).map_err(|e| e.as_string().unwrap_or_else(|| "network error".into()));
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+extern "C" {
+    /// A blocking GET, defined by `docs/sandbox/worker.js`: `query` is JSON `[[key, value], ...]`, and failures throw a message.
+    #[wasm_bindgen(catch, js_name = zilGet)]
+    fn zil_get(url: &str, query: &str) -> Result<String, wasm_bindgen::JsValue>;
 }
 
 fn shell(cmd: &str) -> std::process::Command {

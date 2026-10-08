@@ -63,6 +63,46 @@ pub const SYNTAX: &[Section] = &[
     ("more", &[("full reference, with operator precedence: the Syntax page from zil --docs", "")]),
 ];
 
+/// The sandbox's tour, by chapter: (prose with `code` in backticks, a REPL entry to run). Each entry runs in the same session, so
+/// later steps can use earlier results; a step with no code is just read, and the last one opens Script mode.
+#[rustfmt::skip]
+#[cfg(any(target_arch = "wasm32", test))]
+pub const TOUR: &[(&str, &[(&str, &str)])] = &[
+    ("Calculator", &[
+        ("zil is a calculator first. Numbers carry units, and `to` converts them.", "42 km / 65 mph to min"),
+        ("Every result is saved: `_` is the last one, and `_1`, `_2`… are numbered ones.", "_ * 2"),
+        ("Decimals are exact, so this really is true.", "0.1 + 0.2 == 0.3"),
+        ("Integers never overflow.", "2 ** 100"),
+    ]),
+    ("Syntax", &[
+        ("Variables need no declaring. A newline or `;` ends a statement, and a line shows its last value.", "x = 5; x += 2; x"),
+        ("`x.f(y)` is just `f(x, y)`, so every function can be chained as a method.", r#""a-b-c".split("-")"#),
+        ("Calls without arguments need no parens.", r#""hello world".upper"#),
+        ("Braces inside a string run code.", r#""2 + 2 = {2 + 2}""#),
+        ("`|x| ...` is a function, ready to pass to `map`, `filter`, `sort_by` and friends.", "[1, 2, 3].map(|x| x * 10)"),
+        ("`|>` pipes a value into a function.", "scores = [4, 8, 15, 16, 23, 42]\nscores.filter(|x| x > 10) |> avg"),
+        ("`fn` defines a longer function, and `if` is an expression with a value.", "sq = fn(x) { x * x }\nif sq(4) > 10 { \"big\" } else { \"small\" }"),
+    ]),
+    ("Finding things", &[
+        ("Help is built in, and every example in it runs live. Click a name or an example in the output to follow it.", "help(sparkline)"),
+        ("Don't know a function's name? Search by topic.", r#"help("sorting")"#),
+        ("Type a value and a dot at the prompt, like `\"hi\".`, to list every method that takes it. Hover any name for its docs.", ""),
+    ]),
+    ("Sampler", &[
+        ("Units mix and split.", "1.8 m to ft in"),
+        ("Error bars carry through arithmetic.", "(5 m ± 0.2 m) * (3 m ± 0.1 m)"),
+        ("Dates know time zones, and cities work as zones.", r#"date("2026-12-25 18:30") to "Tokyo""#),
+        ("Currencies use live rates. zil stays offline until you allow the network.", "allow_network_access()\n100 USD to EUR"),
+        ("Text tools are built in, like pulling every number out of a string.", r#""a1b22c333".nums.sum"#),
+        ("So is calculus.", "integrate(sin, 0, pi)"),
+        ("And a world atlas.", r#"great_circle("Paris", "Tokyo")"#),
+        ("Charts are text, so they work anywhere.", "(0..20).map(|x| sin(x / 3)).sparkline"),
+    ]),
+    ("Scripts", &[
+        ("For longer programs, use Script mode: every line shows its value as you type, and Share copies a link to your code. The catalog on the left has plenty more to try.", ""),
+    ]),
+];
+
 /// A worked example drawing on several modules: (what it does, the modules it uses, a script whose result is shown).
 pub type Recipe = (&'static str, &'static str, &'static str);
 
@@ -197,3 +237,24 @@ read_file(file).from_csv.map(|r| r[col]).describe"#),
     ("one phrase, three languages", "text.translation · sys", r#"allow_network_access()
 ["es", "ja", "de"].map(|l| "where is the train station?".translate(l))"#),
 ]);
+
+#[cfg(test)]
+mod tests {
+    use super::TOUR;
+
+    /// Every step runs in one session, as the sandbox's REPL would; the network one only has to parse.
+    #[test]
+    fn tour_runs() {
+        let (mut interp, mut n) = (crate::Interp::new(), 0);
+        for (text, src) in TOUR.iter().flat_map(|c| c.1) {
+            assert_eq!(text.matches('`').count() % 2, 0, "{text}");
+            if src.contains("allow_network_access") {
+                assert!(crate::parser::parse(src).is_ok(), "{src}");
+            } else if !src.is_empty() {
+                let v = crate::run(&mut interp, src).unwrap_or_else(|e| panic!("{src}: {}", e.msg));
+                crate::session::record(&mut interp, &mut n, &v);
+            }
+        }
+        assert!(TOUR.last().unwrap().1.last().unwrap().1.is_empty(), "the last step opens Script mode");
+    }
+}
