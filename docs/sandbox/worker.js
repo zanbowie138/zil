@@ -1,5 +1,5 @@
 // Runs zil off the page's thread, so a runaway loop can be killed with worker.terminate().
-// Messages in: {id, fn: "run" | "notebook" | "examples", src}. Out: {ready} once loaded, then {id, result} or {id, crash}.
+// Messages in: {id, fn, src}, fn naming a `wasm.rs` export. Out: {ready} once loaded, then {id, result} or {id, crash}.
 import init, * as zil from "./pkg/zil.js";
 
 const ready = init().then(() => postMessage({ ready: true }));

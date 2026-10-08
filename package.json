@@ -5,13 +5,22 @@
   "type": "module",
   "packageManager": "pnpm@12.6.0",
   "scripts": {
-    "build": "pnpm book && pnpm wasm && mdbook build docs/book && node docs/stage.mjs site",
-    "serve": "pnpm build && sirv docs/book/book --dev --port 8765",
-    "sandbox": "pnpm wasm && sirv docs/sandbox --dev --port 8765",
+    "build": "pnpm book && pnpm wasm && pnpm js && mdbook build docs/book && node docs/stage.mjs site",
+    "serve": "pnpm build && sirv site --dev --port 8765",
+    "sandbox": "pnpm wasm && pnpm js && sirv docs/sandbox --dev --port 8765",
     "book": "cargo run --release -- --docs docs/book/src",
-    "wasm": "cargo wasm && wasm-bindgen --target web --no-typescript --out-dir docs/sandbox/pkg target/wasm32-unknown-unknown/release/zil.wasm && node docs/stage.mjs examples"
+    "wasm": "cargo wasm && wasm-bindgen --target web --no-typescript --out-dir docs/sandbox/pkg target/wasm32-unknown-unknown/release/zil.wasm && node docs/stage.mjs examples",
+    "js": "esbuild docs/editor/app.js --bundle --format=esm --minify --sourcemap --outfile=docs/sandbox/app.js"
   },
   "devDependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
+    "@lezer/highlight": "^1.2.5",
+    "esbuild": "^0.28.2",
     "sirv-cli": "^3.0.1"
   }
 }
