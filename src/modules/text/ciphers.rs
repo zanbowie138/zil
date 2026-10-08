@@ -7,7 +7,7 @@ use crate::value::Value;
 
 pub const MODULE: Module = Module {
     name: "ciphers",
-    about: "Caesar, ROT13, Atbash, Vigenère, Morse, Braille, NATO spelling (for fun, not secrecy)",
+    about: "Caesar, ROT13, Atbash, Vigenère, Morse, Braille, NATO spelling",
     #[rustfmt::skip]
     examples: &[
         ("ciphers", &[

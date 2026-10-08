@@ -11,7 +11,7 @@ use indexmap::IndexMap;
 
 pub const MODULE: Module = Module {
     name: "finance",
-    about: "pay, interest and growth, loans, splitting bills, margins; amounts are money from units.money",
+    about: "pay, interest and growth, loans, splitting bills, margins",
     examples: EXAMPLES,
     guide: GUIDE,
     fns: FNS,

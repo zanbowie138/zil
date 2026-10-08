@@ -1,4 +1,4 @@
-//! Core: printing, type conversions, parsing, help, `input`.
+//! Core: printing and paging, type conversions, parsing, help, `input`.
 
 use super::data::tables;
 use super::math::formatting::commas;
@@ -31,7 +31,6 @@ pub const MODULE: Module = Module {
         ("pretty", &[
             ("long: thousands separators, decimals kept", "pretty(1234567.891)"),
             ("short: K M B T, 3 significant figures", r#"pretty(1234567, "short")"#),
-            ("pages for quantity, uncertain, date, list, map, set and table show theirs", ""),
         ]),
     ],
     fns: FNS,
@@ -39,7 +38,7 @@ pub const MODULE: Module = Module {
     groups: &[
         ("values", &["type", "parse", "pretty"]),
         ("convert", &["str", "int", "float", "frac", "bool", "list"]),
-        ("io", &["print", "help"]),
+        ("io", &["print", "page", "help"]),
     ],
     call,
     #[rustfmt::skip]
@@ -51,14 +50,15 @@ pub const MODULE: Module = Module {
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
     doc("print", "print(a?: any, ...)", "print values separated by spaces", &[], &["str"]).shown(&[r#"print("total:", 5 km)"#]),
+    doc("page", "page(a?: any, ...)", "print like print, but long output opens a scrollable pager (arrows, wheel, / to search, q to quit) when shown on a terminal", &[], &["print", "help"]).shown(&[r#"help("math") |> page"#, r#"(1..200).map(|n| n ** 2).join("\n") |> page"#]),
     doc("type", "type(v: any)", "the type name of a value", &["type(5 km)", r#"type("hi")"#, "type([1])"], &["str", "int", "float"]),
     doc("str", "str(v: any)", "convert to a string (full float precision)", &["str(1/3)", "str(5 km)"], &["int", "float"]),
-    doc("int", "int(v: num|str) / int(s: str, base: int)", "convert to an integer, parsing strings in an optional base", &["int(3.9)", r#""ff".int(16)"#, r#""0b101".int"#], &["float", "str"]),
-    doc("float", "float(v: num|quantity|str)", "convert to a float; drops a quantity's unit", &[r#"float("2.5")"#, "float(5 km)"], &["int", "str"]),
-    doc("frac", "frac(v: num)", "show as a fraction; floats become the simplest fraction within 1e-12", &["7/2 to frac", "1/3 + 1/6 to frac", "0.75.frac"], &["float"]),
+    doc("int", "int(v: num|str) / int(s: str, base: int)", "convert to an integer, parsing strings in an optional base", &["int(3.9)", r#""ff".int(16)"#, r#""0b101".int"#], &["float", "str"]).pretty(),
+    doc("float", "float(v: num|quantity|str)", "convert to a float; drops a quantity's unit", &[r#"float("2.5")"#, "float(5 km)"], &["int", "str"]).pretty(),
+    doc("frac", "frac(v: num)", "show as a fraction; floats become the simplest fraction within 1e-12", &["7/2 to frac", "1/3 + 1/6 to frac", "0.75.frac"], &["float"]).pretty(),
     doc("bool", "bool(v: any)", "truthiness: false only for nil and false", &["bool(0)", "nil to bool"], &["str"]),
     doc("list", "list(v: str|list|map|set|table)", "convert to a list: characters, a copy, [key, value] pairs, a set's items, or a table's rows as maps", &[r#"list("abc")"#, r#""abc" to list"#, "{a: 1, b: 2}.list"], &["chars", "parse"]),
-    doc("pretty", "pretty(v: any) / pretty(v: any, style: str)", "human-readable text; style is \"long\" (default) or \"short\"; each type's module page has its rules", &["pretty(1234567)", r#"pretty(1234567, "short")"#, "pretty(5000 s)", r#"pretty(date("2026-12-25 18:30"))"#, "pretty([1500000 B, 2 ** 20], \"short\")"], &["str", "commas", "simplify", "parts", "format"]),
+    doc("pretty", "pretty(v: any) / pretty(v: any, style: str)", "human-readable text; style is \"long\" (default) or \"short\"; help(int), help(date), help(set), help(table) and the quantity, uncertain, list and map module pages show each type's rules", &["pretty(1234567)", r#"pretty(1234567, "short")"#], &["str", "commas", "simplify", "parts", "format"]),
     doc("parse", "parse(s: str)", "read a zil literal (number, string, list, map, quantity); never runs code", &[r#""[1, 2.5, 0xff]".parse"#, r#""5 km".parse to m"#], &["str", "nums"]),
     doc("help", "help(topic?: any)", "this help, as text; topic is a function, module (\"trig\" or \"math.trig\"), unit, or any value to list functions for its type", &[], &[]).shown(&["help(upper)", r#"help("math.trig")"#, "help(today)", r#"help("text") |> grep("case")"#]),
 ];
@@ -66,9 +66,12 @@ const FNS: &[Doc] = &[
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
     Ok(match (name, args) {
-        ("print", vs) => {
+        ("print" | "page", vs) => {
             let parts: Vec<String> = vs.iter().map(|v| if let Table(t) = v { super::data::tables::grid(t, false) } else { v.to_string() }).collect();
-            println!("{}", parts.join(" "));
+            match name {
+                "page" => crate::pager::page(&parts.join(" ")),
+                _ => println!("{}", parts.join(" ")),
+            }
             Nil
         }
         // Plain text, so it can be piped to `grep` etc. A miss returns its note: not finding help isn't an error in the user's code.

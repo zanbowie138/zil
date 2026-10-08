@@ -8,7 +8,7 @@ use base64::Engine;
 
 pub const MODULE: Module = Module {
     name: "encoding",
-    about: "base64, base32, base58, URL and hex encodings, code points, UTF-8 bytes, hex dumps and entropy",
+    about: "base64, base32, base58, URL and hex encodings, UTF-8 bytes, hex dumps",
     #[rustfmt::skip]
     examples: &[
         ("encoding", &[

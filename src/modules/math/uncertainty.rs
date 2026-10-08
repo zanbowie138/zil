@@ -13,7 +13,7 @@ use std::cmp::Ordering;
 
 pub const MODULE: Module = Module {
     name: "uncertainty",
-    about: "measurements with an error, `5 ± 0.1 m`, propagated through arithmetic and math (first order, independent errors)",
+    about: "measurements with an error, `5 ± 0.1 m`, carried through arithmetic",
     #[rustfmt::skip]
     guide: &[
         ("operators", &[("x ± e (or x +- e)", "5 ± 0.1 m"), ("x ± n%", "20 ± 5%")]),

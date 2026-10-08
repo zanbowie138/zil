@@ -4,7 +4,7 @@ use crate::ansi::{DIM, RESET, color_on, highlight, tint};
 use crate::interp::{self, Interp};
 use crate::lexer::{self, Tok};
 use crate::value::Value;
-use crate::{ast, cache_dir, help, modules, parser, report, run};
+use crate::{ast, cache_dir, help, modules, pager, parser, report, run};
 use rustyline::error::ReadlineError;
 use std::borrow::Cow;
 
@@ -154,6 +154,16 @@ fn show(n: usize, v: &Value) -> String {
 impl rustyline::validate::Validator for Names {}
 impl rustyline::Helper for Names {}
 
+/// A random `(label, code)` from what `help("examples")` and `help("advanced")` show, for the startup blurb.
+fn tip() -> (&'static str, &'static str) {
+    use crate::guide::{ADVANCED, ADVANCED_UNRUN, HIGHLIGHTS};
+    let examples = HIGHLIGHTS.iter().chain(modules::modules().flat_map(|m| m.examples)).flat_map(|s| s.1.iter().copied());
+    let recipes = ADVANCED.iter().chain([&ADVANCED_UNRUN]).flat_map(|t| t.1).map(|&(what, _, code)| (what, code));
+    // The highlights end on a syntax note with no code.
+    let tips: Vec<_> = examples.chain(recipes).filter(|(_, code)| !code.is_empty()).collect();
+    tips[fastrand::usize(..tips.len())]
+}
+
 pub fn repl(interp: &mut Interp) {
     let config = rustyline::Config::builder().completion_type(rustyline::CompletionType::List).build();
     let mut rl = rustyline::Editor::with_config(config).expect("terminal");
@@ -162,6 +172,13 @@ pub fn repl(interp: &mut Interp) {
     if let Some(h) = &history {
         let _ = rl.load_history(h);
     }
+    let (what, code) = tip();
+    let code = if color_on() { highlight(code) } else { code.to_string() };
+    let (dim, reset) = if color_on() { (DIM, RESET) } else { ("", "") };
+    println!("zil {} {dim}· help() for docs, exit or Ctrl-D to quit{reset}", env!("CARGO_PKG_VERSION"));
+    // A multi-line recipe starts under its label.
+    let sep = if code.contains('\n') { "\n" } else { " " };
+    println!("{dim}tip, {what}:{reset}{sep}{code}\n");
     let mut buf = String::new();
     let mut n = 0;
     loop {
@@ -192,14 +209,18 @@ pub fn repl(interp: &mut Interp) {
         let _ = rl.add_history_entry(src.trim_end());
         // Printed directly, so it keeps its colors.
         if let Some(topic) = help_shorthand(&src) {
-            println!("{}\n", help::live(help_term(&src), || help::help(topic, color_on())).unwrap_or_else(|e| e));
+            pager::page(&help::live(help_term(&src), || help::help(topic, color_on())).unwrap_or_else(|e| e));
+            println!();
             continue;
         }
         match help::live(help_term(&src), || run(interp, &src)) {
             Ok(Value::Nil | Value::Fn(_)) => {}
             // Multi-line text, like `help(upper)`, reads better bare and unnumbered.
             Ok(v) if matches!(&v, Value::Str(s) if s.contains('\n')) => {
-                println!("{v}");
+                match help_term(&src) {
+                    Some(_) => pager::page(&v.to_string()),
+                    None => println!("{v}"),
+                }
                 interp.set_global("_", v);
             }
             Ok(v) => {

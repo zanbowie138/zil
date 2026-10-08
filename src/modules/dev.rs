@@ -18,7 +18,7 @@ use std::cmp::Ordering;
 
 pub const MODULE: Module = Module {
     name: "dev",
-    about: "developer tools: JWTs, URLs, semver, file permissions; IP addresses and ports, UUIDs and passwords, colors, check digits and lookups below",
+    about: "JWTs, URLs, semver, file permissions; networks, IDs, colors and codes below",
     #[rustfmt::skip]
     examples: &[
         ("dev", &[

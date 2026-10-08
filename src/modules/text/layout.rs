@@ -7,7 +7,7 @@ use crate::value::Value;
 
 pub const MODULE: Module = Module {
     name: "layout",
-    about: "pad, center, wrap, truncate, dedent; snake_case, camelCase, kebab-case, Title Case, slugs; words",
+    about: "pad, center, wrap, truncate, dedent; snake_case, camelCase, slugs; words",
     #[rustfmt::skip]
     examples: &[
         ("layout", &[

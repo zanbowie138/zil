@@ -5,13 +5,8 @@ use crate::modules::math::formatting::commas;
 use crate::modules::{Module, Section};
 use crate::value::fmt_float;
 
-pub const MODULE: Module = Module {
-    name: "money",
-    about: "currencies shown as money, paid time like workday and workyr, live exchange rates; pay, loans and interest are in finance",
-    examples: EXAMPLES,
-    guide: GUIDE,
-    ..Module::EMPTY
-};
+pub const MODULE: Module =
+    Module { name: "money", about: "currencies, live exchange rates, paid time like workday and workyr", examples: EXAMPLES, guide: GUIDE, ..Module::EMPTY };
 
 #[rustfmt::skip]
 const EXAMPLES: &[Section] = &[

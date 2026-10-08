@@ -10,6 +10,7 @@ mod interp;
 mod lexer;
 mod modules;
 mod ops;
+mod pager;
 mod parser;
 mod repl;
 mod signature;

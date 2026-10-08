@@ -4,7 +4,7 @@ use crate::modules::Module;
 
 pub const MODULE: Module = Module {
     name: "constants",
-    about: "physical constants (CODATA 2018) as quantities; `h` is still hours, so Planck's constant is `h_planck`",
+    about: "physical constants (CODATA 2018); Planck's constant is `h_planck`",
     #[rustfmt::skip]
     guide: &[
         ("constants", &[

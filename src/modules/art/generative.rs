@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 
 pub const MODULE: Module = Module {
     name: "generative",
-    about: "L-systems and named fractals in braille, the Mandelbrot set, cellular automata like rule 30 and the Game of Life, mazes, the Ulam prime spiral, starfields",
+    about: "L-systems, fractals, the Mandelbrot set, cellular automata, mazes, starfields",
     #[rustfmt::skip]
     examples: &[
         ("grow things", &[

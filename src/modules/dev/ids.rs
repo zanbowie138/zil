@@ -9,7 +9,7 @@ use jiff::{Timestamp, tz::TimeZone};
 
 pub const MODULE: Module = Module {
     name: "ids",
-    about: "UUIDs made and taken apart, ULIDs and nano IDs; passwords and passphrases from the OS's secure generator",
+    about: "UUIDs, ULIDs and nano IDs; secure passwords and passphrases",
     #[rustfmt::skip]
     examples: &[
         ("ids", &[

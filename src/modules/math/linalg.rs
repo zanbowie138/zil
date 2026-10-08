@@ -9,7 +9,7 @@ use crate::value::{Value, num};
 
 pub const MODULE: Module = Module {
     name: "linalg",
-    about: "dot and cross products, norms, matrix multiply, transpose, determinant, inverse, linear systems; exact with fractions",
+    about: "dot and cross products, matrix multiply, determinant, inverse, linear systems",
     #[rustfmt::skip]
     examples: &[
         ("linalg", &[

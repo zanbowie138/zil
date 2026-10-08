@@ -8,7 +8,7 @@ use crate::value::Value;
 
 pub const MODULE: Module = Module {
     name: "frames",
-    about: "boxes, cowsay, and art side by side, stacked, overlaid, mirrored, rotated, scaled or inverted",
+    about: "boxes, cowsay; art side by side, stacked, overlaid, mirrored, rotated, scaled",
     #[rustfmt::skip]
     examples: &[
         ("compose", &[

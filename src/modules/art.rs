@@ -17,7 +17,7 @@ use crate::value::Value;
 
 pub const MODULE: Module = Module {
     name: "art",
-    about: "clip art, rainbows and gradients, QR codes, seven-segment digits, images and animation; boxes and composition, fractals and toys, game boards and FIGlet banners below",
+    about: "clip art, gradients, QR codes, images, animation; frames, fractals, games below",
     #[rustfmt::skip]
     examples: &[
         ("gallery", &[

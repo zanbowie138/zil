@@ -14,6 +14,10 @@ pub const NAME: &str = "\x1b[1;36m";
 const TYPE: &str = "\x1b[32m";
 /// Titles of `help("advanced")` recipes, set apart from the code under them.
 const RECIPE: &str = "\x1b[1;35m";
+/// Function groups on a module page (`shape`, `search`), a step below headings.
+const GROUP: &str = "\x1b[33m";
+/// Search matches, added on top of the text's own color.
+const REVERSE: &str = "\x1b[7m";
 
 thread_local! {
     /// What the page renderers below write to, read back by `capture`.
@@ -154,7 +158,9 @@ fn render(topic: Option<&str>) -> bool {
         out!("no help for {topic:?}{hint}  help() for an overview");
         return false;
     }
-    listing(hits);
+    let n = hits.len();
+    out!("{}\n", paint(HEADING, &format!("search {topic:?}: {n} function{}", if n == 1 { "" } else { "s" })));
+    listing(hits, &stems(topic));
     true
 }
 
@@ -170,28 +176,21 @@ pub fn type_page(ty: &str) -> bool {
         return false;
     }
     out!("functions taking a {} first, so x.f(...) works\n", paint(TYPE, ty));
-    listing(hits);
+    listing(hits, &[]);
     true
 }
 
 /// `help()`: what zil is, its module tree, and how to dig deeper.
 fn overview() {
-    out!("{}: an expression calculator and scripting language with units, dates, exact fractions and big ints.", paint(MODPATH, "zil"));
-    out!("\n{}", paint(HEADING, "modules"));
-    let types = |m: &Module| m.guide.iter().find(|s| s.0 == "types").map(|s| s.1.iter().map(|r| r.0).collect::<Vec<_>>().join(" "));
-    // Indented by depth: two spaces per dot in the path.
-    let rows: Vec<_> = ALL.iter().map(|(path, m)| (format!("{}{}", "  ".repeat(path.matches('.').count()), m.name), *m)).collect();
-    let w = rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0);
-    for (name, m) in rows {
-        let types = types(m).map_or(String::new(), |t| format!(" {}", paint(DIM, &format!("[{t}]"))));
-        let label = name.replace(m.name, &paint(if m.children.is_empty() { SUBMODULE } else { MODPATH }, m.name));
-        out!("  {label}{}  {}{types}", pad(&name, w), m.about);
-    }
-    out!("\n{}", paint(HEADING, "more help"));
-    let rows = [
+    out!("{}: a calculator and scripting language with units, dates, exact fractions and big ints.", paint(MODPATH, "zil"));
+    let start = [
         (r#"help("examples")"#, "start here: a few dozen one-liners, module by module"),
         (r#"help("syntax")"#, "the language at a glance"),
         (r#"help("advanced")"#, "longer recipes that combine several modules"),
+        ("clear", "clear the screen (or Ctrl+L)"),
+        ("exit", "leave the REPL (or quit, Ctrl+D)"),
+    ];
+    let usage = [
         (r#"help("text")"#, "a module: its types, operators and every function"),
         (r#"help("math.trig")"#, "a submodule, by path or just help(\"trig\")"),
         ("help(upper)", "a function: signature, live examples, related functions"),
@@ -199,12 +198,24 @@ fn overview() {
         (r#"help("km")"#, r#"a unit, or a kind of unit like help("length")"#),
         (r#"help("sorting")"#, "search function names and descriptions"),
         ("help upper", "REPL shorthand for help(upper)"),
-        ("clear", "clear the screen (or Ctrl+L)"),
-        ("exit", "leave the REPL (or quit, Ctrl+D)"),
     ];
+    // One width across both tables so their descriptions line up.
+    let w = start.iter().chain(&usage).map(|r| r.0.chars().count()).max().unwrap_or(0);
+    for (title, rows) in [("start", &start[..]), ("help usage", &usage[..])] {
+        out!("\n{}", paint(HEADING, title));
+        for (ex, what) in rows {
+            out!("  {}{}  {}", code(ex), pad(ex, w), paint(DIM, what));
+        }
+    }
+    out!("\n{}", paint(HEADING, "modules"));
+    let types = |m: &Module| m.guide.iter().find(|s| s.0 == "types").map(|s| s.1.iter().map(|r| r.0.split(':').next().unwrap()).collect::<Vec<_>>().join(" "));
+    // Indented by depth: two spaces per dot in the path.
+    let rows: Vec<_> = ALL.iter().map(|(path, m)| (format!("{}{}", "  ".repeat(path.matches('.').count()), m.name), *m)).collect();
     let w = rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0);
-    for (ex, what) in rows {
-        out!("  {}{}  {}", code(ex), pad(ex, w), paint(DIM, what));
+    for (name, m) in rows {
+        let types = types(m).map_or(String::new(), |t| format!(" {}", paint(DIM, &format!("[{t}]"))));
+        let label = name.replace(m.name, &paint(if name.starts_with(' ') { SUBMODULE } else { MODPATH }, m.name));
+        out!("  {label}{}  {}{types}", pad(&name, w), m.about);
     }
 }
 
@@ -243,7 +254,12 @@ fn docs() -> impl Iterator<Item = (&'static Module, &'static Doc)> {
 fn function(m: &Module, f: &Doc) {
     let group = m.groups.iter().find(|g| g.1.contains(&f.name)).map_or(String::new(), |g| format!(" › {}", g.0));
     out!("{}{}", paint(MODPATH, modules::path(m)), paint(DIM, &group));
-    out!("{}  {}", sig(f), f.desc);
+    body(m, f, true);
+}
+
+/// A function's signature, description, live examples and, if `see`, related functions.
+fn body(m: &Module, f: &Doc, see: bool) {
+    out!("{}  {}", sig(f, paint(NAME, f.name)), f.desc);
     show(f.examples.iter().map(|e| e.to_string()).collect());
     for ex in f.shown {
         out!("  {}", code(ex));
@@ -251,34 +267,59 @@ fn function(m: &Module, f: &Doc) {
     if f.name == "help" {
         out!("  {}  {}", code("help upper"), paint(DIM, "(REPL shorthand)"));
     }
-    if !f.see.is_empty() {
+    if f.pretty {
+        sections(&m.guide.iter().filter(|s| s.0 == "pretty").copied().collect::<Vec<_>>());
+    }
+    if see && !f.see.is_empty() {
         out!("{} {}", paint(DIM, "see also:"), names(f.see, ", "));
     }
 }
 
-/// Search or type-page hits, grouped under their module.
-fn listing(hits: Vec<(&Module, &Doc)>) {
+/// Search or type-page hits, grouped under their module (and help-page group, when that's what matched),
+/// with whatever matched a search stem in reverse video.
+fn listing(hits: Vec<(&Module, &Doc)>, stems: &[String]) {
     let w = hits.iter().map(|h| h.1.sig.chars().count()).max().unwrap_or(0);
-    let mut last = "";
+    let mut last = String::new();
     for (m, f) in hits {
-        if m.name != last {
-            out!("{}", paint(MODPATH, modules::path(m)));
-            last = m.name;
+        let group = m.groups.iter().find(|g| g.1.contains(&f.name) && stems.iter().any(|s| s == g.0));
+        let head = mark(modules::path(m), stems, MODPATH) + &group.map_or(String::new(), |g| paint(DIM, " › ") + &mark(g.0, stems, DIM));
+        if head != last {
+            out!("{head}");
+            last = head;
         }
-        out!("  {}{}  {}", sig(f), pad(f.sig, w), f.desc);
+        out!("  {}{}  {}", sig(f, mark(f.name, stems, NAME)), pad(f.sig, w), mark(f.desc, stems, ""));
     }
+}
+
+/// `s` painted `color`, with every hit of the longest stem it contains in reverse video.
+fn mark(s: &str, stems: &[String], color: &str) -> String {
+    let lower = s.to_lowercase();
+    // Byte offsets in `lower` only line up with `s` when lowercasing kept the length.
+    let stem = stems.iter().filter(|t| lower.len() == s.len() && lower.contains(t.as_str())).max_by_key(|t| t.len());
+    let Some(stem) = stem else { return paint(color, s) };
+    let (mut out, mut at) = (String::new(), 0);
+    for (i, _) in lower.match_indices(stem.as_str()) {
+        out += &paint(color, &s[at..i]);
+        out += &paint(&format!("{color}{REVERSE}"), &s[i..i + stem.len()]);
+        at = i + stem.len();
+    }
+    out + &paint(color, &s[at..])
+}
+
+/// `topic` lowercased, plus crude suffix stems ("sorting" → "sort").
+fn stems(topic: &str) -> Vec<String> {
+    let t = topic.to_lowercase();
+    [Some(&t[..]), t.strip_suffix("ing"), t.strip_suffix("es"), t.strip_suffix('s')].into_iter().flatten().filter(|s| s.len() >= 2).map(String::from).collect()
 }
 
 /// Builtins whose name, description, module (`trig`) or help-page group (`spread`) mentions `topic`, or its stem.
 // ponytail: crude suffix stemming ("sorting" → "sort"); real fuzzy matching if this misses too often.
 fn search(topic: &str) -> Vec<(&'static Module, &'static Doc)> {
-    let t = topic.to_lowercase();
-    let stems: Vec<&str> =
-        [Some(&t[..]), t.strip_suffix("ing"), t.strip_suffix("es"), t.strip_suffix('s')].into_iter().flatten().filter(|s| s.len() >= 2).collect();
+    let stems = stems(topic);
     let hit = |m: &Module, f: &Doc| {
-        stems.contains(&m.name)
-            || m.groups.iter().any(|g| stems.contains(&g.0) && g.1.contains(&f.name))
-            || stems.iter().any(|s| f.name.contains(s) || f.desc.to_lowercase().contains(s))
+        stems.iter().any(|s| s == m.name)
+            || m.groups.iter().any(|g| stems.iter().any(|s| s == g.0) && g.1.contains(&f.name))
+            || stems.iter().any(|s| f.name.contains(s.as_str()) || f.desc.to_lowercase().contains(s.as_str()))
     };
     docs().filter(|(m, f)| hit(m, f)).collect()
 }
@@ -321,12 +362,15 @@ fn page(m: &Module) {
     let all = [("", m.fns.iter().map(|f| f.name).collect::<Vec<_>>())];
     let groups: Vec<_> = m.groups.iter().map(|g| (g.0, g.1.to_vec())).collect();
     let groups = if groups.is_empty() { &all[..] } else { &groups[..] };
-    let gw = groups.iter().map(|g| g.0.chars().count()).max().unwrap_or(0);
     for (name, fns) in groups {
-        let label = if name.is_empty() { String::new() } else { format!("{}{}  ", paint(DIM, name), pad(name, gw)) };
-        out!("  {label}{}", names(fns, " "));
+        if !name.is_empty() {
+            out!("\n{}", paint(GROUP, name));
+        }
+        for f in m.fns.iter().filter(|f| fns.contains(&f.name)) {
+            out!("");
+            body(m, f, false);
+        }
     }
-    out!("{}", paint(DIM, &format!("help(name) for details, e.g. help({})", m.fns[0].name)));
 }
 
 /// Help sections as aligned `label  example  → result` rows; an empty example prints the label alone.
@@ -389,11 +433,11 @@ fn result(src: &str) -> (String, String) {
     }
 }
 
-/// A signature with each form's function name and parameter types colored.
-fn sig(f: &Doc) -> String {
+/// A signature with each form's function name shown as `name` and parameter types colored.
+fn sig(f: &Doc, name: String) -> String {
     let types = regex::Regex::new(r": ([^,)]+)").unwrap();
     let form = |form: &str| match form.strip_prefix(f.name) {
-        Some(rest) => format!("{}{}", paint(NAME, f.name), types.replace_all(rest, |c: &regex::Captures| format!(": {}", paint(TYPE, &c[1])))),
+        Some(rest) => format!("{}{}", name, types.replace_all(rest, |c: &regex::Captures| format!(": {}", paint(TYPE, &c[1])))),
         None => form.to_string(),
     };
     f.sig.split(" / ").map(form).collect::<Vec<_>>().join(" / ")
@@ -469,6 +513,14 @@ mod tests {
         assert!(names("trig").contains(&"atan2"));
         assert!(names("hash").contains(&"md5"));
         assert!(names("zzz").is_empty());
+    }
+
+    #[test]
+    fn search_marks_matches_and_groups() {
+        let sorting = help(Some("sorting"), true).unwrap();
+        assert!(sorting.contains(&format!("{REVERSE}sort")), "{sorting}");
+        let spread = crate::ansi::strip_ansi(&help(Some("spread"), false).unwrap());
+        assert!(spread.starts_with("search \"spread\": ") && spread.contains("math.stats › spread"), "{spread}");
     }
 
     #[test]

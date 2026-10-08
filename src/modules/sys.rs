@@ -19,7 +19,7 @@ pub fn network_allowed() -> bool {
 
 pub const MODULE: Module = Module {
     name: "sys",
-    about: "script arguments, environment variables, shell commands, HTTP GET, exit codes, network access",
+    about: "script arguments, environment variables, shell commands, HTTP GET",
     #[rustfmt::skip]
     examples: &[
         ("sys", &[

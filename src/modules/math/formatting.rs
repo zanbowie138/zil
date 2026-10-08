@@ -8,7 +8,7 @@ use num_traits::Signed;
 
 pub const MODULE: Module = Module {
     name: "formatting",
-    about: "format specs in strings, printf, fixed/sci/percent/commas, numbers in words, ordinals, Roman numerals, and human_bytes",
+    about: "printf and format specs, commas, numbers in words, ordinals, Roman numerals",
     #[rustfmt::skip]
     examples: &[
         ("formatting", &[

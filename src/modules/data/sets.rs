@@ -46,7 +46,7 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("set", "set(xs: list|str|set) / set(a?: any, ...)", "a set of a list's items (or a string's characters), or of the arguments", &["[3, 1, 3, 2].set", "set(1, 2)", r#""hello" to set"#], &["unique", "list"]),
+    doc("set", "set(xs: list|str|set) / set(a?: any, ...)", "a set of a list's items (or a string's characters), or of the arguments", &["[3, 1, 3, 2].set", "set(1, 2)", r#""hello" to set"#], &["unique", "list"]).pretty(),
     doc("is_subset", "is_subset(a: set, b: set)", "true if every item of a is in b", &["set(1, 2).is_subset(set(1, 2, 3))"], &["is_superset"]),
     doc("is_superset", "is_superset(a: set, b: set)", "true if a has every item of b", &["set(1, 2, 3).is_superset(set(1, 5))"], &["is_subset"]),
     doc("is_disjoint", "is_disjoint(a: set, b: set)", "true if a and b share nothing", &["set(1, 2).is_disjoint(set(3))"], &["is_subset"]),

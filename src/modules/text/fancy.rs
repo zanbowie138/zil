@@ -7,7 +7,7 @@ use crate::value::Value;
 
 pub const MODULE: Module = Module {
     name: "fancy",
-    about: "mock case, l33t, uwu, Pig Latin, zalgo, upside-down text, emoji, and 𝐛𝐨𝐥𝐝/𝒮𝒸𝓇𝒾𝓅𝓉/ｗｉｄｅ Unicode styles",
+    about: "mock case, l33t, uwu, Pig Latin, zalgo, upside-down, 𝐛𝐨𝐥𝐝/𝒮𝒸𝓇𝒾𝓅𝓉/ｗｉｄｅ",
     #[rustfmt::skip]
     examples: &[
         ("fancy", &[

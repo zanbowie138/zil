@@ -7,7 +7,7 @@ use crate::value::{Value, fmt_float, num};
 
 pub const MODULE: Module = Module {
     name: "charts",
-    about: "sparklines, bar charts, histograms, braille function plots, heatmaps, progress bars and trees of nested data, as text",
+    about: "sparklines, bar charts, histograms, plots, heatmaps, progress bars and trees",
     #[rustfmt::skip]
     examples: &[
         ("charts", &[

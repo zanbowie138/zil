@@ -17,7 +17,7 @@ use crate::value::Value;
 
 pub const MODULE: Module = Module {
     name: "text",
-    about: "case, splitting, search and regex; layout, comparison, translation, encodings, hashes, ciphers, fancy text and placeholders below",
+    about: "case, splitting, search, regex; encodings, ciphers and more below",
     #[rustfmt::skip]
     examples: &[
         ("text", &[

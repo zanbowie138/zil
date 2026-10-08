@@ -8,7 +8,7 @@ use crate::value::{self, Table, Value};
 
 pub const MODULE: Module = Module {
     name: "tables",
-    about: "rows under named columns: filter, pick columns, sort; list fns work on the rows",
+    about: "rows under named columns: filter, pick columns, sort",
     #[rustfmt::skip]
     examples: &[
         ("tables", &[
@@ -40,7 +40,7 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("table", "table(rows: list|table)", "a table from a list of maps; columns are every key, missing cells nil", &["[{a: 1}, {a: 2, b: 3}].table", "[{a: 1}] to table"], &["select", "list"]),
+    doc("table", "table(rows: list|table)", "a table from a list of maps; columns are every key, missing cells nil", &["[{a: 1}, {a: 2, b: 3}].table", "[{a: 1}] to table"], &["select", "list"]).pretty(),
     doc("where", "where(t: table, f: fn)", "keep rows where f(row) is truthy", &["[{n: 1}, {n: 5}].table.where(|r| r.n > 2)"], &["filter", "sort_by"]),
     doc("select", "select(t: table, col: str, ...)", "keep only these columns, in this order", &[r#"[{a: 1, b: 2, c: 3}].table.select("c", "a")"#], &["reject"]),
     doc("reject", "reject(t: table, col: str, ...)", "drop these columns", &[r#"[{a: 1, b: 2, c: 3}].table.reject("b")"#], &["select"]),

@@ -10,7 +10,7 @@ use std::f64::consts::{PI, TAU};
 
 pub const MODULE: Module = Module {
     name: "sky",
-    about: "sunrise, sunset, day length and moon phase for a place and date; good to about a minute",
+    about: "sunrise, sunset, day length and moon phase for a place and date",
     #[rustfmt::skip]
     examples: &[
         ("sky", &[

@@ -1,0 +1,208 @@
+//! A full-screen pager for long REPL help and `page(...)`: arrows, PgUp/PgDn, Space, Home/End and the mouse wheel scroll, `/` searches
+//! (`n`/`N` step through matches), `q` or Esc quits and leaves the page being read in the scrollback.
+
+use crate::ansi::strip_ansi;
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEventKind};
+use crossterm::{cursor, execute, queue, terminal};
+use std::io::{Write, stdout};
+
+/// Puts the terminal back however the pager ends, panics included.
+struct Screen;
+
+impl Screen {
+    fn enter() -> std::io::Result<Screen> {
+        terminal::enable_raw_mode()?;
+        // `?7l`: lines too wide after a resize are cut off rather than wrapped, which would push the status bar away.
+        execute!(stdout(), terminal::EnterAlternateScreen, event::EnableMouseCapture, cursor::Hide, crossterm::style::Print("\x1b[?7l"))?;
+        Ok(Screen)
+    }
+}
+
+impl Drop for Screen {
+    fn drop(&mut self) {
+        let _ = execute!(stdout(), crossterm::style::Print("\x1b[?7h"), cursor::Show, event::DisableMouseCapture, terminal::LeaveAlternateScreen);
+        let _ = terminal::disable_raw_mode();
+    }
+}
+
+/// Prints `text`, paging it when it's taller than the terminal.
+pub fn page(text: &str) {
+    let lines: Vec<&str> = text.lines().collect();
+    let fits = !std::io::IsTerminal::is_terminal(&stdout()) || terminal::size().map_or(true, |(_, h)| lines.len() < h as usize);
+    if fits {
+        println!("{text}");
+        return;
+    }
+    match browse(&lines) {
+        // Leave what was on screen behind, so it can be read while typing the next line.
+        Ok(top) => {
+            let rows = terminal::size().map_or(lines.len(), |(_, h)| (h as usize).saturating_sub(1).max(1));
+            println!("{}", lines[top..lines.len().min(top + rows)].join("\n"));
+        }
+        Err(_) => println!("{text}"),
+    }
+}
+
+/// The pager loop; returns the top line being shown when it was quit.
+fn browse(lines: &[&str]) -> std::io::Result<usize> {
+    let _screen = Screen::enter()?;
+    let plain: Vec<String> = lines.iter().map(|l| strip_ansi(l).to_lowercase()).collect();
+    let (mut top, mut query, mut typing, mut note) = (0usize, String::new(), None::<String>, String::new());
+    let mut shown = None;
+    loop {
+        let (w, h) = terminal::size()?;
+        let rows = (h as usize).saturating_sub(1).max(1);
+        let max_top = lines.len().saturating_sub(rows);
+        top = top.min(max_top);
+        // Repaint only on change: scrolling against either end would otherwise redraw the same screen and flicker.
+        let state = Some((top, w, h, query.clone(), typing.clone(), note.clone()));
+        if state != shown {
+            draw(lines, top, rows, w as usize, &query, typing.as_deref(), &note)?;
+            shown = state;
+        }
+        let ev = event::read()?;
+        note.clear();
+        // Typing a search: keys edit the query until Enter or Esc.
+        if let Some(q) = &mut typing {
+            if let Event::Key(KeyEvent { code, kind: KeyEventKind::Press, modifiers, .. }) = ev {
+                match code {
+                    KeyCode::Char('c') if modifiers.contains(KeyModifiers::CONTROL) => typing = None,
+                    KeyCode::Char(c) => q.push(c),
+                    KeyCode::Backspace if q.pop().is_none() => typing = None,
+                    KeyCode::Esc => typing = None,
+                    KeyCode::Enter => {
+                        query = typing.take().unwrap().to_lowercase();
+                        if !query.is_empty() {
+                            match find(&plain, &query, top, true) {
+                                Some(i) => top = i,
+                                None => note = format!("no match for \"{query}\""),
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            continue;
+        }
+        let step = |n: &str| if query.is_empty() { "press / to search first".to_string() } else { format!("no more matches for \"{n}\"") };
+        match ev {
+            Event::Key(KeyEvent { code, kind: KeyEventKind::Press, modifiers, .. }) => match code {
+                KeyCode::Char('q') | KeyCode::Esc => return Ok(top),
+                KeyCode::Char('c') if modifiers.contains(KeyModifiers::CONTROL) => return Ok(top),
+                KeyCode::Up => top = top.saturating_sub(1),
+                KeyCode::Down | KeyCode::Enter => top += 1,
+                KeyCode::PageUp => top = top.saturating_sub(rows),
+                KeyCode::PageDown | KeyCode::Char(' ') => top += rows,
+                KeyCode::Home => top = 0,
+                KeyCode::End => top = max_top,
+                KeyCode::Char('/') => typing = Some(String::new()),
+                KeyCode::Char('n') => match find(&plain, &query, top + 1, true) {
+                    Some(i) => top = i,
+                    None => note = step(&query),
+                },
+                KeyCode::Char('N') => match find(&plain, &query, top, false) {
+                    Some(i) => top = i,
+                    None => note = step(&query),
+                },
+                _ => {}
+            },
+            Event::Mouse(m) => match m.kind {
+                MouseEventKind::ScrollUp => top = top.saturating_sub(3),
+                MouseEventKind::ScrollDown => top += 3,
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+}
+
+/// The first line holding `query` from `from` on (or before `from`, going back), wrapping around the end.
+fn find(plain: &[String], query: &str, from: usize, forward: bool) -> Option<usize> {
+    if query.is_empty() {
+        return None;
+    }
+    let n = plain.len();
+    (0..n).map(|i| if forward { (from + i) % n } else { (from + n - 1 - i) % n }).find(|&i| plain[i].contains(query))
+}
+
+fn draw(lines: &[&str], top: usize, rows: usize, width: usize, query: &str, typing: Option<&str>, note: &str) -> std::io::Result<()> {
+    let mut out = stdout();
+    queue!(out, terminal::BeginSynchronizedUpdate)?;
+    // Each line is written over the old one, then the rest cleared, so nothing is ever blank on screen.
+    for (r, line) in lines[top..].iter().chain(std::iter::repeat(&"")).take(rows).enumerate() {
+        queue!(out, cursor::MoveTo(0, r as u16))?;
+        write!(out, "{}\x1b[0m", mark(line, query))?;
+        queue!(out, terminal::Clear(terminal::ClearType::UntilNewLine))?;
+    }
+    let end = lines.len().min(top + rows);
+    let status = match typing {
+        Some(q) => format!("/{q}"),
+        None if !note.is_empty() => format!(" {note}"),
+        None => {
+            let pct = end * 100 / lines.len().max(1);
+            format!(" lines {}-{end} of {} ({pct}%)   ↑↓ PgUp PgDn wheel scroll · / search · n N next/prev · q quit", top + 1, lines.len())
+        }
+    };
+    let status: String = status.chars().take(width).collect();
+    // Padded to full width, so it covers the old bar without clearing first.
+    queue!(out, cursor::MoveTo(0, rows as u16))?;
+    write!(out, "\x1b[7m{status:<width$}\x1b[0m")?;
+    if typing.is_some() {
+        queue!(out, cursor::MoveTo(status.chars().count() as u16, rows as u16), cursor::Show)?;
+    } else {
+        queue!(out, cursor::Hide)?;
+    }
+    queue!(out, terminal::EndSynchronizedUpdate)?;
+    out.flush()
+}
+
+/// `line` with each case-insensitive `query` match in reverse video, keeping its own colors.
+fn mark(line: &str, query: &str) -> String {
+    if query.is_empty() {
+        return line.to_string();
+    }
+    // Byte offset of every visible char, skipping escape codes.
+    let esc = regex::Regex::new("\x1b\\[[0-9;?]*[A-Za-z]").unwrap();
+    let mut at = Vec::new();
+    let mut i = 0;
+    for m in esc.find_iter(line) {
+        at.extend(line[i..m.start()].char_indices().map(|(j, _)| i + j));
+        i = m.end();
+    }
+    at.extend(line[i..].char_indices().map(|(j, _)| i + j));
+    at.push(line.len());
+    let visible: Vec<char> = strip_ansi(line).chars().flat_map(|c| c.to_lowercase().next()).collect();
+    let q: Vec<char> = query.chars().collect();
+    let (mut out, mut last, mut v) = (String::new(), 0, 0);
+    while v + q.len() <= visible.len() {
+        if visible[v..v + q.len()] == q[..] {
+            let (s, e) = (at[v], at[v + q.len()]);
+            out.push_str(&line[last..s]);
+            out.push_str("\x1b[7m");
+            out.push_str(&line[s..e]);
+            out.push_str("\x1b[27m");
+            last = e;
+            v += q.len();
+        } else {
+            v += 1;
+        }
+    }
+    out.push_str(&line[last..]);
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn marks_and_finds_matches() {
+        assert_eq!(mark("\x1b[1mUpper\x1b[0m case UP", "up"), "\x1b[1m\x1b[7mUp\x1b[27mper\x1b[0m case \x1b[7mUP\x1b[27m");
+        assert_eq!(mark("plain", ""), "plain");
+        let plain: Vec<String> = ["a", "xy", "b", "xy"].iter().map(|s| s.to_string()).collect();
+        assert_eq!(find(&plain, "xy", 2, true), Some(3));
+        assert_eq!(find(&plain, "xy", 0, false), Some(3));
+        assert_eq!(find(&plain, "xy", 3, false), Some(1));
+        assert_eq!(find(&plain, "zz", 0, true), None);
+    }
+}

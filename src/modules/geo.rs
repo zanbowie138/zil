@@ -14,7 +14,7 @@ use std::sync::LazyLock;
 
 pub const MODULE: Module = Module {
     name: "geo",
-    about: "countries and cities: lookups, distance, bearing, nearest city; place names work as time zones and currencies",
+    about: "countries and cities: lookups, distance, bearing, nearest city",
     #[rustfmt::skip]
     examples: &[
         ("geo", &[

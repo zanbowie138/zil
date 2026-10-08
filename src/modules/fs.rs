@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 pub const MODULE: Module = Module {
     name: "fs",
-    about: "files and directories, path pieces, JSON and CSV; relative paths start at the current directory",
+    about: "files, directories, paths, JSON and CSV",
     #[rustfmt::skip]
     examples: &[
         ("fs", &[

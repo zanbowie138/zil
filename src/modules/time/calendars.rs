@@ -9,7 +9,7 @@ use jiff::{Span, Zoned};
 
 pub const MODULE: Module = Module {
     name: "calendars",
-    about: "periods, weekdays, business days, week numbers, month grids, cron schedules, Western and Chinese zodiac; weeks start Monday",
+    about: "periods, weekdays, business days, week numbers, month grids, cron, zodiacs",
     #[rustfmt::skip]
     examples: &[
         ("calendars", &[

@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 pub const MODULE: Module = Module {
     name: "figlet",
-    about: "banners in block letters or FIGlet fonts: standard, slant, shadow, script, lean, banner, bubble and more, or any .flf file",
+    about: "big-letter banners in FIGlet fonts like slant and shadow, or any .flf file",
     #[rustfmt::skip]
     examples: &[
         ("banners", &[

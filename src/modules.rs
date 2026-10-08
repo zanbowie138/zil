@@ -45,16 +45,22 @@ pub struct Doc {
     pub see: &'static [&'static str],
     /// Shown but never run, for fns with side effects: `doc(...).shown(&[...])`.
     pub shown: &'static [&'static str],
+    /// Its help page shows its module's "pretty" section: set on the fn that makes the module's type, like `date`.
+    pub pretty: bool,
 }
 
 /// Keeps the `FNS` tables one positional row per builtin.
 pub const fn doc(name: &'static str, sig: &'static str, desc: &'static str, examples: &'static [&'static str], see: &'static [&'static str]) -> Doc {
-    Doc { name, sig, desc, examples, see, shown: &[] }
+    Doc { name, sig, desc, examples, see, shown: &[], pretty: false }
 }
 
 impl Doc {
     pub const fn shown(self, shown: &'static [&'static str]) -> Doc {
         Doc { shown, ..self }
+    }
+
+    pub const fn pretty(self) -> Doc {
+        Doc { pretty: true, ..self }
     }
 }
 

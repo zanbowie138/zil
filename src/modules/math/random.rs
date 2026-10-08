@@ -9,7 +9,7 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 
 pub const MODULE: Module = Module {
     name: "random",
-    about: "random numbers, picks and shuffles; dice and coins; the birthday paradox and odds in plain words; fortune cookies, a magic 8-ball and excuses",
+    about: "random numbers and picks, dice, odds in plain words, fortunes, a magic 8-ball",
     examples: EXAMPLES,
     fns: FNS,
     #[rustfmt::skip]

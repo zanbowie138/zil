@@ -17,7 +17,7 @@ use parsing::{parse, time, with_format};
 
 pub const MODULE: Module = Module {
     name: "time",
-    about: "dates: parsing, fields, date math, durations, relative text",
+    about: "dates, durations, date math, relative text",
     #[rustfmt::skip]
     examples: &[
         ("time", &[
@@ -79,7 +79,7 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("date", "date(s: str) / date(s: str, fmt: str) / date(y: int, m: int, d: int, h?: int, min?: int, s?: int) / date(unix: int)", "parse ISO, US (12/25/2026), written (Dec 25 2026) or natural language dates", &[r#"date("2026-12-25")"#, r#"date("next friday at 5pm")"#, r#"date("3 days ago")"#, r#"date("25.12.2026", "%d.%m.%Y")"#, "date(2026, 12, 25, 18, 30)", "date(0)"], &["format", "with", "start_of"]),
+    doc("date", "date(s: str) / date(s: str, fmt: str) / date(y: int, m: int, d: int, h?: int, min?: int, s?: int) / date(unix: int)", "parse ISO, US (12/25/2026), written (Dec 25 2026) or natural language dates", &[r#"date("2026-12-25")"#, r#"date("next friday at 5pm")"#, r#"date("3 days ago")"#, r#"date("25.12.2026", "%d.%m.%Y")"#, "date(2026, 12, 25, 18, 30)", "date(0)"], &["format", "with", "start_of"]).pretty(),
     doc("year", "year(d: date)", "year of a date", &["now.year"], &["month", "day"]),
     doc("month", "month(d: date)", "month of a date (1-12)", &["now.month"], &["year", "day"]),
     doc("day", "day(d: date)", "day of the month", &["now.day"], &["month", "weekday"]),

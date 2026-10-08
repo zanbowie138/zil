@@ -29,7 +29,7 @@ use std::rc::Rc;
 
 pub const MODULE: Module = Module {
     name: "units",
-    about: "numbers with units, combined and converted, decibels; currencies use live rates",
+    about: "numbers with units, combined and converted; live currency rates",
     #[rustfmt::skip]
     examples: &[
         ("units", &[
