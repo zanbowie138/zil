@@ -25,6 +25,7 @@ pub const MODULE: Module = Module {
             ("to UTC, to local", r#"date("2026-12-25 18:30") to UTC"#),
             ("to \"Zone/Name\"", r#"date("2026-12-25 18:30") to "Asia/Tokyo""#),
             ("to \"City\" or \"Country\"", r#"date("2026-12-25 18:30") to "Sao Paulo""#),
+            ("a zone in a variable", r#"z = "Asia/Tokyo"; date("2026-12-25 18:30") to (z)"#),
         ]),
     ],
     fns: FNS,

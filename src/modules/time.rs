@@ -508,6 +508,8 @@ mod tests {
         assert_eq!(show(&format!("({midnight} + 1 d) - {midnight}")), "1 d");
         assert_eq!(show(&format!("{midnight} + 24 h"))[..16], *"2026-11-01 23:00");
         assert_eq!(show(r#"date("2026-12-25") - (date("2026-12-25") to "Asia/Tokyo")"#), "0 d");
+        // A zone held in a variable: `to (z)` or an interpolated string.
+        assert_eq!(show(r#"z = "Tokyo"; [date(0) to (z), date(0) to "Asia/{z}"].map(|d| d.hour)"#), "[9, 9]");
         // Session 11: compact durations, clock times, cities, holidays, ms timestamps.
         assert_eq!(show("1h30m"), "90 min");
         assert_eq!(show("2d4h"), "52 h");

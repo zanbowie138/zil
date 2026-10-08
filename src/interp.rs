@@ -263,6 +263,20 @@ impl Interp {
     #[inline(never)]
     fn convert_to(&mut self, e: &Expr, x: &Expr, target: &Target, env: &Env) -> EResult {
         let v = self.eval(x, env)?;
+        let computed;
+        let target = match target {
+            Target::Expr(t) => match self.eval(t, env)? {
+                Value::Str(s) => {
+                    computed = Target::Str(s.to_string());
+                    &computed
+                }
+                other => {
+                    let msg = format!("`to` needs a string here, not a {}", other.type_name());
+                    return Err(Ctl::Err(Error::new(msg, t.span.clone()).label(t.span.clone(), format!("this is {}", crate::error::short(&other)))));
+                }
+            },
+            _ => target,
+        };
         match modules::convert(&v, target) {
             Some(Ok(r)) => Ok(r),
             Some(Err(msg)) => {
@@ -655,6 +669,7 @@ fn target_name(t: &Target) -> String {
         Target::Units(specs) => format!("`{}`", specs.iter().map(units::spec_name).collect::<Vec<_>>().join(" ")),
         Target::Named(n, _) => format!("`{n}`"),
         Target::Str(s) => format!("{s:?}"),
+        Target::Expr(_) => "a string".into(),
     }
 }
 

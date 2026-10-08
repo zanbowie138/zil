@@ -78,6 +78,8 @@ pub enum Target {
     Named(String, Option<i64>),
     /// A string such as a time zone name: `to "Asia/Tokyo"`.
     Str(String),
+    /// `to "{zone}"` or `to (zone)`: evaluated to a string, then used like `Str`.
+    Expr(Box<Expr>),
 }
 
 /// How an integer displays: `base`, and `width` bits of two's complement (0 = plain signed).

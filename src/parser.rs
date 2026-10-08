@@ -569,10 +569,12 @@ impl Parser<'_> {
                 }
                 Ok(Target::Named(s, arg))
             }
-            Tok::Str(s) => {
+            Tok::Str(s) if !s.contains(['\\', '{']) => {
                 self.bump();
                 Ok(Target::Str(s))
             }
+            // `to "{zone}"` and `to (zone)`: a string computed at run time.
+            Tok::Str(_) | Tok::LParen => Ok(Target::Expr(Box::new(self.prefix()?))),
             _ => {
                 let mut specs = vec![self.unit_spec(false)?];
                 while matches!(self.peek(), Tok::Ident(_) | Tok::In) {

@@ -27,11 +27,11 @@ pub fn write(dir: &Path) -> std::io::Result<()> {
 fn pages() -> Vec<(String, String)> {
     let date = jiff::Zoned::now().date();
     let note = format!("{NOTE}{date}.\n> Ones using `now`, `today` or randomness will differ when you run them.\n");
-    let mut summary = String::from("# Summary\n\n[Overview](index.md)\n\n- [Syntax](syntax.md)\n- [Advanced examples](advanced.md)\n");
+    let mut summary = String::from("# Summary\n\n[Overview](index.md)\n\n- [Advanced examples](advanced.md)\n");
     let mut index = format!("# zil\n\nAn expression calculator and scripting language with units, dates, exact fractions and big ints.\n\n{note}");
     sections(&mut index, HIGHLIGHTS);
     index.push_str("\n## Modules\n\n| module | about |\n|---|---|\n");
-    let mut out = vec![("syntax.md".into(), "{{#include ../../syntax.md}}\n".into()), ("advanced.md".into(), advanced(&note))];
+    let mut out = vec![("advanced.md".into(), advanced(&note))];
     for (path, m) in ALL.iter() {
         let depth = path.matches('.').count();
         writeln!(summary, "{}- [{}]({})", "  ".repeat(depth), m.name, file(path)).unwrap();
