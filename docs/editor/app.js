@@ -5,7 +5,6 @@ import { insertNewlineAndIndent } from "@codemirror/commands";
 import { highlightActiveLine, highlightActiveLineGutter, lineNumbers, placeholder } from "@codemirror/view";
 import { call, decode, encode, escape, generation, highlight, learn, stop, vocab, warm } from "../sandbox/client.js";
 import { EditorState, EditorView, Prec, keymap, relearn, setResults, zil } from "./cm.js";
-import { TOUR } from "./tour.js";
 
 const START = `# zil: a calculator language with units, dates and exact math.
 # Each line shows its value as you type. Change a number and watch.
@@ -431,50 +430,64 @@ document.addEventListener("keydown", (e) => {
 // ── The tour ─────────────────────────────────────────────────────────────────
 
 const tour = $("tour");
+// The steps from `guide.rs`, flattened: {chapter, text, code}. The last one opens Script mode.
+const steps = call("tour").then((json) => JSON.parse(json).flatMap(([chapter, rows], c) => rows.map(([text, code]) => ({ c, chapter, text, code }))));
+const chapters = steps.then((all) => [...new Set(all.map((s) => s.chapter))]);
+const STEP = "zil.tour.step";
 let step = 0,
   ran = false;
-function showStep() {
-  const s = TOUR[step];
-  const last = step === TOUR.length - 1;
+async function showStep() {
+  const all = await steps;
+  const s = all[step];
+  const inChapter = all.filter((t) => t.c === s.c);
+  const options = (await chapters).map((name, i) => `<option value="${i}"${i === s.c ? " selected" : ""}>${escape(name)}</option>`);
+  const prose = escape(s.text).replace(/`([^`]+)`/g, "<code>$1</code>");
+  const last = step === all.length - 1;
+  store.set(STEP, step);
   tour.innerHTML = `
-    <header><span>Tour · ${step + 1} of ${TOUR.length}</span><button class="x" data-act="close" aria-label="Close the tour">×</button></header>
-    <p>${s.text}</p>
+    <header><select data-act="chapter" aria-label="Tour chapter">${options.join("")}</select><span>· ${inChapter.indexOf(s) + 1} of ${inChapter.length}</span><button class="x" data-act="close" aria-label="Close the tour">×</button></header>
+    <p>${prose}</p>
     ${s.code ? `<pre>${highlight(s.code)}</pre>` : ""}
     <footer>
       ${step ? `<button class="btn" data-act="back">Back</button>` : ""}
       <span class="spacer"></span>
       ${
-        s.script
+        last
           ? `<button class="btn primary" data-act="script">Open Script mode</button>`
-          : ran
-            ? `<button class="btn primary" data-act="next">${last ? "Done" : "Next"}</button>`
+          : ran || !s.code
+            ? `<button class="btn primary" data-act="next">Next</button>`
             : `<button class="btn" data-act="next">Skip</button><button class="btn primary" data-act="run">Run it</button>`
       }
     </footer>`;
 }
+async function go(to) {
+  step = to;
+  ran = false;
+  await showStep();
+  tour.querySelector("[data-act=run], [data-act=next], [data-act=script]")?.focus();
+}
 tour.addEventListener("click", async (e) => {
-  const act = e.target.closest("[data-act]")?.dataset.act;
+  const act = e.target.closest("button[data-act]")?.dataset.act;
   if (act === "run") {
     ran = true;
     showStep();
-    await repl(TOUR[step].code);
-  } else if (act === "next" || act === "back") {
-    if (act === "next" && step === TOUR.length - 1) return endTour();
-    step = Math.max(0, step + (act === "next" ? 1 : -1));
-    ran = false;
-    showStep();
-  } else if (act === "script") {
+    await repl((await steps)[step].code);
+  } else if (act === "next" || act === "back") go(step + (act === "next" ? 1 : -1));
+  else if (act === "script") {
     endTour();
+    store.set(STEP, 0);
     setMode("editor");
     load(START);
   } else if (act === "close") endTour();
 });
-function startTour() {
-  step = 0;
-  ran = false;
+tour.addEventListener("change", async (e) => {
+  if (e.target.dataset.act === "chapter") go((await steps).findIndex((s) => s.c === +e.target.value));
+});
+// Opens where the reader left off.
+async function startTour() {
+  const all = await steps;
   tour.hidden = false;
-  showStep();
-  tour.querySelector("[data-act=run]")?.focus();
+  go(Math.min(+store.get(STEP) || 0, all.length - 1));
 }
 function endTour() {
   tour.hidden = true;

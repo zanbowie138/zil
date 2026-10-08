@@ -100,7 +100,9 @@ details[open] { padding-bottom: 6px; }
 /* the tour card */
 .tour { flex: none; margin: 12px; padding: 14px 16px; border-radius: 10px; background: var(--panel); border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); box-shadow: var(--shadow); }
 .tour header { display: flex; align-items: center; font-size: 12px; font-weight: 600; color: var(--accent); }
-.tour header span { flex: 1; }
+.tour header span { flex: 1; margin-left: 4px; }
+.tour header select { font: inherit; color: inherit; background: none; border: 0; border-radius: 5px; padding: 2px 0; cursor: pointer; }
+.tour header select:hover { background: var(--sunk); }
 .tour .x { border: 0; background: none; font-size: 18px; line-height: 1; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 5px; }
 .tour .x:hover { background: var(--sunk); color: var(--ink); }
 .tour p { margin: 8px 0 10px; font-size: 13.5px; }
@@ -229,7 +231,7 @@ p code, li code { background: var(--sunk); padding: 1px 4px; border-radius: 4px;
   <aside class="rail pane" aria-label="Examples">
     <div class="search">
       <input type="search" id="find" placeholder="Search examples" aria-label="Search examples" aria-keyshortcuts="/">
-      <button class="btn" id="tour-start" title="A two-minute walk through the language">Tour</button>
+      <button class="btn" id="tour-start" title="A five-minute walk through the language">Tour</button>
     </div>
     <div class="paste editor-only">
       <span id="paste-label">Examples</span>

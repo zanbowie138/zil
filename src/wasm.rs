@@ -125,6 +125,12 @@ pub fn examples() -> String {
     serde_json::to_string(&rows).unwrap()
 }
 
+/// The sandbox's tour as JSON `[[chapter, [[text, code], ...]], ...]`.
+#[wasm_bindgen]
+pub fn tour() -> String {
+    serde_json::to_string(crate::guide::TOUR).unwrap()
+}
+
 /// Starts a fresh REPL session, returning its greeting as HTML.
 #[wasm_bindgen]
 pub fn repl_reset() -> String {
