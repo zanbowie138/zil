@@ -68,3 +68,18 @@ pub fn strip_ansi(s: &str) -> String {
     let re = regex::Regex::new(r"\x1b\[[0-9;?]*[A-Za-z]").unwrap();
     re.replace_all(s, "").into_owned()
 }
+
+/// Terminal columns `s` takes: color codes take none, wide glyphs two.
+pub fn width(s: &str) -> usize {
+    unicode_width::UnicodeWidthStr::width(strip_ansi(s).as_str())
+}
+
+/// `body` in a rounded box with `label` on the top edge; `body` may carry colors and wide glyphs.
+pub fn boxed(label: &str, body: &str, dim: &str, reset: &str) -> String {
+    let inner = body.lines().map(width).max().unwrap_or(0).max(width(label) + 2);
+    let mut out = format!("{dim}╭─{reset} {label} {dim}{}╮{reset}\n", "─".repeat(inner - width(label) - 1));
+    for line in body.lines() {
+        out += &format!("{dim}│{reset} {line}{} {dim}│{reset}\n", " ".repeat(inner - width(line)));
+    }
+    out + &format!("{dim}╰{}╯{reset}", "─".repeat(inner + 2))
+}

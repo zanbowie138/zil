@@ -48,8 +48,8 @@ const FNS: &[Doc] = &[
     doc("file_size", "file_size(path: str)", "size in bytes, as a quantity", &[], &["mtime", "human_bytes"]).shown(&[r#"file_size("Cargo.lock") to KiB"#]),
     doc("mtime", "mtime(path: str)", "when the file was last modified", &[], &["file_size"]).shown(&[r#"now - mtime("Cargo.lock") to h"#]),
     doc("rm", "rm(path: str)", "delete a file or an empty directory", &[], &["mv", "mkdir"]).shown(&[r#"rm("out.txt")"#]),
-    doc("mv", "mv(from: str, to: str)", "move or rename a file or directory", &[], &["cp", "rm"]).shown(&[r#"mv("draft.txt", "final.txt")"#]),
-    doc("cp", "cp(from: str, to: str)", "copy a file", &[], &["mv"]).shown(&[r#"cp("data.csv", "backup/data.csv")"#]),
+    doc("mv", "mv(from: str, to: str)", "move or rename a file or directory, creating missing folders", &[], &["cp", "rm"]).shown(&[r#"mv("draft.txt", "final.txt")"#]),
+    doc("cp", "cp(from: str, to: str)", "copy a file, creating missing folders", &[], &["mv"]).shown(&[r#"cp("data.csv", "backup/data.csv")"#]),
     doc("mkdir", "mkdir(path: str)", "create a directory and any missing parents", &[], &["rm"]).shown(&[r#"mkdir("out/2026/10")"#]),
     doc("path_join", "path_join(a: str, b: str, ...)", "join path pieces with the OS separator", &[r#"path_join("a", "b.txt")"#], &["dirname", "basename"]),
     doc("basename", "basename(path: str)", "the last piece of a path, or nil", &[r#""a/b/c.txt".basename"#], &["dirname", "stem"]),
@@ -107,10 +107,12 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             Nil
         }
         ("mv", [Str(a), Str(b)]) => {
+            parents(b)?;
             std::fs::rename(&**a, &**b).map_err(io("move", a))?;
             Nil
         }
         ("cp", [Str(a), Str(b)]) => {
+            parents(b)?;
             std::fs::copy(&**a, &**b).map_err(io("copy", a))?;
             Nil
         }
@@ -166,6 +168,14 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
 }
 
 /// An io error blaming the path, always the first argument: `cannot read "x": no such file or directory`.
+/// Creates the folders `path` needs, so `mv`/`cp` can land in a new one.
+fn parents(path: &str) -> Result<(), Fail> {
+    match Path::new(path).parent() {
+        Some(d) if !d.as_os_str().is_empty() => std::fs::create_dir_all(d).map_err(|e| Fail::Arg(1, format!("cannot create {:?}: {}", d, io_reason(&e)))),
+        _ => Ok(()),
+    }
+}
+
 fn io<'a>(verb: &'a str, path: &'a str) -> impl FnOnce(std::io::Error) -> Fail + 'a {
     move |e| Fail::Arg(0, format!("cannot {verb} {path:?}: {}", io_reason(&e)))
 }
@@ -391,6 +401,8 @@ mod tests {
         run(r#"cp(d + "/a.txt", d + "/c.txt"); mv(d + "/c.txt", d + "/e.txt"); rm(d + "/a.txt")"#);
         assert_eq!(run("ls(d).name"), r#"["e.txt", "sub"]"#);
         assert!(try_eval(&format!(r#"rm("{d}/sub")"#)).is_err(), "rm refuses a non-empty directory");
+        run(r#"mv(d + "/e.txt", d + "/new/deeper/e.txt")"#);
+        assert_eq!(run(r#"ls(d + "/new/deeper").name"#), r#"["e.txt"]"#);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

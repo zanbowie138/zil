@@ -135,7 +135,7 @@ impl rustyline::highlight::Highlighter for Names {
 /// or a line that is just `help(...)`. Help inside a bigger expression stays plain text for piping.
 pub fn help_term(src: &str) -> Option<(bool, usize)> {
     use ast::ExprKind::{Call, Ident};
-    let call = matches!(parser::parse(src).as_deref(), Ok([e]) if matches!(&e.kind, Call(f, _) if matches!(&f.kind, Ident(n) if n == "help")));
+    let call = matches!(parser::parse(src).as_deref(), Ok([e]) if matches!(&e.kind, Call(f, _) if matches!(&f.kind, Ident(n) if n == "help" || n == "tip")));
     let (terminal_size::Width(w), _) = terminal_size::terminal_size_of(std::io::stdout())?;
     (call || help_shorthand(src).is_some()).then_some((color_on(), w as usize))
 }
@@ -154,37 +154,44 @@ fn show(n: usize, v: &Value) -> String {
 impl rustyline::validate::Validator for Names {}
 impl rustyline::Helper for Names {}
 
-/// A random `(label, code)` from what `help("examples")` and `help("advanced")` show, for the startup blurb.
-fn tip() -> (&'static str, &'static str) {
-    use crate::guide::{ADVANCED, ADVANCED_UNRUN, HIGHLIGHTS};
-    let examples = HIGHLIGHTS.iter().chain(modules::modules().flat_map(|m| m.examples)).flat_map(|s| s.1.iter().copied());
-    let recipes = ADVANCED.iter().chain([&ADVANCED_UNRUN]).flat_map(|t| t.1).map(|&(what, _, code)| (what, code));
-    // The highlights end on a syntax note with no code.
-    let tips: Vec<_> = examples.chain(recipes).filter(|(_, code)| !code.is_empty()).collect();
-    tips[fastrand::usize(..tips.len())]
+/// Alt+Q: drop the line being typed but keep it in history, to come back to with Up.
+struct Stash(std::sync::Arc<std::sync::Mutex<Option<String>>>);
+
+impl rustyline::ConditionalEventHandler for Stash {
+    fn handle(&self, _: &rustyline::Event, _: rustyline::RepeatCount, _: bool, ctx: &rustyline::EventContext) -> Option<rustyline::Cmd> {
+        *self.0.lock().unwrap() = Some(ctx.line().to_string());
+        Some(rustyline::Cmd::Interrupt)
+    }
 }
 
 pub fn repl(interp: &mut Interp) {
     let config = rustyline::Config::builder().completion_type(rustyline::CompletionType::List).build();
     let mut rl = rustyline::Editor::with_config(config).expect("terminal");
     rl.set_helper(Some(Names::new(interp.globals())));
+    let stashed = std::sync::Arc::default();
+    rl.bind_sequence(
+        rustyline::KeyEvent(rustyline::KeyCode::Char('q'), rustyline::Modifiers::ALT),
+        rustyline::EventHandler::Conditional(Box::new(Stash(std::sync::Arc::clone(&stashed)))),
+    );
     let history = cache_dir().map(|d| d.join("history.txt"));
     if let Some(h) = &history {
         let _ = rl.load_history(h);
     }
-    let (what, code) = tip();
-    let code = if color_on() { highlight(code) } else { code.to_string() };
     let (dim, reset) = if color_on() { (DIM, RESET) } else { ("", "") };
-    println!("zil {} {dim}· help() for docs, exit or Ctrl-D to quit{reset}", env!("CARGO_PKG_VERSION"));
-    // A multi-line recipe starts under its label.
-    let sep = if code.contains('\n') { "\n" } else { " " };
-    println!("{dim}tip, {what}:{reset}{sep}{code}\n");
+    println!("zil {} {dim}· help for docs, Alt-Q to set a line aside, exit or Ctrl-D to quit{reset}", env!("CARGO_PKG_VERSION"));
+    println!("{}\n", help::tip(color_on()));
     let mut buf = String::new();
     let mut n = 0;
     loop {
         let line = match rl.readline(if buf.is_empty() { "> " } else { ". " }) {
             Ok(line) => line,
             Err(ReadlineError::Interrupted) => {
+                if let Some(line) = stashed.lock().unwrap().take() {
+                    buf.push_str(&line);
+                    if !buf.trim().is_empty() {
+                        let _ = rl.add_history_entry(buf.trim_end());
+                    }
+                }
                 buf.clear();
                 continue;
             }

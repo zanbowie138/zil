@@ -55,7 +55,7 @@ pub fn capture(color: bool, render: impl FnOnce() -> bool) -> Result<String, Str
     COLOR.set(TERM.get().map_or(color, |t| t.0));
     OUT.take();
     let found = render();
-    let mut text = OUT.take().trim_end().to_string();
+    let mut text = OUT.take().trim_start_matches('\n').trim_end().to_string();
     if let Some((_, width)) = TERM.get() {
         text = text.lines().map(|l| wrap(l, width)).collect::<Vec<_>>().join("\n");
     }
@@ -159,8 +159,8 @@ fn render(topic: Option<&str>) -> bool {
         return false;
     }
     let n = hits.len();
-    out!("{}\n", paint(HEADING, &format!("search {topic:?}: {n} function{}", if n == 1 { "" } else { "s" })));
-    listing(hits, &stems(topic));
+    let head = paint(HEADING, &format!("search {topic:?}: {n} function{}", if n == 1 { "" } else { "s" }));
+    framed(&head, &collected(|| listing(hits, &stems(topic))));
     true
 }
 
@@ -175,20 +175,20 @@ pub fn type_page(ty: &str) -> bool {
     if hits.is_empty() {
         return false;
     }
-    out!("functions taking a {} first, so x.f(...) works\n", paint(TYPE, ty));
-    listing(hits, &[]);
+    framed(&format!("functions taking a {} first, so x.f(...) works", paint(TYPE, ty)), &collected(|| listing(hits, &[])));
     true
 }
 
 /// `help()`: what zil is, its module tree, and how to dig deeper.
 fn overview() {
-    out!("{}: a calculator and scripting language with units, dates, exact fractions and big ints.", paint(MODPATH, "zil"));
+    out!("{}: a calculator and scripting language.", paint(MODPATH, "zil"));
     let start = [
         (r#"help("examples")"#, "start here: a few dozen one-liners, module by module"),
         (r#"help("syntax")"#, "the language at a glance"),
         (r#"help("advanced")"#, "longer recipes that combine several modules"),
         ("clear", "clear the screen (or Ctrl+L)"),
         ("exit", "leave the REPL (or quit, Ctrl+D)"),
+        ("Alt+Q", "set the line aside into history, Up brings it back"),
     ];
     let usage = [
         (r#"help("text")"#, "a module: its types, operators and every function"),
@@ -202,21 +202,21 @@ fn overview() {
     // One width across both tables so their descriptions line up.
     let w = start.iter().chain(&usage).map(|r| r.0.chars().count()).max().unwrap_or(0);
     for (title, rows) in [("start", &start[..]), ("help usage", &usage[..])] {
-        out!("\n{}", paint(HEADING, title));
-        for (ex, what) in rows {
-            out!("  {}{}  {}", code(ex), pad(ex, w), paint(DIM, what));
-        }
+        framed(&paint(HEADING, title), &rows.iter().map(|(ex, what)| format!("{}{}  {}", code(ex), pad(ex, w), paint(DIM, what))).collect::<Vec<_>>());
     }
-    out!("\n{}", paint(HEADING, "modules"));
     let types = |m: &Module| m.guide.iter().find(|s| s.0 == "types").map(|s| s.1.iter().map(|r| r.0.split(':').next().unwrap()).collect::<Vec<_>>().join(" "));
     // Indented by depth: two spaces per dot in the path.
     let rows: Vec<_> = ALL.iter().map(|(path, m)| (format!("{}{}", "  ".repeat(path.matches('.').count()), m.name), *m)).collect();
     let w = rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0);
-    for (name, m) in rows {
-        let types = types(m).map_or(String::new(), |t| format!(" {}", paint(DIM, &format!("[{t}]"))));
-        let label = name.replace(m.name, &paint(if name.starts_with(' ') { SUBMODULE } else { MODPATH }, m.name));
-        out!("  {label}{}  {}{types}", pad(&name, w), m.about);
-    }
+    let rows: Vec<_> = rows
+        .into_iter()
+        .map(|(name, m)| {
+            let types = types(m).map_or(String::new(), |t| format!(" {}", paint(DIM, &format!("[{t}]"))));
+            let label = name.replace(m.name, &paint(if name.starts_with(' ') { SUBMODULE } else { MODPATH }, m.name));
+            format!("{label}{}  {}{types}", pad(&name, w), m.about)
+        })
+        .collect();
+    framed(&paint(HEADING, "modules"), &rows);
 }
 
 /// `help("examples")`: the highlights, then every module's showcase, aligned per module so one long line doesn't stretch them all.
@@ -234,13 +234,11 @@ fn advanced() {
     for ((theme, recipes), run) in ADVANCED.iter().map(|t| (*t, true)).chain(unrun) {
         out!("\n{}", paint(HEADING, theme));
         for (title, uses, src) in recipes {
-            out!("\n  {}  {}", paint(RECIPE, title), paint(DIM, &format!("({uses})")));
-            for line in src.lines() {
-                out!("    {}", code(line));
-            }
+            let mut lines: Vec<_> = src.lines().map(code).collect();
             if run {
-                out!("    {} {}", paint(DIM, "→"), below(&result(src).1));
+                lines.push(format!("{} {}", paint(DIM, "→"), below(&result(src).1)));
             }
+            framed(&format!("{}  {}", paint(RECIPE, title), paint(DIM, &format!("({uses})"))), &lines);
         }
     }
 }
@@ -253,8 +251,7 @@ fn docs() -> impl Iterator<Item = (&'static Module, &'static Doc)> {
 /// A function's page: where it lives, signature, live examples, related functions.
 fn function(m: &Module, f: &Doc) {
     let group = m.groups.iter().find(|g| g.1.contains(&f.name)).map_or(String::new(), |g| format!(" › {}", g.0));
-    out!("{}{}", paint(MODPATH, modules::path(m)), paint(DIM, &group));
-    body(m, f, true);
+    framed(&format!("{}{}", paint(MODPATH, modules::path(m)), paint(DIM, &group)), &collected(|| body(m, f, true)));
 }
 
 /// A function's signature, description, live examples and, if `see`, related functions.
@@ -267,8 +264,14 @@ fn body(m: &Module, f: &Doc, see: bool) {
     if f.name == "help" {
         out!("  {}  {}", code("help upper"), paint(DIM, "(REPL shorthand)"));
     }
+    // Unboxed: the function is already in a box.
     if f.pretty {
-        sections(&m.guide.iter().filter(|s| s.0 == "pretty").copied().collect::<Vec<_>>());
+        for (heading, lines) in rows(&m.guide.iter().filter(|s| s.0 == "pretty").copied().collect::<Vec<_>>()) {
+            out!("\n{}", paint(HEADING, heading));
+            for line in lines {
+                out!("  {line}");
+            }
+        }
     }
     if see && !f.see.is_empty() {
         out!("{} {}", paint(DIM, "see also:"), names(f.see, ", "));
@@ -338,62 +341,106 @@ fn page(m: &Module) {
     sections(m.guide);
     let kinds = units::kinds(m.units);
     if !kinds.is_empty() {
-        out!("\n{}", paint(HEADING, "units"));
         let w = kinds.iter().map(|k| k.0.chars().count()).max().unwrap_or(0);
-        for (kind, rows) in kinds {
-            let units: Vec<_> = rows.iter().map(|r| r.0.split(' ').next().unwrap()).collect();
-            out!("  {}{}  {}", paint(DIM, kind), pad(kind, w), names(&units, " "));
-        }
+        let rows: Vec<_> = kinds
+            .iter()
+            .map(|(kind, rows)| {
+                let units: Vec<_> = rows.iter().map(|r| r.0.split(' ').next().unwrap()).collect();
+                format!("{}{}  {}", paint(DIM, kind), pad(kind, w), names(&units, " "))
+            })
+            .collect();
+        framed(&paint(HEADING, "units"), &rows);
     }
     if let Some(topic) = m.topic {
         topic(m.name);
     }
     if !m.children.is_empty() {
-        out!("\n{}", paint(HEADING, "submodules"));
         let w = m.children.iter().map(|c| c.name.chars().count()).max().unwrap_or(0);
-        for c in m.children {
-            out!("  {}{}  {}", paint(SUBMODULE, c.name), pad(c.name, w), c.about);
-        }
+        let rows: Vec<_> = m.children.iter().map(|c| format!("{}{}  {}", paint(SUBMODULE, c.name), pad(c.name, w), c.about)).collect();
+        framed(&paint(HEADING, "submodules"), &rows);
     }
     if m.fns.is_empty() {
         return;
     }
-    out!("\n{}", paint(HEADING, "functions"));
-    let all = [("", m.fns.iter().map(|f| f.name).collect::<Vec<_>>())];
+    let all = [("functions", m.fns.iter().map(|f| f.name).collect::<Vec<_>>())];
     let groups: Vec<_> = m.groups.iter().map(|g| (g.0, g.1.to_vec())).collect();
     let groups = if groups.is_empty() { &all[..] } else { &groups[..] };
+    // One box per group; a module without groups gets one "functions" box.
     for (name, fns) in groups {
-        if !name.is_empty() {
-            out!("\n{}", paint(GROUP, name));
-        }
-        for f in m.fns.iter().filter(|f| fns.contains(&f.name)) {
-            out!("");
-            body(m, f, false);
-        }
+        let lines = collected(|| {
+            for f in m.fns.iter().filter(|f| fns.contains(&f.name)) {
+                out!("");
+                body(m, f, false);
+            }
+        });
+        framed(&paint(if m.groups.is_empty() { HEADING } else { GROUP }, name), &lines);
     }
 }
 
-/// Help sections as aligned `label  example  → result` rows; an empty example prints the label alone.
+/// Help sections, each in its own box of aligned `label  example  → result` rows; an empty example prints the label alone.
 fn sections(guide: &[Section]) {
+    for (heading, lines) in rows(guide) {
+        framed(&paint(HEADING, heading), &lines);
+    }
+}
+
+/// Each section's heading and its rows, aligned across the whole guide.
+fn rows(guide: &[Section]) -> Vec<(&str, Vec<String>)> {
     let rows: Vec<_> = guide.iter().flat_map(|s| s.1).filter(|r| !r.1.is_empty()).collect();
     let lw = rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0);
     let ew = rows.iter().map(|r| r.1.chars().count()).max().unwrap_or(0);
-    for (heading, rows) in guide {
-        out!("\n{}", paint(HEADING, heading));
-        for (label, ex) in *rows {
-            if ex.is_empty() {
-                out!("  {}", paint(DIM, label));
-                continue;
-            }
-            let (plain, colored) = result(ex);
-            let label = format!("{}{}", paint(DIM, label), pad(label, lw));
-            if plain == *ex {
-                out!("  {label}  {}", code(ex));
-            } else {
-                out!("  {label}  {}{}  {} {}", code(ex), pad(ex, ew), paint(DIM, "→"), below(&colored));
-            }
+    let row = |&(label, ex): &(&str, &str)| {
+        if ex.is_empty() {
+            return paint(DIM, label);
         }
+        let (plain, colored) = result(ex);
+        let label = format!("{}{}", paint(DIM, label), pad(label, lw));
+        if plain == ex { format!("{label}  {}", code(ex)) } else { format!("{label}  {}{}  {} {}", code(ex), pad(ex, ew), paint(DIM, "→"), below(&colored)) }
+    };
+    guide.iter().map(|(heading, rows)| (*heading, rows.iter().map(row).collect())).collect()
+}
+
+/// `lines` in a dim box headed by `label`, preceded by a blank line. Lines are wrapped to fit inside first, so the
+/// terminal-width pass in `capture` leaves the box whole; code is never broken, so when it still doesn't fit, the
+/// lines go out unboxed under the label instead.
+fn framed(label: &str, lines: &[String]) {
+    // Rows indented for an unboxed page drop that indent: the box sets them apart now.
+    let indented = lines.iter().flat_map(|l| l.split('\n')).all(|l| l.is_empty() || l.starts_with("  "));
+    let lines: Vec<_> = lines.iter().flat_map(|l| l.split('\n')).map(|l| if indented { l.get(2..).unwrap_or("") } else { l }.to_string()).collect();
+    let inside = TERM.get().map(|t| t.1.saturating_sub(4));
+    let body: Vec<_> = lines.iter().map(|l| inside.map_or(l.to_string(), |w| wrap(l, w))).collect();
+    let width = crate::ansi::width;
+    let fits = inside.is_none_or(|w| body.iter().flat_map(|l| l.lines()).all(|l| width(l) <= w) && width(label) + 3 <= w);
+    if !fits {
+        out!("\n{label}");
+        for line in &lines {
+            out!("  {line}");
+        }
+        return;
     }
+    let (dim, reset) = if COLOR.get() { (DIM, RESET) } else { ("", "") };
+    out!("\n{}", crate::ansi::boxed(label, &body.join("\n"), dim, reset));
+}
+
+/// A random example or recipe from `help("examples")` and `help("advanced")`, boxed under its label.
+pub fn tip(color: bool) -> String {
+    let examples = HIGHLIGHTS.iter().chain(modules().flat_map(|m| m.examples)).flat_map(|s| s.1.iter().copied());
+    let recipes = ADVANCED.iter().chain([&ADVANCED_UNRUN]).flat_map(|t| t.1).map(|&(what, _, code)| (what, code));
+    // The highlights end on a syntax note with no code.
+    let tips: Vec<_> = examples.chain(recipes).filter(|(_, code)| !code.is_empty()).collect();
+    let (what, src) = tips[fastrand::usize(..tips.len())];
+    capture(color, || {
+        framed(&format!("tip, {what}"), &src.lines().map(code).collect::<Vec<_>>());
+        true
+    })
+    .unwrap_or_else(|e| e)
+}
+
+/// What `f` writes to the help buffer, taken back out as lines, without blank lines at either end.
+fn collected(f: impl FnOnce()) -> Vec<String> {
+    let before = OUT.take();
+    f();
+    OUT.replace(before).trim_matches('\n').lines().map(String::from).collect()
 }
 
 /// Print each example with its live result, arrows aligned.
@@ -520,7 +567,24 @@ mod tests {
         let sorting = help(Some("sorting"), true).unwrap();
         assert!(sorting.contains(&format!("{REVERSE}sort")), "{sorting}");
         let spread = crate::ansi::strip_ansi(&help(Some("spread"), false).unwrap());
-        assert!(spread.starts_with("search \"spread\": ") && spread.contains("math.stats › spread"), "{spread}");
+        assert!(spread.starts_with("╭─ search \"spread\": ") && spread.contains("math.stats › spread"), "{spread}");
+    }
+
+    #[test]
+    fn boxes_survive_wrapping() {
+        for topic in ["examples", "advanced", "syntax", "text", "upper", "sorting"] {
+            // Some boxes fit in 100 columns and some fall back to unboxed.
+            let text = live(Some((false, 100)), || help(Some(topic), false)).unwrap();
+            assert!(text.contains('╭'), "{topic}: no boxes at all");
+            let mut open = false;
+            for line in text.lines() {
+                open = (open || line.starts_with('╭')) && !line.starts_with('╰');
+                if open && !line.starts_with('╭') {
+                    assert!(line.starts_with('│') && line.ends_with('│'), "{topic}: broken box row {line:?}");
+                    assert!(line.chars().count() <= 100, "{topic}: box wider than the terminal: {line:?}");
+                }
+            }
+        }
     }
 
     #[test]

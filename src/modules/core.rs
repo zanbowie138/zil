@@ -38,7 +38,7 @@ pub const MODULE: Module = Module {
     groups: &[
         ("values", &["type", "parse", "pretty"]),
         ("convert", &["str", "int", "float", "frac", "bool", "list"]),
-        ("io", &["print", "page", "help"]),
+        ("io", &["print", "page", "help", "tip"]),
     ],
     call,
     #[rustfmt::skip]
@@ -61,6 +61,7 @@ const FNS: &[Doc] = &[
     doc("pretty", "pretty(v: any) / pretty(v: any, style: str)", "human-readable text; style is \"long\" (default) or \"short\"; help(int), help(date), help(set), help(table) and the quantity, uncertain, list and map module pages show each type's rules", &["pretty(1234567)", r#"pretty(1234567, "short")"#], &["str", "commas", "simplify", "parts", "format"]),
     doc("parse", "parse(s: str)", "read a zil literal (number, string, list, map, quantity); never runs code", &[r#""[1, 2.5, 0xff]".parse"#, r#""5 km".parse to m"#], &["str", "nums"]),
     doc("help", "help(topic?: any)", "this help, as text; topic is a function, module (\"trig\" or \"math.trig\"), unit, or any value to list functions for its type", &[], &[]).shown(&["help(upper)", r#"help("math.trig")"#, "help(today)", r#"help("text") |> grep("case")"#]),
+    doc("tip", "tip()", "a random one-liner or recipe to try, from help(\"examples\") and help(\"advanced\")", &[], &["help"]).shown(&["tip()"]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -78,6 +79,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("help", []) => Value::str(help(None, false).unwrap_or_else(|e| e)),
         ("help", [Str(s)]) => Value::str(help(Some(s), false).unwrap_or_else(|e| e)),
         ("help", [Builtin(_, f)]) => Value::str(help(Some(f), false).unwrap_or_else(|e| e)),
+        ("tip", []) => Value::str(crate::help::tip(false)),
         ("help", [Fn(_)]) => return Err(Fail::Arg(0, "no help for user-defined functions".into())),
         ("help", [v]) => {
             let t = v.type_name();

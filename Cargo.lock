@@ -1310,6 +1310,7 @@ dependencies = [
  "sha1",
  "sha2",
  "terminal_size",
+ "unicode-width",
  "ureq",
 ]
 
