@@ -1,5 +1,5 @@
 // Runs zil off the page's thread, so a runaway loop can be killed with worker.terminate().
-// Messages in: {id, fn, src}, fn naming a `wasm.rs` export. Out: {ready} once loaded, then {id, result} or {id, crash}.
+// Messages in: {id, fn, src}, fn naming a `wasm.rs` export. Out: {ready} or {fail} once loaded, then {id, result} or {id, crash}.
 import init, * as zil from "./pkg/zil.js";
 
 // zil's network calls (currency rates, fetch, translate) block, which only a worker's synchronous XHR can do.
@@ -17,7 +17,11 @@ globalThis.zilGet = (url, query) => {
   return x.responseText;
 };
 
-const ready = init().then(() => postMessage({ ready: true }));
+// A failed init is a promise rejection, which the page's worker.onerror never sees, so say so.
+const ready = init().then(
+  () => postMessage({ ready: true }),
+  (e) => postMessage({ fail: String(e) }),
+);
 
 onmessage = async ({ data: { id, fn, src } }) => {
   await ready;
