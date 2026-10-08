@@ -25,7 +25,7 @@ jobs:
         with:
           bin: zil
           target: ${{ matrix.target }}
-          include: LICENSE.md,README.md
+          include: LICENSE.md,README.md,THIRD_PARTY.md
           token: ${{ secrets.GITHUB_TOKEN }}
       # The installer (packaging/zil.wxs) and the portable zip, whose zil-data folder keeps zil from writing anywhere else.
       - if: runner.os == 'Windows'
@@ -40,7 +40,7 @@ jobs:
           # MSI versions are plain numbers: v1.2.3-rc.1 installs as 1.2.3.
           wix build packaging/zil.wxs -arch x64 -d Version=$(($env:TAG.TrimStart('v') -split '-')[0]) -d Bin=$bin -o "$name.msi"
           New-Item -ItemType Directory zil/zil-data
-          Copy-Item $bin/zil.exe, LICENSE.md, README.md zil
+          Copy-Item $bin/zil.exe, LICENSE.md, README.md, THIRD_PARTY.md zil
           Copy-Item packaging/zil-data.txt zil/zil-data/README.txt
           Compress-Archive zil "$name-portable.zip"
           gh release upload $env:TAG "$name.msi" "$name-portable.zip"

@@ -1,0 +1,22 @@
+name: size
+on:
+  pull_request:
+    paths: [src/**, Cargo.*, .cargo/**, package.json]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup target add wasm32-unknown-unknown
+      # Must match the wasm-bindgen version in Cargo.lock.
+      - uses: taiki-e/install-action@v2
+        with: { tool: wasm-bindgen@0.2.129 }
+      - run: cargo wasm
+      - run: wasm-bindgen --target web --no-typescript --out-dir pkg target/wasm32-unknown-unknown/wasm/zil.wasm
+      # Reported, not enforced.
+      - run: |
+          f=pkg/zil_bg.wasm
+          echo "zil_bg.wasm: $(stat -c%s $f) bytes raw, $(gzip -9c $f | wc -c) gzipped" | tee -a "$GITHUB_STEP_SUMMARY"

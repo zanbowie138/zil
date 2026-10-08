@@ -24,6 +24,9 @@
         <Component>
           <File Source="README.md" />
         </Component>
+        <Component>
+          <File Source="THIRD_PARTY.md" />
+        </Component>
       </Directory>
     </StandardDirectory>
   </Package>

@@ -44,6 +44,15 @@ getrandom = { version = "0.2", features = ["js"] }
 jiff = { version = "0.2.38", features = ["js", "tzdb-bundle-always"] }
 wasm-bindgen = "0.2"
 
+# The browser build (`cargo wasm`): smallest download over speed. The CLI keeps the plain release profile.
+[profile.wasm]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
 [build-dependencies]
 winresource = "0.1.31"
 
