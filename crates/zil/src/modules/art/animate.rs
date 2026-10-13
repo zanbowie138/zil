@@ -4,7 +4,6 @@ use crate::interp::Interp;
 use crate::lexer::Span;
 use crate::modules::{Call, Fail};
 use crate::value::{Value, num};
-use std::io::{IsTerminal, Write};
 
 pub fn animate(it: &mut Interp, args: &[Value], span: &Span) -> Call {
     use Value::*;
@@ -27,8 +26,8 @@ pub fn animate(it: &mut Interp, args: &[Value], span: &Span) -> Call {
         Some(l) => l.len() * count.unwrap_or(1),
         None => count.unwrap_or(60),
     };
-    let tty = std::io::stdout().is_terminal();
-    let mut out = std::io::stdout();
+    let host = crate::host::get();
+    let tty = host.terminal().is_some();
     let mut shown = 0;
     // ponytail: Ctrl-C ends the whole process mid-animation; add a SIGINT handler if that hurts in the REPL.
     for i in 0..total {
@@ -40,19 +39,12 @@ pub fn animate(it: &mut Interp, args: &[Value], span: &Span) -> Call {
             continue;
         }
         let text = frame.to_string();
-        if !tty {
-            crate::print(&text);
-            continue;
-        }
-        if shown > 0 {
-            // Back up over the previous frame and clear from there down.
-            _ = write!(out, "\x1b[{shown}F\x1b[J");
-        }
-        _ = writeln!(out, "{text}");
-        _ = out.flush();
+        // Back up over the previous frame and clear from there down.
+        let back = if shown > 0 { format!("\x1b[{shown}F\x1b[J") } else { String::new() };
+        host.print(&format!("{back}{text}"));
         shown = text.lines().count().max(1);
         if tty && i + 1 < total {
-            std::thread::sleep(std::time::Duration::from_secs_f64(1.0 / fps));
+            host.sleep(1.0 / fps);
         }
     }
     Ok(Nil)

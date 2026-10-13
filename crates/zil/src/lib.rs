@@ -32,15 +32,6 @@ pub mod state;
 #[doc(hidden)]
 pub mod value;
 
-/// No terminal to page in the browser: `page(...)` just prints.
-#[cfg(target_arch = "wasm32")]
-#[doc(hidden)]
-pub mod pager {
-    pub fn page(text: &str) {
-        crate::print(text)
-    }
-}
-
 use interp::Interp;
 use std::path::PathBuf;
 use value::Value;

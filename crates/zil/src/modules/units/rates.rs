@@ -68,7 +68,7 @@ fn load_rates() -> Result<Vec<(String, f64)>, String> {
             Err(e) => match cache {
                 Some((body, _)) => {
                     let days = age.map_or(0, |a| a.max(0) / 86400);
-                    eprintln!("note: using currency rates cached {days} day{} ago", if days == 1 { "" } else { "s" });
+                    host.note(&format!("note: using currency rates cached {days} day{} ago", if days == 1 { "" } else { "s" }));
                     body
                 }
                 None => return Err(e),

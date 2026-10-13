@@ -20,7 +20,8 @@ pub fn img(args: &[Value]) -> Call {
                 Some(Str(m)) if ["blocks", "ascii", "braille"].contains(&&**m) => m,
                 Some(_) => return Err(Fail::Arg(2, "mode is \"blocks\", \"ascii\" or \"braille\"".into())),
             };
-            let pic = image::open(&**path).map_err(|e| Fail::Arg(0, format!("can't open {path}: {e}")))?;
+            let bytes = crate::host::get().read(path).map_err(|e| Fail::Arg(0, format!("can't open {path}: {e}")))?;
+            let pic = image::load_from_memory(&bytes).map_err(|e| Fail::Arg(0, format!("can't open {path}: {e}")))?;
             Value::str(draw(&pic, width, mode))
         }
         _ => return Err(Fail::BadArgs),

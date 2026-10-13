@@ -29,6 +29,18 @@ fn denied<T>(what: &str) -> io::Result<T> {
 pub trait Host {
     /// A line of program output, from `print` and friends.
     fn print(&self, _text: &str) {}
+    /// Long output from `page`, which a terminal can scroll through.
+    fn page(&self, text: &str) {
+        self.print(text)
+    }
+    /// A side note for the user that isn't program output, like a stale cache warning.
+    fn note(&self, _text: &str) {}
+    /// Columns and rows when output goes to a terminal that understands ANSI escapes.
+    fn terminal(&self) -> Option<(usize, usize)> {
+        None
+    }
+    /// Pauses between `animate` frames.
+    fn sleep(&self, _secs: f64) {}
     /// All of stdin, for `input`.
     fn stdin(&self) -> io::Result<String> {
         denied("reading input")
@@ -147,14 +159,30 @@ impl Host for NativeHost {
     fn print(&self, text: &str) {
         println!("{text}")
     }
+    fn page(&self, text: &str) {
+        crate::pager::page(text)
+    }
+    fn note(&self, text: &str) {
+        eprintln!("{text}")
+    }
+    // Tests never see a terminal, wherever they run.
+    fn terminal(&self) -> Option<(usize, usize)> {
+        use io::IsTerminal;
+        let (w, h) = terminal_size::terminal_size()?;
+        (!cfg!(test) && io::stdout().is_terminal()).then_some((w.0 as usize, h.0 as usize))
+    }
+    fn sleep(&self, secs: f64) {
+        std::thread::sleep(std::time::Duration::from_secs_f64(secs))
+    }
     fn stdin(&self) -> io::Result<String> {
         io::read_to_string(io::stdin())
     }
+    // The tests run at a fixed moment in Chicago, whatever the machine's clock and zone.
     fn now(&self) -> Timestamp {
-        Timestamp::now()
+        if cfg!(test) { "2026-10-06T14:30:00Z".parse().unwrap() } else { Timestamp::now() }
     }
     fn time_zone(&self) -> TimeZone {
-        TimeZone::system()
+        if cfg!(test) { TimeZone::get("America/Chicago").unwrap() } else { TimeZone::system() }
     }
     fn seed(&self) -> u64 {
         fastrand::u64(..)
@@ -238,6 +266,7 @@ mod tests {
         assert_eq!(show(r#"read_file("Cargo.toml")"#), r#"read_file: cannot read "Cargo.toml": file access is disabled in this session"#);
         assert_eq!(show(r#"env("PATH")"#), "nil");
         assert!(show(r#"sh("echo hi")"#).contains("running commands is disabled"));
+        assert!(show(r#"img("x.png")"#).contains("file access is disabled"));
         let a = show("[rand(), rand()]");
         assert_eq!(run(&mut Interp::with_host(Rc::new(NullHost)), "[rand(), rand()]").unwrap().to_string(), a, "seed 0 repeats");
     }

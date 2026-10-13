@@ -16,8 +16,6 @@ jobs:
           - { target: aarch64-apple-darwin, os: macos-latest }
           - { target: x86_64-pc-windows-msvc, os: windows-latest }
     runs-on: ${{ matrix.os }}
-    env:
-      TZ: America/Chicago # the tests assume it
     steps:
       - uses: actions/checkout@v4
       - run: cargo test --release

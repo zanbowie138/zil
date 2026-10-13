@@ -57,19 +57,15 @@ impl Role {
 
 pub const RESET: &str = "[0m";
 
-/// Whether to print colors: stdout is a terminal and `NO_COLOR` is unset.
+/// Whether to print colors: the host's output is a terminal and `NO_COLOR` is unset.
 pub fn color_on() -> bool {
-    use std::io::IsTerminal;
-    std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none()
+    let host = crate::host::get();
+    host.terminal().is_some() && host.env("NO_COLOR").is_none()
 }
 
 /// Terminal width, or 80 without one.
 pub fn columns() -> usize {
-    #[cfg(not(target_arch = "wasm32"))]
-    if let Some((w, _)) = terminal_size::terminal_size() {
-        return w.0 as usize;
-    }
-    80
+    crate::host::get().terminal().map_or(80, |(w, _)| w)
 }
 
 /// A value's role by type, as REPL results and help color it.

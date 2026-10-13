@@ -70,7 +70,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("print" | "page", vs) => {
             let parts: Vec<String> = vs.iter().map(|v| if let Table(t) = v { super::data::tables::grid(t, false) } else { v.to_string() }).collect();
             match name {
-                "page" => crate::pager::page(&parts.join(" ")),
+                "page" => crate::host::get().page(&parts.join(" ")),
                 _ => crate::print(&parts.join(" ")),
             }
             Nil
