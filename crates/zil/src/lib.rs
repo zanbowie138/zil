@@ -3,8 +3,7 @@
 // Internals the CLI and the browser build reach into, until the Session API (roadmap Phase 3a) replaces them.
 #[doc(hidden)]
 pub mod ansi;
-#[doc(hidden)]
-pub mod ast;
+mod ast;
 mod data;
 mod error;
 #[doc(hidden)]
@@ -13,16 +12,14 @@ pub mod guide;
 pub mod help;
 pub mod host;
 mod interp;
-#[doc(hidden)]
-pub mod lexer;
+mod lexer;
 #[doc(hidden)]
 pub mod modules;
 mod ops;
 #[cfg(not(target_arch = "wasm32"))]
 #[doc(hidden)]
 pub mod pager;
-#[doc(hidden)]
-pub mod parser;
+mod parser;
 #[doc(hidden)]
 pub mod repl;
 mod session;

@@ -15,13 +15,6 @@ zil = { path = "../crates/zil" }
 [workspace]
 
 [[bin]]
-name = "lex"
-path = "fuzz_targets/lex.rs"
-test = false
-doc = false
-bench = false
-
-[[bin]]
 name = "parse"
 path = "fuzz_targets/parse.rs"
 test = false
