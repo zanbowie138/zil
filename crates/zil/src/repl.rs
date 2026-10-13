@@ -42,6 +42,32 @@ pub fn help_call(src: &str) -> bool {
     call || help_shorthand(src).is_some()
 }
 
+/// Units convertible from the expression before a trailing `to`, for completion. Read from literals and `s`'s
+/// variables only: nothing is evaluated, so Tab has no side effects. Call it inside `s.enter` so user units count.
+pub fn conversions(s: &Session, before: &str) -> Option<Vec<String>> {
+    use crate::ast::ExprKind::{Assign, Ident, Qty};
+    use crate::modules::units::{known_dim, names_with_dim};
+    let toks = lexer::lex(before).ok()?;
+    let [.., (Tok::To, to), (Tok::Eof, _)] = toks.as_slice() else {
+        return None;
+    };
+    // Longest parseable tail, so `print(5 km to` looks at `5 km`.
+    let ast = toks.iter().find_map(|(_, sp)| crate::parser::parse(&before[sp.start..to.start]).ok())?;
+    let mut e = ast.last()?;
+    while let Assign(_, rhs) = &e.kind {
+        e = rhs;
+    }
+    let dim = match &e.kind {
+        Qty(_, spec) => known_dim(spec)?,
+        Ident(name) => match s.get(name) {
+            Some(Value::Qty(_, u)) => u.dim(),
+            _ => known_dim(&vec![(name.clone(), 1)])?,
+        },
+        _ => return None,
+    };
+    Some(names_with_dim(dim))
+}
+
 /// How the REPL shows a result.
 pub enum Shown {
     /// nil and functions: nothing.

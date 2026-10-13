@@ -5,10 +5,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::wasm_bindgen;
 use zil::ansi::{RESET, Role, strip_ansi, tint, to_html};
-use zil::ast::ExprKind;
 use zil::host::Host;
 use zil::repl::{self, Shown};
-use zil::{Session, Value, help, parser};
+use zil::{Session, Value, help};
 
 thread_local! {
     /// What the program printed, since the last `take_output`.
@@ -89,7 +88,7 @@ pub fn run(src: &str) -> Vec<String> {
     let last_line = |end: usize| src[..end].trim_end().matches('\n').count();
     let error_line = |e: &zil::Error| e.line_col(src).0 - 1;
     let mut lines: Vec<(usize, String)> = Vec::new();
-    let (result, err) = match parser::parse(src) {
+    let (result, err) = match zil::parse(src) {
         Err(e) => {
             lines.push((error_line(&e), format!("error: {}", e.msg)));
             (String::new(), e.render("sandbox", src, true))
@@ -97,13 +96,13 @@ pub fn run(src: &str) -> Vec<String> {
         Ok(prog) => {
             let mut session = sandboxed();
             let mut out = Ok(Value::Nil);
-            for (i, stmt) in prog.iter().enumerate() {
-                let line = last_line(stmt.span.end);
-                out = session.run(&prog[i..=i]);
+            for stmt in &prog {
+                let line = last_line(stmt.span().end);
+                out = session.run(stmt);
                 // A loop's value is just its last pass; `x = 5; x += 2` on one line shows only the last.
                 lines.retain(|l| l.0 != line);
                 match &out {
-                    Ok(v) if !matches!(stmt.kind, ExprKind::For(..) | ExprKind::While(..)) => {
+                    Ok(v) if !stmt.is_loop() => {
                         let text = strip_ansi(&shown(v));
                         if !text.is_empty() && !text.contains('\n') {
                             lines.push((line, text));
@@ -133,7 +132,7 @@ pub fn run(src: &str) -> Vec<String> {
 #[wasm_bindgen]
 pub fn notebook(src: &str) -> String {
     let last_line = |end: usize| src[..end].trim_end().matches('\n').count();
-    let rows: Vec<(usize, String)> = match parser::parse(src) {
+    let rows: Vec<(usize, String)> = match zil::parse(src) {
         Err(e) => vec![(last_line(src.len()), format!("error: {}", e.msg))],
         Ok(prog) => {
             let mut session = sandboxed();
@@ -141,11 +140,10 @@ pub fn notebook(src: &str) -> String {
             prog.iter()
                 .enumerate()
                 .filter_map(|(i, stmt)| {
-                    let r = session.run(&prog[i..=i]);
-                    let line = last_line(stmt.span.end);
+                    let r = session.run(stmt);
+                    let line = last_line(stmt.span().end);
                     // `x = 5; x += 2; x` shows one result, like a REPL line.
-                    let quiet = matches!(stmt.kind, ExprKind::Assign(..) | ExprKind::Unpack(..) | ExprKind::For(..) | ExprKind::While(..))
-                        || prog.get(i + 1).is_some_and(|next| last_line(next.span.end) == line);
+                    let quiet = stmt.is_assignment() || stmt.is_loop() || prog.get(i + 1).is_some_and(|next| last_line(next.span().end) == line);
                     let printed = take_output();
                     let value = match r {
                         // `"abc".find("z")` → nil is an answer; after `print` it's just noise.

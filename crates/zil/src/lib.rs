@@ -36,7 +36,7 @@ use std::path::PathBuf;
 pub use data::Data;
 pub use error::{Error, Limit};
 pub use interp::Limits;
-pub use session::Session;
+pub use session::{Session, Statement};
 pub use value::Value;
 
 /// A line of program output, from `print` and friends.
@@ -53,6 +53,11 @@ pub fn cache_dir() -> Option<PathBuf> {
     let env = |k| std::env::var_os(k).map(PathBuf::from);
     let base = env("XDG_CACHE_HOME").or_else(|| env("LOCALAPPDATA")).or_else(|| Some(env("HOME")?.join(".cache")))?;
     Some(base.join("zil"))
+}
+
+/// Splits `src` into top-level statements, to run one at a time with `Session::run`.
+pub fn parse(src: &str) -> Result<Vec<Statement>, Error> {
+    Ok(parser::parse(src)?.into_iter().map(Statement).collect())
 }
 
 fn run(interp: &mut Interp, src: &str) -> Result<Value, Error> {

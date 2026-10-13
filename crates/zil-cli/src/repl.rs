@@ -6,9 +6,8 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
 use zil::ansi::{RESET, Role, color_on, highlight};
-use zil::lexer::{self, Tok};
 use zil::repl::{self, Shown, help_shorthand, unclosed};
-use zil::{Session, Value, ast, cache_dir, help, modules, pager, parser};
+use zil::{Session, Value, cache_dir, help, modules, pager};
 
 /// REPL tab completion over builtins, constants, `to` targets, units, help topics and
 /// variables in scope. After `.`, only functions; after `to`, every unit the left side converts to.
@@ -29,30 +28,6 @@ impl Names {
         v.dedup();
         Names(v, session)
     }
-
-    /// Units convertible from the expression before a trailing `to`, read from literals and
-    /// existing variables only: nothing is evaluated, so Tab has no side effects.
-    fn conversions(&self, before: &str) -> Option<Vec<String>> {
-        let toks = lexer::lex(before).ok()?;
-        let [.., (Tok::To, to), (Tok::Eof, _)] = toks.as_slice() else {
-            return None;
-        };
-        // Longest parseable tail, so `print(5 km to` looks at `5 km`.
-        let ast = toks.iter().find_map(|(_, s)| parser::parse(&before[s.start..to.start]).ok())?;
-        let mut e = ast.last()?;
-        while let ast::ExprKind::Assign(_, rhs) = &e.kind {
-            e = rhs;
-        }
-        let dim = match &e.kind {
-            ast::ExprKind::Qty(_, spec) => modules::units::known_dim(spec)?,
-            ast::ExprKind::Ident(name) => match self.1.borrow().get(name) {
-                Some(Value::Qty(_, u)) => u.dim(),
-                _ => modules::units::known_dim(&vec![(name.clone(), 1)])?,
-            },
-            _ => return None,
-        };
-        Some(modules::units::names_with_dim(dim))
-    }
 }
 
 impl rustyline::completion::Completer for Names {
@@ -63,7 +38,7 @@ impl rustyline::completion::Completer for Names {
         // Units come from this session's own, user-made ones included.
         let session = self.1.borrow();
         let mut hits: Vec<String> = session.enter(|| {
-            if let Some(units) = self.conversions(&line[..start]) {
+            if let Some(units) = repl::conversions(&session, &line[..start]) {
                 units
             } else if line[..start].ends_with('.') {
                 session.names().into_iter().filter(|n| matches!(session.get(n), Some(Value::Fn(_) | Value::Builtin(..)))).collect()

@@ -1,9 +1,10 @@
 //! The embedding API: one sandboxed session of zil code.
 
-use crate::ast::Expr;
+use crate::ast::{Expr, ExprKind};
 use crate::host::Host;
 use crate::interp::{Interp, Limits, lookup, names};
 use crate::{Data, Error, Value};
+use std::ops::Range;
 use std::rc::Rc;
 
 /// A zil session: globals, user units and rates that persist across `eval`s, with every effect going through `host`.
@@ -28,9 +29,9 @@ impl Session {
         crate::run(&mut self.0, src)
     }
 
-    /// Runs already-parsed statements, e.g. one at a time to show each result.
-    pub fn run(&mut self, prog: &[Expr]) -> Result<Value, Error> {
-        self.0.run(prog)
+    /// Runs one statement from `zil::parse`, e.g. to show each result.
+    pub fn run(&mut self, stmt: &Statement) -> Result<Value, Error> {
+        self.0.run(std::slice::from_ref(&stmt.0))
     }
 
     /// What the script's `args()` returns.
@@ -66,6 +67,26 @@ impl Session {
     /// Caps on each `eval`; hitting one is an `Error` whose `limit` says which.
     pub fn limits(&mut self) -> &mut Limits {
         &mut self.0.limits
+    }
+}
+
+/// One top-level statement of a program, from `zil::parse`.
+pub struct Statement(pub(crate) Expr);
+
+impl Statement {
+    /// Where it sits in the source, in bytes.
+    pub fn span(&self) -> Range<usize> {
+        self.0.span.clone()
+    }
+
+    /// A `for` or `while` loop, whose value is just its last pass.
+    pub fn is_loop(&self) -> bool {
+        matches!(self.0.kind, ExprKind::For(..) | ExprKind::While(..))
+    }
+
+    /// An assignment, `x = 1` or `a, b = ...`.
+    pub fn is_assignment(&self) -> bool {
+        matches!(self.0.kind, ExprKind::Assign(..) | ExprKind::Unpack(..))
     }
 }
 
