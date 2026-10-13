@@ -6,6 +6,8 @@ use crate::interp::Interp;
 use crate::modules::{self, ALL, Doc, Module, Section, modules, units};
 use std::cell::{Cell, RefCell};
 
+pub mod docs;
+
 thread_local! {
     /// What the page renderers below write to, read back by `capture`.
     static OUT: RefCell<String> = const { RefCell::new(String::new()) };
@@ -532,6 +534,13 @@ fn snippet(line: &str, src: &str) -> String {
 /// Spaces padding uncolored `s` to width `w`; `{:<w$}` would count escape codes.
 pub fn pad(s: &str, w: usize) -> String {
     " ".repeat(w.saturating_sub(s.chars().count()))
+}
+
+/// Every example in the module tree, for seeding fuzzers.
+pub fn all_examples() -> Vec<&'static str> {
+    let fns = modules().flat_map(|m| m.fns.iter().flat_map(|f| f.examples.iter().chain(f.shown)));
+    let sections = modules().flat_map(|m| m.examples.iter().chain(m.guide).flat_map(|(_, rows)| rows.iter().map(|(_, ex)| ex)));
+    fns.chain(sections).copied().filter(|ex| !ex.is_empty()).collect()
 }
 
 /// `help("examples")`'s sections as JSON `[[top-level module, title, [[label, code], ...]], ...]`, highlights first.

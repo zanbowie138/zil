@@ -1,30 +1,17 @@
-//! `zil --docs <dir>`: the reference as Starlight MDX pages, rendered from the same module tree as `help`, one page per module,
+//! The reference as Starlight MDX pages for `zil --docs <dir>`, rendered from the same module tree as `help`, one page per module,
 //! plus `sidebar.json`, which `docs/astro.config.mjs` reads. A build step for the site, not a user-facing command.
 //! Example results are evaluated live, so the pages are build output: CI regenerates them on deploy.
 
+use super::eval;
+use crate::guide::{ADVANCED, ADVANCED_UNRUN, HIGHLIGHTS, SYNTAX};
+use crate::modules::{self, ALL, Doc, Module, Section, TREE, modules, units};
 use std::fmt::Write;
-use std::path::Path;
-use zil::guide::{ADVANCED, ADVANCED_UNRUN, HIGHLIGHTS, SYNTAX};
-use zil::help::eval;
-use zil::modules::{ALL, Doc, Module, Section, TREE, modules, units};
 
 /// Prefix of the line holding an example's result; the zil grammar and `runnable.js` know it.
 const RESULT: &str = "# → ";
 
-/// Writes every page into `dir`.
-pub fn write(dir: &Path) -> std::io::Result<()> {
-    std::fs::create_dir_all(dir)?;
-    for (name, page) in pages() {
-        let file = dir.join(name);
-        std::fs::create_dir_all(file.parent().unwrap())?;
-        std::fs::write(file, page)?;
-    }
-    Ok(())
-}
-
-/// (file name, contents) for every page.
-fn pages() -> Vec<(String, String)> {
-    let date = jiff::Zoned::now().date();
+/// (file name, contents) for every page; `date` goes in the note on generated results.
+pub fn pages(date: jiff::civil::Date) -> Vec<(String, String)> {
     // Under docs/, so the reference is served at /docs/ and the landing page (src/pages/index.astro) has the root.
     let mut out = vec![("docs/index.mdx".to_string(), index(date)), ("docs/syntax.mdx".into(), syntax(date)), ("docs/advanced.mdx".into(), advanced(date))];
     for (path, m) in ALL.iter() {
@@ -165,7 +152,7 @@ fn function(s: &mut String, f: &Doc) {
 
 /// The URL of the page documenting function `name`.
 fn home(name: &str) -> String {
-    modules().find(|m| m.fns.iter().any(|g| g.name == name)).map_or(String::new(), |m| url(zil::modules::path(m)))
+    modules().find(|m| m.fns.iter().any(|g| g.name == name)).map_or(String::new(), |m| url(modules::path(m)))
 }
 
 /// Each section as a heading and a code block of `# label`, example, result.

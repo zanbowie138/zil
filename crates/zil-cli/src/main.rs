@@ -1,6 +1,5 @@
 //! The `zil` command line: REPL, `-e`, scripts and `--docs`.
 
-mod docs;
 mod native;
 mod pager;
 mod repl;
@@ -45,7 +44,7 @@ fn real_main() {
                 v => println!("{}", zil::repl::display(&v, ansi::color_on())),
             }
         }
-        [flag, dir] if flag == "--docs" => docs::write(dir.as_ref()).unwrap_or_else(|e| {
+        [flag, dir] if flag == "--docs" => write_docs(dir.as_ref()).unwrap_or_else(|e| {
             eprintln!("zil: {dir}: {e}");
             exit(1)
         }),
@@ -64,6 +63,16 @@ fn real_main() {
             exit(2)
         }
     }
+}
+
+/// Writes the reference pages (`help::docs::pages`) into `dir`.
+fn write_docs(dir: &std::path::Path) -> std::io::Result<()> {
+    for (name, page) in help::docs::pages(jiff::Zoned::now().date()) {
+        let file = dir.join(name);
+        std::fs::create_dir_all(file.parent().unwrap())?;
+        std::fs::write(file, page)?;
+    }
+    Ok(())
 }
 
 /// Prints `e` to stderr, colored when stderr is a terminal.

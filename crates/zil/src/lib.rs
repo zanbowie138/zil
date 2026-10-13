@@ -6,15 +6,13 @@ pub mod ansi;
 mod ast;
 mod data;
 mod error;
-#[doc(hidden)]
-pub mod guide;
+mod guide;
 #[doc(hidden)]
 pub mod help;
 pub mod host;
 mod interp;
 mod lexer;
-#[doc(hidden)]
-pub mod modules;
+mod modules;
 mod ops;
 mod parser;
 #[doc(hidden)]
