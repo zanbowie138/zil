@@ -1,0 +1,44 @@
+[package]
+name = "zil-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+zil = { path = "../crates/zil" }
+
+# Not part of the main workspace: it builds only with nightly and `cargo fuzz`.
+[workspace]
+
+[[bin]]
+name = "lex"
+path = "fuzz_targets/lex.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parse"
+path = "fuzz_targets/parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "eval"
+path = "fuzz_targets/eval.rs"
+test = false
+doc = false
+bench = false
+
+# Writes `corpus/<target>/` from examples/*.zil and every help example: `cargo run --bin seed`, then `cargo +nightly fuzz run eval`.
+[[bin]]
+name = "seed"
+path = "seed.rs"
+test = false
+doc = false
+bench = false

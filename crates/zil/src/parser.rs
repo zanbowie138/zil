@@ -8,7 +8,7 @@ use std::rc::Rc;
 type PResult<T> = Result<T, Error>;
 
 pub fn parse(src: &str) -> PResult<Vec<Expr>> {
-    let mut p = Parser { src, toks: lex(src)?, pos: 0, prev_end: 0, holes: 0 };
+    let mut p = Parser { src, toks: lex(src)?, pos: 0, prev_end: 0, holes: 0, depth: 0 };
     let mut stmts = Vec::new();
     p.skip_nl();
     while *p.peek() != Tok::Eof {
@@ -29,7 +29,12 @@ struct Parser<'a> {
     prev_end: usize,
     /// `_` placeholders seen so far, so `x |> f(_, 2)` knows to bind `_` instead of inserting `x`.
     holes: usize,
+    /// How deep the expression being built is nested, capped at `MAX_NEST`.
+    depth: usize,
 }
+
+/// Deeper trees would overflow the stack evaluating them: the browser's ~1 MB fits about 300 levels.
+const MAX_NEST: usize = 256;
 
 /// (left, right) binding power of infix operators; higher binds tighter.
 fn infix_bp(t: &Tok) -> Option<(u8, u8)> {
@@ -183,7 +188,26 @@ impl Parser<'_> {
         Expr { kind, span: start..self.prev_end }
     }
 
+    /// One more level of nesting, or an error past `MAX_NEST`.
+    fn nest(&mut self) -> PResult<()> {
+        self.depth += 1;
+        if self.depth > MAX_NEST {
+            return Err(Error::new("nested too deeply", self.span())
+                .help(format!("expressions can nest at most {MAX_NEST} levels, long `a + b + ...` chains included")));
+        }
+        Ok(())
+    }
+
     fn expr(&mut self, min_bp: u8) -> PResult<Expr> {
+        let depth = self.depth;
+        let e = self.expr_chain(min_bp);
+        self.depth = depth;
+        e
+    }
+
+    /// Each operator applied to `lhs` nests it a level deeper.
+    fn expr_chain(&mut self, min_bp: u8) -> PResult<Expr> {
+        self.nest()?;
         let start = self.span().start;
         let mut lhs = self.prefix()?;
         loop {
@@ -203,6 +227,7 @@ impl Parser<'_> {
                     _ => ExprKind::Field(Box::new(lhs), self.ident()?),
                 };
                 lhs = self.mk(kind, start);
+                self.nest()?;
                 continue;
             }
             if t == Tok::To {
@@ -212,6 +237,7 @@ impl Parser<'_> {
                 self.bump();
                 let target = self.target()?;
                 lhs = self.mk(ExprKind::To(Box::new(lhs), target), start);
+                self.nest()?;
                 continue;
             }
             let Some((lbp, rbp)) = infix_bp(&t) else {
@@ -263,6 +289,7 @@ impl Parser<'_> {
                 _ => arith(binop(&t), lhs, rhs),
             };
             lhs = self.mk(kind, start);
+            self.nest()?;
         }
         Ok(lhs)
     }
@@ -463,6 +490,14 @@ impl Parser<'_> {
         if *self.peek() != Tok::LBracket {
             return Ok(Pat::Name(self.ident()?));
         }
+        let depth = self.depth;
+        let p = self.list_pattern();
+        self.depth = depth;
+        p
+    }
+
+    fn list_pattern(&mut self) -> PResult<Pat> {
+        self.nest()?;
         let open = self.span();
         self.bump();
         let mut items = Vec::new();
@@ -627,7 +662,7 @@ impl Parser<'_> {
                         return Err(Error::new("empty `{}` in a string", start + i..start + end + 1)
                             .help("put an expression inside, or write `\\{` for a literal brace"));
                     }
-                    let mut p = Parser { src: self.src, toks: inner_toks, pos: 0, prev_end: 0, holes: 0 };
+                    let mut p = Parser { src: self.src, toks: inner_toks, pos: 0, prev_end: 0, holes: 0, depth: self.depth + 1 };
                     p.skip_nl();
                     let e = p.expr(0)?;
                     p.skip_nl();
@@ -870,5 +905,26 @@ mod tests {
         for src in ["1 = 2", r#""{1""#, "r\"(\"", "5 to hex(x)"] {
             assert!(super::parse(src).is_err(), "{src}");
         }
+    }
+
+    #[test]
+    fn caps_nesting() {
+        let run = || {
+            let n = super::MAX_NEST;
+            assert!(super::parse(&format!("{}1{}", "(".repeat(n - 1), ")".repeat(n - 1))).is_ok());
+            let deep = |k| {
+                [
+                    format!("{}1{}", "(".repeat(k), ")".repeat(k)),
+                    format!("{}1", "1+".repeat(k)),
+                    "-".repeat(k) + "1",
+                    format!("|{}x{}| 1", "[".repeat(k), "]".repeat(k)),
+                ]
+            };
+            for src in deep(n + 1).iter().chain(&deep(100_000)) {
+                assert!(super::parse(src).is_err(), "{}", &src[..20]);
+            }
+        };
+        // Debug frames are ~10x release ones.
+        std::thread::Builder::new().stack_size(crate::STACK).spawn(run).unwrap().join().unwrap();
     }
 }
