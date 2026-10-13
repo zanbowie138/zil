@@ -164,16 +164,13 @@ pub fn notebook(src: &str) -> String {
 /// The sandbox's sidebar: `help("examples")`'s sections as JSON `[[top-level module, title, [[label, code], ...]], ...]`, highlights first.
 #[wasm_bindgen]
 pub fn examples() -> String {
-    let highlights = zil::guide::HIGHLIGHTS.iter().map(|s| ("start", s));
-    let sections = highlights.chain(zil::modules::modules().flat_map(|m| m.examples.iter().map(|s| (zil::modules::path(m).split('.').next().unwrap(), s))));
-    let rows: Vec<_> = sections.map(|(module, (title, rows))| (module, title, rows.iter().filter(|(_, code)| !code.is_empty()).collect::<Vec<_>>())).collect();
-    serde_json::to_string(&rows).unwrap()
+    help::examples_json()
 }
 
 /// The sandbox's tour as JSON `[[chapter, [[text, code], ...]], ...]`.
 #[wasm_bindgen]
 pub fn tour() -> String {
-    serde_json::to_string(zil::guide::TOUR).unwrap()
+    help::tour_json()
 }
 
 /// Starts a fresh REPL session, returning its greeting as HTML.
@@ -219,10 +216,5 @@ pub fn repl(src: &str) -> Vec<String> {
 /// `{fns: [[name, sig, desc, module], ...], units: [[names, desc], ...], consts: [name, ...], modules: [[path, about], ...]}`.
 #[wasm_bindgen]
 pub fn vocab() -> String {
-    use zil::modules::{ALL, modules, path, units};
-    let fns: Vec<_> = modules().flat_map(|m| m.fns.iter().map(move |f| (f.name, f.sig, f.desc, path(m)))).collect();
-    let units: Vec<_> = units::rows().map(|r| (r.0, r.4)).collect();
-    let consts: Vec<_> = modules().flat_map(|m| m.consts.iter().map(|c| c.0).chain(m.quantities.iter().map(|q| q.0))).collect();
-    let mods: Vec<_> = ALL.iter().map(|(p, m)| (p, m.about)).collect();
-    serde_json::json!({ "fns": fns, "units": units, "consts": consts, "modules": mods }).to_string()
+    help::vocab_json()
 }

@@ -534,6 +534,30 @@ pub fn pad(s: &str, w: usize) -> String {
     " ".repeat(w.saturating_sub(s.chars().count()))
 }
 
+/// `help("examples")`'s sections as JSON `[[top-level module, title, [[label, code], ...]], ...]`, highlights first.
+pub fn examples_json() -> String {
+    let highlights = HIGHLIGHTS.iter().map(|s| ("start", s));
+    let sections = highlights.chain(modules().flat_map(|m| m.examples.iter().map(|s| (modules::path(m).split('.').next().unwrap(), s))));
+    let rows: Vec<_> = sections.map(|(module, (title, rows))| (module, title, rows.iter().filter(|(_, code)| !code.is_empty()).collect::<Vec<_>>())).collect();
+    serde_json::to_string(&rows).unwrap()
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+/// The tour as JSON `[[chapter, [[text, code], ...]], ...]`.
+pub fn tour_json() -> String {
+    serde_json::to_string(crate::guide::TOUR).unwrap()
+}
+
+/// The vocabulary, for editor completion, hover docs and highlighting, as JSON:
+/// `{fns: [[name, sig, desc, module], ...], units: [[names, desc], ...], consts: [name, ...], modules: [[path, about], ...]}`.
+pub fn vocab_json() -> String {
+    let fns: Vec<_> = modules().flat_map(|m| m.fns.iter().map(move |f| (f.name, f.sig, f.desc, modules::path(m)))).collect();
+    let units: Vec<_> = units::rows().map(|r| (r.0, r.4)).collect();
+    let consts: Vec<_> = modules().flat_map(|m| m.consts.iter().map(|c| c.0).chain(m.quantities.iter().map(|q| q.0))).collect();
+    let mods: Vec<_> = ALL.iter().map(|(p, m)| (p, m.about)).collect();
+    serde_json::json!({ "fns": fns, "units": units, "consts": consts, "modules": mods }).to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
