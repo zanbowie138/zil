@@ -13,7 +13,7 @@ impl Host for NativeHost {
         println!("{text}")
     }
     fn page(&self, text: &str) {
-        zil::pager::page(text)
+        crate::pager::page(text)
     }
     fn note(&self, text: &str) {
         eprintln!("{text}")

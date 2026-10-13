@@ -1,5 +1,6 @@
 //! The REPL: line editing with completion, hints and syntax colors, multi-line input, `help` shorthand and numbered results.
 
+use crate::pager;
 use crate::report;
 use rustyline::error::ReadlineError;
 use std::borrow::Cow;
@@ -7,7 +8,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use zil::ansi::{RESET, Role, color_on, highlight};
 use zil::repl::{self, Shown, help_shorthand, unclosed};
-use zil::{Session, Value, cache_dir, help, modules, pager};
+use zil::{Session, Value, cache_dir, help, modules};
 
 /// REPL tab completion over builtins, constants, `to` targets, units, help topics and
 /// variables in scope. After `.`, only functions; after `to`, every unit the left side converts to.

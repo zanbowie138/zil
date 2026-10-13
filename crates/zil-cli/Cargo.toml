@@ -21,6 +21,7 @@ rustyline = "18.0.1"
 terminal_size = "0.4.4"
 ctrlc = "3.5.2"
 fastrand = "2.5.0"
+regex = "1.13.1"
 ureq = "3.4.2"
 
 [build-dependencies]

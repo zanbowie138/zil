@@ -2,6 +2,7 @@
 
 mod docs;
 mod native;
+mod pager;
 mod repl;
 
 use std::process::exit;

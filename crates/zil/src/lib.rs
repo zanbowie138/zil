@@ -16,9 +16,6 @@ mod lexer;
 #[doc(hidden)]
 pub mod modules;
 mod ops;
-#[cfg(not(target_arch = "wasm32"))]
-#[doc(hidden)]
-pub mod pager;
 mod parser;
 #[doc(hidden)]
 pub mod repl;

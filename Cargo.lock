@@ -1539,7 +1539,6 @@ version = "0.3.0"
 dependencies = [
  "ariadne",
  "base64",
- "crossterm",
  "fastrand",
  "getrandom 0.2.17",
  "image",
@@ -1567,6 +1566,7 @@ dependencies = [
  "ctrlc",
  "fastrand",
  "jiff",
+ "regex",
  "rustyline",
  "terminal_size",
  "ureq",

@@ -1,10 +1,10 @@
 //! A full-screen pager for long REPL help and `page(...)`: arrows, PgUp/PgDn, Space, Home/End and the mouse wheel scroll, `/` searches
 //! (`n`/`N` step through matches), `q` or Esc quits and leaves the page being read in the scrollback.
 
-use crate::ansi::{Role, strip_ansi};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEventKind};
 use crossterm::{cursor, execute, queue, terminal};
 use std::io::{Write, stdout};
+use zil::ansi::{Role, strip_ansi};
 
 /// Puts the terminal back however the pager ends, panics included.
 struct Screen;
