@@ -118,11 +118,12 @@ pub trait Host {
 pub struct NullHost;
 impl Host for NullHost {}
 
-/// The host of a thread's first session: the real machine natively, nothing in the browser until `zil-wasm` installs its own.
+/// The host of a thread's first session: nothing until the embedder installs its own with `set_default`, as the CLI and
+/// `zil-wasm` do. The tests get `TestHost`.
 pub fn default() -> Rc<dyn Host> {
-    #[cfg(not(target_arch = "wasm32"))]
-    return Rc::new(NativeHost);
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(test)]
+    return Rc::new(TestHost);
+    #[cfg(not(test))]
     return Rc::new(NullHost);
 }
 
@@ -152,104 +153,17 @@ pub fn rng<T>(f: impl FnOnce(&mut fastrand::Rng) -> T) -> T {
     state::with(|s| f(&mut s.rng.borrow_mut()))
 }
 
-/// The machine zil runs on, with nothing held back: what the CLI and the tests use.
-#[cfg(not(target_arch = "wasm32"))]
-pub struct NativeHost;
+/// The tests run at a fixed moment in Chicago, whatever the machine's clock and zone.
+#[cfg(test)]
+pub struct TestHost;
 
-#[cfg(not(target_arch = "wasm32"))]
-impl Host for NativeHost {
-    fn print(&self, text: &str) {
-        println!("{text}")
-    }
-    fn page(&self, text: &str) {
-        crate::pager::page(text)
-    }
-    fn note(&self, text: &str) {
-        eprintln!("{text}")
-    }
-    // Tests never see a terminal, wherever they run.
-    fn terminal(&self) -> Option<(usize, usize)> {
-        use io::IsTerminal;
-        let (w, h) = terminal_size::terminal_size()?;
-        (!cfg!(test) && io::stdout().is_terminal()).then_some((w.0 as usize, h.0 as usize))
-    }
-    fn sleep(&self, secs: f64) {
-        std::thread::sleep(std::time::Duration::from_secs_f64(secs))
-    }
-    fn stdin(&self) -> io::Result<String> {
-        io::read_to_string(io::stdin())
-    }
-    // The tests run at a fixed moment in Chicago, whatever the machine's clock and zone.
+#[cfg(test)]
+impl Host for TestHost {
     fn now(&self) -> Timestamp {
-        if cfg!(test) { "2026-10-06T14:30:00Z".parse().unwrap() } else { Timestamp::now() }
+        "2026-10-06T14:30:00Z".parse().unwrap()
     }
     fn time_zone(&self) -> TimeZone {
-        if cfg!(test) { TimeZone::get("America/Chicago").unwrap() } else { TimeZone::system() }
-    }
-    fn seed(&self) -> u64 {
-        fastrand::u64(..)
-    }
-    fn env(&self, name: &str) -> Option<String> {
-        std::env::var(name).ok()
-    }
-    fn env_all(&self) -> Vec<(String, String)> {
-        std::env::vars().collect()
-    }
-    fn read(&self, path: &str) -> io::Result<Vec<u8>> {
-        std::fs::read(path)
-    }
-    fn write(&self, path: &str, bytes: &[u8], append: bool) -> io::Result<()> {
-        use io::Write;
-        std::fs::OpenOptions::new().write(true).create(true).append(append).truncate(!append).open(path)?.write_all(bytes)
-    }
-    fn list(&self, dir: &str) -> io::Result<Vec<String>> {
-        std::fs::read_dir(dir)?.map(|e| Ok(e?.file_name().to_string_lossy().into_owned())).collect()
-    }
-    fn metadata(&self, path: &str) -> io::Result<Meta> {
-        let md = std::fs::metadata(path).or_else(|_| std::fs::symlink_metadata(path))?;
-        let modified = Timestamp::try_from(md.modified()?).map_err(io::Error::other)?;
-        Ok(Meta { is_dir: md.is_dir(), len: md.len(), modified })
-    }
-    fn remove(&self, path: &str) -> io::Result<()> {
-        if std::path::Path::new(path).is_dir() { std::fs::remove_dir(path) } else { std::fs::remove_file(path) }
-    }
-    fn rename(&self, from: &str, to: &str) -> io::Result<()> {
-        std::fs::rename(from, to)
-    }
-    fn copy(&self, from: &str, to: &str) -> io::Result<()> {
-        std::fs::copy(from, to).map(drop)
-    }
-    fn mkdir(&self, path: &str) -> io::Result<()> {
-        std::fs::create_dir_all(path)
-    }
-    fn cwd(&self) -> io::Result<String> {
-        Ok(std::env::current_dir()?.to_string_lossy().into_owned())
-    }
-    fn cd(&self, dir: &str) -> io::Result<()> {
-        std::env::set_current_dir(dir)
-    }
-    fn run(&self, cmd: &str) -> io::Result<Ran> {
-        let (sh, flag) = if cfg!(windows) { ("cmd", "/C") } else { ("sh", "-c") };
-        let out = std::process::Command::new(sh).args([flag, cmd]).output()?;
-        let text = |b: &[u8]| String::from_utf8_lossy(b).into_owned();
-        Ok(Ran { code: out.status.code().unwrap_or(-1), out: text(&out.stdout), err: text(&out.stderr) })
-    }
-    fn http_get(&self, url: &str, query: &[(&str, &str)]) -> Result<String, String> {
-        ureq::get(url).query_pairs(query.iter().copied()).call().and_then(|mut r| r.body_mut().read_to_string()).map_err(|e| e.to_string())
-    }
-    fn cache_get(&self, key: &str) -> Option<(String, Timestamp)> {
-        let path = crate::cache_dir()?.join(key);
-        let at = Timestamp::try_from(path.metadata().ok()?.modified().ok()?).ok()?;
-        Some((std::fs::read_to_string(path).ok()?, at))
-    }
-    fn cache_put(&self, key: &str, value: &str) {
-        if let Some(dir) = crate::cache_dir() {
-            let _ = std::fs::create_dir_all(&dir);
-            let _ = std::fs::write(dir.join(key), value);
-        }
-    }
-    fn exit(&self, code: i32) -> String {
-        std::process::exit(code)
+        TimeZone::get("America/Chicago").unwrap()
     }
 }
 

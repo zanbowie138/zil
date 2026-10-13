@@ -20,6 +20,8 @@ jiff = "0.2.38"
 rustyline = "18.0.1"
 terminal_size = "0.4.4"
 ctrlc = "3.5.2"
+fastrand = "2.5.0"
+ureq = "3.4.2"
 
 [build-dependencies]
 winresource = "0.1.31"

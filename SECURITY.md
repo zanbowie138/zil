@@ -8,9 +8,9 @@ Please report vulnerabilities privately through GitHub's "Report a vulnerability
 
 ## The model
 
-A session (`Interp`) touches the outside world only through its `Host`. A `Host` method the embedder doesn't implement is denied, and a denied call is an ordinary zil error. `NullHost` implements nothing: no output, no files, no network, a clock stuck at 1970 and fixed random numbers.
+A `Session` touches the outside world only through its `Host`. A `Host` method the embedder doesn't implement is denied, and a denied call is an ordinary zil error. `NullHost` implements nothing: no output, no files, no network, a clock stuck at 1970 and fixed random numbers. It is the default host on every target; the CLI installs its own `NativeHost` (the whole machine).
 
-Resources are bounded by `Interp::limits` (`Limits`): eval steps, wall time, an interrupt flag, call depth, the size of one list/map/string, the bits in one exact number, and bytes printed. Hitting one is an `Error` whose `limit` names it, so a host can tell "too much" from a bug in the script.
+Resources are bounded by `Session::limits` (`Limits`): eval steps, wall time, an interrupt flag, call depth, the size of one list/map/string, the bits in one exact number, and bytes printed. Hitting one is an `Error` whose `limit` names it, so a host can tell "too much" from a bug in the script.
 
 ## In scope
 
@@ -21,7 +21,7 @@ Resources are bounded by `Interp::limits` (`Limits`): eval steps, wall time, an 
 ## Out of scope
 
 - **Side channels:** timing, cache or memory-usage observations.
-- **The native default.** `Interp::new` on a native target uses `NativeHost`, which is the whole machine (that's what the CLI wants). Embedders running untrusted code must pass their own host with `Interp::with_host`, and set `limits`; the defaults are generous (no step or time cap).
+- **Default limits.** They are generous (no step or time cap); embedders running untrusted code must set `limits`.
 - **What a host grants.** If a host implements `http_get`, scripts can GET any URL it allows: `allow_network_access()` is callable from the script itself and is a guard against accidents, not a permission. Filtering URLs belongs to the host.
 - **Output content.** Printed text may contain terminal escapes (zil colors its own output); a host showing it somewhere escapes matter should sanitize it.
 - **Regex size.** Regex literals compile in the parser, outside any session, bounded only by the regex crate's default 10 MB limit.

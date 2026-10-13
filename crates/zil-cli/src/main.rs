@@ -1,9 +1,11 @@
 //! The `zil` command line: REPL, `-e`, scripts and `--docs`.
 
 mod docs;
+mod native;
 mod repl;
 
 use std::process::exit;
+use std::rc::Rc;
 use zil::{Error, STACK, Session, Value, ansi, help, modules};
 
 /// Run `src` and exit with status 1 on error.
@@ -30,6 +32,7 @@ fn main() {
 }
 
 fn real_main() {
+    zil::host::set_default(Rc::new(native::NativeHost));
     let mut session = Session::new(zil::host::get());
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.as_slice() {

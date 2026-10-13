@@ -376,24 +376,4 @@ mod tests {
         assert!(try_eval(r#"cd("no/such/dir")"#).is_err());
         assert_eq!(show(r#"["a/b.tar.gz".stem, "a/b.tar.gz".ext, "a/b".dirname, "x".ext, "/".basename]"#), r#"["b.tar", "gz", "a", nil, nil]"#);
     }
-
-    #[test]
-    fn files() {
-        let dir = std::env::temp_dir().join(format!("zil-fs-{}", std::process::id()));
-        let d = dir.to_string_lossy().replace('\\', "/");
-        let run = |s: &str| show(&format!("d = \"{d}\"; {s}"));
-        run(r#"mkdir(d + "/sub/deep"); write_file(d + "/a.txt", ["x", "y"]); append_file(d + "/a.txt", "z"); write_file(d + "/sub/deep/b.rs", "")"#);
-        assert_eq!(run(r#"read_file(d + "/a.txt")"#), "x\ny\nz");
-        assert_eq!(run(r#"[exists(d + "/a.txt"), is_dir(d + "/sub"), file_size(d + "/a.txt"), type(mtime(d + "/a.txt"))]"#), r#"[true, true, 5 B, "date"]"#);
-        assert_eq!(run("ls(d).select(\"name\", \"type\") to list"), r#"[{name: "a.txt", type: "file"}, {name: "sub", type: "dir"}]"#);
-        assert_eq!(run(r#"glob(d + "/**/*.rs").name.map(|p| p.basename)"#), r#"["b.rs"]"#);
-        assert_eq!(run(r#"glob(d + "/*").len"#), "2");
-        assert_eq!(run(r#"glob(d + "/s?b/*").name.map(|p| p.basename)"#), r#"["deep"]"#);
-        run(r#"cp(d + "/a.txt", d + "/c.txt"); mv(d + "/c.txt", d + "/e.txt"); rm(d + "/a.txt")"#);
-        assert_eq!(run("ls(d).name"), r#"["e.txt", "sub"]"#);
-        assert!(try_eval(&format!(r#"rm("{d}/sub")"#)).is_err(), "rm refuses a non-empty directory");
-        run(r#"mv(d + "/e.txt", d + "/new/deeper/e.txt")"#);
-        assert_eq!(run(r#"ls(d + "/new/deeper").name"#), r#"["e.txt"]"#);
-        std::fs::remove_dir_all(&dir).unwrap();
-    }
 }

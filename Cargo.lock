@@ -1556,9 +1556,7 @@ dependencies = [
  "serde_json",
  "sha1",
  "sha2",
- "terminal_size",
  "unicode-width",
- "ureq",
 ]
 
 [[package]]
@@ -1567,9 +1565,11 @@ version = "0.3.0"
 dependencies = [
  "crossterm",
  "ctrlc",
+ "fastrand",
  "jiff",
  "rustyline",
  "terminal_size",
+ "ureq",
  "winresource",
  "zil",
 ]

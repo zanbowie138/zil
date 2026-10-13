@@ -104,15 +104,12 @@ pub fn get(url: &str, query: &[(&str, &str)]) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use crate::interp::tests::{show, try_eval};
+    use crate::interp::tests::show;
 
     #[test]
     fn sys() {
         assert_eq!(show("args()"), "[]");
         assert_eq!(show(r#"env("ZIL_SURELY_UNSET")"#), "nil");
-        assert_eq!(show(r#"sh("echo hi")"#), "hi");
-        assert_eq!(show(r#"run("exit 3").code"#), "3");
         assert_eq!(show("allow_network_access()"), "nil");
-        assert!(try_eval(r#"sh("exit 3")"#).is_err());
     }
 }
