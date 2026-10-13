@@ -332,7 +332,10 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("share", [sum, parts]) => {
             let (x, cur) = money(sum)?;
             let weights: Vec<f64> = match parts {
-                Int(n, _) if *n > 0 => vec![1.0; *n as usize],
+                Int(n, _) if *n > 0 => {
+                    crate::state::check_len(*n as usize, "items")?;
+                    vec![1.0; *n as usize]
+                }
                 List(l) => l.borrow().iter().map(|w| num(w).filter(|w| *w >= 0.0)).collect::<Option<_>>().ok_or("weights must be numbers, 0 or more")?,
                 _ => return Err(Fail::BadArgs),
             };

@@ -405,7 +405,7 @@ fn off(rest: &[Value], i: usize) -> Result<Off, Fail> {
 pub fn add_workdays(z: &Zoned, n: i64, off: &Off) -> Result<Zoned, String> {
     let step = if n < 0 { -1 } else { 1 };
     let mut d = z.date();
-    for _ in 0..n.abs() {
+    for _ in 0..n.unsigned_abs() {
         d = d.checked_add(Span::new().days(step)).map_err(msg)?;
         while off.has(d) {
             d = d.checked_add(Span::new().days(step)).map_err(msg)?;
@@ -456,7 +456,7 @@ fn chinese(y: i64) -> String {
     const ANIMALS: [&str; 12] = ["Rat", "Ox", "Tiger", "Rabbit", "Dragon", "Snake", "Horse", "Goat", "Monkey", "Rooster", "Dog", "Pig"];
     const ELEMENTS: [&str; 5] = ["Wood", "Fire", "Earth", "Metal", "Water"];
     // 1984 was a Wood Rat, the start of a 60-year cycle.
-    let k = (y - 1984).rem_euclid(60);
+    let k = (y % 60 - 1984 % 60).rem_euclid(60);
     format!("{} {}", ELEMENTS[(k / 2 % 5) as usize], ANIMALS[(k % 12) as usize])
 }
 

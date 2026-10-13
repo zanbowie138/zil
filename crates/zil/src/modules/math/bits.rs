@@ -55,6 +55,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("bit", [n @ (Int(..) | Big(..)), Int(i, _)]) if *i >= 0 => Value::int(int(n)?.bit(*i as u64) as i64),
         ("set_bit" | "clear_bit", [n @ (Int(_, r) | Big(_, r)), Int(i, _)]) if *i >= 0 => {
             let mut b = int(n)?;
+            crate::state::check_bits(*i as u64 + 1)?;
             b.set_bit(*i as u64, name == "set_bit");
             exact(BigRational::from_integer(b), *r, false)
         }

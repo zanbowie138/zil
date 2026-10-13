@@ -88,7 +88,16 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             if *n < 0 {
                 return Err(Fail::Arg(0, format!("people must be 0 or more, got {n}")));
             }
-            let none_shared: f64 = (0..*n.min(&(days + 1))).map(|i| (days - i) as f64 / days as f64).product();
+            if *n > days {
+                return Ok(Float(1.0));
+            }
+            let (nf, df) = (*n as f64, days as f64);
+            // ponytail: past a million people, the series to the n^3 term instead of the exact product; good to ~1e-6
+            let none_shared: f64 = if *n > 1_000_000 {
+                (-(nf * (nf - 1.0)) / (2.0 * df) - nf.powi(3) / (6.0 * df * df)).exp()
+            } else {
+                (0..*n).map(|i| (days - i) as f64 / df).product()
+            };
             Float(1.0 - none_shared)
         }
         ("odds", [p]) => {
