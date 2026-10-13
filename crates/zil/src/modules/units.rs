@@ -675,6 +675,19 @@ pub fn terms(s: &str) -> Result<Unit, String> {
     Ok(u)
 }
 
+/// A unit from its display form (`km/h`, `kg*m/s^2`, `1/s`); empty is no unit.
+pub fn parse(s: &str) -> Result<Unit, String> {
+    let mut u = Unit::default();
+    for (i, part) in s.split('/').enumerate() {
+        for t in part.split('*').filter(|t| !t.is_empty() && *t != "1") {
+            let (name, p) = t.split_once('^').unwrap_or((t, "1"));
+            let p: i8 = p.parse().map_err(|_| format!("bad power in `{t}`"))?;
+            u = u.mul(&unit(name)?.pow(p), if i == 0 { 1 } else { -1 });
+        }
+    }
+    Ok(u)
+}
+
 pub fn unit(name: &str) -> Result<Unit, String> {
     Ok(Unit(vec![(lookup(name)?, 1)]))
 }

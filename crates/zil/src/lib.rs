@@ -5,6 +5,7 @@
 pub mod ansi;
 #[doc(hidden)]
 pub mod ast;
+mod data;
 #[doc(hidden)]
 pub mod error;
 #[doc(hidden)]
@@ -36,6 +37,7 @@ pub mod value;
 use interp::Interp;
 use std::path::PathBuf;
 
+pub use data::Data;
 pub use error::{Error, Limit};
 pub use interp::Limits;
 pub use session::Session;

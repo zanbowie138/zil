@@ -2,7 +2,7 @@
 
 use crate::host::Host;
 use crate::interp::{Interp, Limits, lookup};
-use crate::{Error, Value};
+use crate::{Data, Error, Value};
 use std::rc::Rc;
 
 /// A zil session: globals, user units and rates that persist across `eval`s, with every effect going through `host`.
@@ -37,6 +37,11 @@ impl Session {
         lookup(&self.0.globals(), name)
     }
 
+    /// The value `d` describes, with units resolved in this session (so user units work too).
+    pub fn from_data(&self, d: Data) -> Result<Value, String> {
+        crate::state::enter(&self.0.state(), || Value::from_data(d))
+    }
+
     /// Caps on each `eval`; hitting one is an `Error` whose `limit` says which.
     pub fn limits(&mut self) -> &mut Limits {
         &mut self.0.limits
@@ -59,5 +64,19 @@ mod tests {
         s.limits().steps = 1000;
         assert_eq!(s.eval("while true {}").unwrap_err().limit, Some(Limit::Steps));
         assert!(s.eval(r#"read_file("x")"#).is_err());
+    }
+
+    #[test]
+    fn data_round_trips() {
+        let mut s = Session::new(Rc::new(NullHost));
+        let src = r#"unit widget; [nil, true, 2^70, 7/2, 1.5, 3 kg*m/s^2, 2 widget/h, 5 ± 0.1 m, 2 - 3i, "hi", r"a+", date("2026-10-06T14:30:00[Europe/Paris]"), {a: set(1, "x")}, table([{n: 1}])]"#;
+        let v = s.eval(src).unwrap();
+        let d = v.to_data();
+        assert_eq!(s.from_data(d.clone()).unwrap().to_data(), d);
+        assert_eq!(s.from_data(d).unwrap().to_string(), v.to_string());
+        assert!(matches!(s.eval("|x| x").unwrap().to_data(), Data::Fn(_)));
+        assert!(s.from_data(Data::Set(vec![Data::List(vec![])])).is_err());
+        assert!(s.from_data(Data::Table { cols: vec!["a".into()], rows: vec![vec![]] }).is_err());
+        assert!(s.from_data(Data::Qty { value: 1.0, unit: "nope".into() }).is_err());
     }
 }
