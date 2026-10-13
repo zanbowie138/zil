@@ -1,5 +1,8 @@
 //! The browser build, for the sandbox and the docs' run buttons. `pnpm wasm` builds it; `docs/sandbox/worker.js` calls it.
+//! `Session` (in `session.rs`) is the embedding API for other JS code.
 #![cfg(target_arch = "wasm32")]
+
+mod session;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -16,16 +19,19 @@ thread_local! {
     static SESSION: RefCell<(Session, usize)> = RefCell::new((sandboxed(), 0));
 }
 
-/// The browser: output collects for the page to take, the clock and randomness come from JS, and HTTP goes through the
-/// worker's `zilGet`. No files, processes or environment.
-struct JsHost;
+/// The browser: output goes to the JS function, or collects for the page to take; the clock and randomness come from JS,
+/// and HTTP goes through the worker's `zilGet`. No files, processes or environment.
+struct JsHost(Option<js_sys::Function>);
 
 impl Host for JsHost {
     fn print(&self, text: &str) {
-        OUT.with_borrow_mut(|o| {
-            o.push_str(text);
-            o.push('\n');
-        })
+        match &self.0 {
+            Some(f) => drop(f.call1(&wasm_bindgen::JsValue::NULL, &text.into())),
+            None => OUT.with_borrow_mut(|o| {
+                o.push_str(text);
+                o.push('\n');
+            }),
+        }
     }
     fn now(&self) -> jiff::Timestamp {
         jiff::Timestamp::now()
@@ -53,7 +59,7 @@ extern "C" {
 
 #[wasm_bindgen(start)]
 fn start() {
-    zil::host::set_default(Rc::new(JsHost));
+    zil::host::set_default(Rc::new(JsHost(None)));
 }
 
 /// A session whose runaway code errors well inside the page's 10 s worker kill, so a REPL session survives it.

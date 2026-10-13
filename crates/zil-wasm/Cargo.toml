@@ -14,6 +14,9 @@ crate-type = ["cdylib"]
 zil = { path = "../zil" }
 fastrand = "2.5.0"
 jiff = "0.2.38"
+js-sys = "0.3"
+num-bigint = "0.4"
+num-rational = "0.4"
 serde_json = { version = "1.0.151", features = ["preserve_order"] }
 wasm-bindgen = "0.2"
 
