@@ -41,7 +41,9 @@ pub fn animate(it: &mut Interp, args: &[Value], span: &Span) -> Call {
         let text = frame.to_string();
         // Back up over the previous frame and clear from there down.
         let back = if shown > 0 { format!("\x1b[{shown}F\x1b[J") } else { String::new() };
-        host.print(&format!("{back}{text}"));
+        let out = format!("{back}{text}");
+        crate::state::check_output(out.len() + 1).map_err(Fail::Msg)?;
+        host.print(&out);
         shown = text.lines().count().max(1);
         if tty && i + 1 < total {
             host.sleep(1.0 / fps);

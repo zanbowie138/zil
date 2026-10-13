@@ -69,9 +69,11 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     Ok(match (name, args) {
         ("print" | "page", vs) => {
             let parts: Vec<String> = vs.iter().map(|v| if let Table(t) = v { super::data::tables::grid(t, false) } else { v.to_string() }).collect();
+            let text = parts.join(" ");
+            crate::state::check_output(text.len() + 1).map_err(Fail::Msg)?;
             match name {
-                "page" => crate::host::get().page(&parts.join(" ")),
-                _ => crate::print(&parts.join(" ")),
+                "page" => crate::host::get().page(&text),
+                _ => crate::print(&text),
             }
             Nil
         }

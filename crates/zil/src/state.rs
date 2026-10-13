@@ -22,6 +22,9 @@ pub struct State {
     /// `Interp::limits`' size caps, copied in by `run` and `call` so builtins and operators can read them.
     pub max_len: Cell<usize>,
     pub max_bits: Cell<u64>,
+    pub max_output: Cell<usize>,
+    /// Bytes printed since the last `run` began.
+    pub printed: Cell<usize>,
 }
 
 impl State {
@@ -37,6 +40,8 @@ impl State {
             stopwatch: Cell::new(None),
             max_len: Cell::new(usize::MAX),
             max_bits: Cell::new(u64::MAX),
+            max_output: Cell::new(usize::MAX),
+            printed: Cell::new(0),
         })
     }
 }
@@ -81,6 +86,23 @@ note: exact results stop at {max} bits, about {} digits",
     } else {
         Ok(())
     }
+}
+
+/// Counts `n` more bytes of output, erroring once the run's total passes the session's output cap.
+pub fn check_output(n: usize) -> Result<(), String> {
+    with(|s| {
+        let total = s.printed.get().saturating_add(n);
+        s.printed.set(total);
+        let max = s.max_output.get();
+        if total > max {
+            Err(format!(
+                "output limit reached
+note: the limit is {max} bytes per run"
+            ))
+        } else {
+            Ok(())
+        }
+    })
 }
 
 /// Runs `f` with `state` as the running session's, then puts back the one before.

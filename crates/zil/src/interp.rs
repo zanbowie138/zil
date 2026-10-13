@@ -142,13 +142,15 @@ pub struct Limits {
     pub len: usize,
     /// Bits in one exact int or fraction.
     pub bits: u64,
+    /// Bytes printed per `run`, by `print`, `page` and `animate`.
+    pub output: usize,
     /// Set from anywhere (a Ctrl-C handler, another thread) to stop the run; it clears once it does.
     pub interrupt: Arc<AtomicBool>,
 }
 
 impl Default for Limits {
     fn default() -> Limits {
-        Limits { steps: u64::MAX, seconds: None, depth: MAX_DEPTH, len: 10_000_000, bits: 1 << 22, interrupt: Default::default() }
+        Limits { steps: u64::MAX, seconds: None, depth: MAX_DEPTH, len: 10_000_000, bits: 1 << 22, output: usize::MAX, interrupt: Default::default() }
     }
 }
 
@@ -207,6 +209,7 @@ impl Interp {
     pub fn run(&mut self, prog: &[Expr]) -> Result<Value, Error> {
         let (globals, state) = (self.globals.clone(), self.state.clone());
         self.steps = 0;
+        self.state.printed.set(0);
         self.share_caps();
         self.deadline = self.limits.seconds.and_then(|s| state.host.now().checked_add(jiff::SignedDuration::try_from_secs_f64(s).ok()?).ok());
         crate::state::enter(&state, || {
@@ -227,6 +230,7 @@ impl Interp {
     fn share_caps(&self) {
         self.state.max_len.set(self.limits.len);
         self.state.max_bits.set(self.limits.bits);
+        self.state.max_output.set(self.limits.output);
     }
 
     /// `call` with each argument's span and the callee's name as written, for sharper errors.
@@ -935,6 +939,10 @@ fib(10)";
         ] {
             assert!(run(&mut it, src).ends_with("result too large"), "{src}");
         }
+        it.limits.output = 10;
+        assert_eq!(run(&mut it, "print(\"12345\"); print(\"12345\")"), "print: output limit reached");
+        // The count starts over each run.
+        assert!(it.run(&crate::parser::parse("print(\"123456789\")").unwrap()).is_ok());
     }
 
     #[test]
