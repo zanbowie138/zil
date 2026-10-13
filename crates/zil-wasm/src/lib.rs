@@ -16,7 +16,7 @@ thread_local! {
     /// What the program printed, since the last `take_output`.
     static OUT: RefCell<String> = const { RefCell::new(String::new()) };
     /// The sandbox's REPL: one interpreter for the whole session, and how many results it has numbered.
-    static SESSION: RefCell<(Interp, usize)> = RefCell::new((Interp::new(), 0));
+    static SESSION: RefCell<(Interp, usize)> = RefCell::new((sandboxed(), 0));
 }
 
 /// The browser: output collects for the page to take, the clock and randomness come from JS, and HTTP goes through the
@@ -59,6 +59,14 @@ fn start() {
     zil::state::set_default_host(Rc::new(JsHost));
 }
 
+/// An interpreter whose runaway code errors well inside the page's 10 s worker kill, so a REPL session survives it.
+fn sandboxed() -> Interp {
+    let mut interp = Interp::new();
+    interp.limits.seconds = Some(5.0);
+    interp.limits.output = 1 << 20;
+    interp
+}
+
 /// Everything printed since the last call.
 fn take_output() -> String {
     OUT.take()
@@ -89,7 +97,7 @@ pub fn run(src: &str) -> Vec<String> {
             (String::new(), error::render(&e, "sandbox", src, true))
         }
         Ok(prog) => {
-            let mut interp = Interp::new();
+            let mut interp = sandboxed();
             let mut out = Ok(Value::Nil);
             for (i, stmt) in prog.iter().enumerate() {
                 let line = last_line(stmt.span.end);
@@ -130,7 +138,7 @@ pub fn notebook(src: &str) -> String {
     let rows: Vec<(usize, String)> = match parser::parse(src) {
         Err(e) => vec![(last_line(src.len()), format!("error: {}", e.msg))],
         Ok(prog) => {
-            let mut interp = Interp::new();
+            let mut interp = sandboxed();
             take_output();
             prog.iter()
                 .enumerate()
@@ -175,7 +183,7 @@ pub fn tour() -> String {
 /// Starts a fresh REPL session, returning its greeting as HTML.
 #[wasm_bindgen]
 pub fn repl_reset() -> String {
-    SESSION.set((Interp::new(), 0));
+    SESSION.set((sandboxed(), 0));
     to_html(&format!(
         "zil {} {}· help for docs{RESET}
 {}",

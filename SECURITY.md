@@ -28,5 +28,4 @@ Resources are bounded by `Interp::limits` (`Limits`): eval steps, wall time, an 
 
 ## Known gaps
 
-- The browser sandbox (`docs/`) doesn't set `Limits` yet; it relies on killing its worker after 10 s.
-- Limits aren't hooked to Ctrl-C in the CLI.
+- The browser sandbox (`docs/`) sets only a 5 s time limit and a 1 MiB output cap per run; a single slow builtin call isn't checked mid-call, so killing the worker after 10 s stays the backstop.

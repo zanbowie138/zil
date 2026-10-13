@@ -139,6 +139,9 @@ pub fn repl(interp: &mut Interp) {
         rustyline::KeyEvent(rustyline::KeyCode::Char('q'), rustyline::Modifiers::ALT),
         rustyline::EventHandler::Conditional(Box::new(Stash(std::sync::Arc::clone(&stashed)))),
     );
+    // Ctrl-C while code runs stops it; while reading a line, rustyline sees it as a key instead.
+    let interrupt = std::sync::Arc::clone(&interp.limits.interrupt);
+    let _ = ctrlc::set_handler(move || interrupt.store(true, std::sync::atomic::Ordering::Relaxed));
     let history = cache_dir().map(|d| d.join("history.txt"));
     if let Some(h) = &history {
         let _ = rl.load_history(h);
@@ -180,6 +183,7 @@ pub fn repl(interp: &mut Interp) {
             continue;
         }
         let _ = rl.add_history_entry(src.trim_end());
+        interp.limits.interrupt.store(false, std::sync::atomic::Ordering::Relaxed);
         // Printed directly, so it keeps its colors.
         if let Some(topic) = help_shorthand(&src) {
             pager::page(&help::live(help_term(&src), || help::help(topic, color_on())).unwrap_or_else(|e| e));
