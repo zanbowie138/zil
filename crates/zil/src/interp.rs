@@ -936,6 +936,12 @@ fib(10)";
             "x = 3; while true { x = x * x }",
             "2 ** 1001",
             "factorial(200)",
+            "x = (0..11).map(|_| 0..10); x.flatten",
+            "table((0..11).map(|i| [[\"k{i}\", i]].from_entries))",
+            "set(0..60) | set(50..100)",
+            "{a: 1} + (0..100).map(|i| [\"k{i}\", i]).from_entries",
+            "banner(\"abc\")",
+            "banner(\"abc\", \"lean\")",
         ] {
             assert!(run(&mut it, src).ends_with("result too large"), "{src}");
         }

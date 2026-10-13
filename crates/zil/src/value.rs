@@ -52,12 +52,13 @@ pub struct Table {
 
 impl Table {
     /// A table from maps, columns in order of first appearance; `None` if any item isn't a map.
-    pub fn from_maps(items: &[Value]) -> Option<Table> {
+    pub fn from_maps(items: &[Value]) -> Result<Table, String> {
         let mut cols: IndexSet<String> = IndexSet::new();
         for v in items {
-            let Value::Map(m) = v else { return None };
+            let Value::Map(m) = v else { return Err("every item must be a map".into()) };
             cols.extend(m.borrow().keys().cloned());
         }
+        crate::state::check_len(items.len().saturating_mul(cols.len()), "cells")?;
         let rows = items
             .iter()
             .map(|v| {
@@ -66,7 +67,7 @@ impl Table {
                 cols.iter().map(|c| m.get(c).cloned().unwrap_or(Value::Nil)).collect()
             })
             .collect();
-        Some(Table { cols: cols.into_iter().collect(), rows })
+        Ok(Table { cols: cols.into_iter().collect(), rows })
     }
 
     pub fn row(&self, i: usize) -> Value {

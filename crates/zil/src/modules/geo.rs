@@ -292,7 +292,7 @@ fn city_map(c: &City) -> Value {
 }
 
 fn table(maps: Vec<Value>) -> Value {
-    Value::table(Table::from_maps(&maps).expect("all maps"))
+    Value::table(Table::from_maps(&maps).expect("all maps, few cells"))
 }
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {

@@ -69,7 +69,7 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Cal
             m.borrow_mut().shift_remove(&key(k));
             Map(m.clone())
         }
-        ("merge", [Map(a), Map(b)]) => merge(a, b),
+        ("merge", [Map(a), Map(b)]) => merge(a, b)?,
         ("entries", [Map(m)]) => Value::list(m.borrow().iter().map(|(k, v)| Value::list(vec![Value::str(k.as_str()), v.clone()])).collect()),
         ("from_entries", [List(l)]) => {
             let mut out = IndexMap::new();
@@ -106,16 +106,17 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Cal
     })
 }
 
-fn merge(a: &std::cell::RefCell<IndexMap<String, Value>>, b: &std::cell::RefCell<IndexMap<String, Value>>) -> Value {
+fn merge(a: &std::cell::RefCell<IndexMap<String, Value>>, b: &std::cell::RefCell<IndexMap<String, Value>>) -> Result<Value, String> {
+    crate::state::check_len(a.borrow().len() + b.borrow().len(), "entries")?;
     let mut out = a.borrow().clone();
     out.extend(b.borrow().iter().map(|(k, v)| (k.clone(), v.clone())));
-    Value::map(out)
+    Ok(Value::map(out))
 }
 
 /// `a + b` merges maps, right side winning.
 fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
     match (op, a, b) {
-        (BinOp::Add, Value::Map(x), Value::Map(y)) => Some(Ok(merge(x, y))),
+        (BinOp::Add, Value::Map(x), Value::Map(y)) => Some(merge(x, y)),
         _ => None,
     }
 }

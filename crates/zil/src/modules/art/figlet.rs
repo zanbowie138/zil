@@ -69,6 +69,8 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
 }
 
 fn block(s: &str) -> Result<String, Fail> {
+    // 5 rows of 4 two-column cells per letter.
+    crate::state::check_len(s.chars().count().saturating_mul(40), "characters").map_err(Fail::Msg)?;
     let mut rows = vec![String::new(); 5];
     for c in s.to_uppercase().chars() {
         let glyph = BLOCK.iter().find(|g| g.0 == c).ok_or_else(|| Fail::Arg(0, format!("the block font has no letter for {c:?}")))?.1;
@@ -155,6 +157,8 @@ impl Font {
     }
 
     fn render(&self, text: &str) -> Result<String, String> {
+        let widest = self.glyphs.values().map(|g| g[0].len()).max().unwrap_or(0);
+        crate::state::check_len(text.chars().count().saturating_mul(self.height * widest), "characters")?;
         let mut out = vec![];
         for line in text.lines() {
             let mut rows: Vec<Vec<char>> = vec![vec![]; self.height];

@@ -149,12 +149,13 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("to_csv", [Table(t)]) => Value::str(csv(&t.cols, &t.rows)),
         ("to_csv", [List(l)]) => {
             let l = l.borrow();
-            if let Some(t) = value::Table::from_maps(&l) {
-                Value::str(csv(&t.cols, &t.rows))
-            } else if l.iter().all(|r| matches!(r, List(_))) {
-                Value::str(l.iter().map(|r| if let List(r) = r { line(&r.borrow()) } else { unreachable!() }).collect::<String>())
-            } else {
-                return Err(Fail::Arg(0, "expected a list of maps or a list of lists".into()));
+            match value::Table::from_maps(&l) {
+                Ok(t) => Value::str(csv(&t.cols, &t.rows)),
+                Err(e) if l.iter().all(|r| matches!(r, Map(_))) => return Err(Fail::Arg(0, e)),
+                Err(_) if l.iter().all(|r| matches!(r, List(_))) => {
+                    Value::str(l.iter().map(|r| if let List(r) = r { line(&r.borrow()) } else { unreachable!() }).collect::<String>())
+                }
+                Err(_) => return Err(Fail::Arg(0, "expected a list of maps or a list of lists".into())),
             }
         }
         _ => return Err(Fail::BadArgs),

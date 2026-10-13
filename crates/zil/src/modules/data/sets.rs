@@ -90,6 +90,11 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
 fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
     let (Value::Set(x), Value::Set(y)) = (a, b) else { return None };
     let (x, y) = (x.borrow(), y.borrow());
+    if matches!(op, BinOp::BitOr | BinOp::BitXor)
+        && let Err(e) = crate::state::check_len(x.len() + y.len(), "items")
+    {
+        return Some(Err(e));
+    }
     Some(Ok(Value::set(match op {
         BinOp::BitOr => x.union(&y).cloned().collect(),
         BinOp::BitAnd => x.intersection(&y).cloned().collect(),

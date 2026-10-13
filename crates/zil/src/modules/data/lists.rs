@@ -111,15 +111,18 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Cal
             }
             acc
         }
-        ("flatten", [List(l)]) => Value::list(
-            l.borrow()
-                .iter()
-                .flat_map(|v| match v {
-                    List(inner) => inner.borrow().clone(),
-                    v => vec![v.clone()],
-                })
-                .collect(),
-        ),
+        ("flatten", [List(l)]) => {
+            crate::state::check_len(l.borrow().iter().map(|v| if let List(i) = v { i.borrow().len() } else { 1 }).sum(), "items").map_err(Fail::Msg)?;
+            Value::list(
+                l.borrow()
+                    .iter()
+                    .flat_map(|v| match v {
+                        List(inner) => inner.borrow().clone(),
+                        v => vec![v.clone()],
+                    })
+                    .collect(),
+            )
+        }
         ("zip", [List(a), List(b)]) => Value::list(a.borrow().iter().zip(b.borrow().iter()).map(|(x, y)| Value::list(vec![x.clone(), y.clone()])).collect()),
         ("enumerate", [List(l)]) => Value::list(l.borrow().iter().enumerate().map(|(i, v)| Value::list(vec![Value::int(i as i64), v.clone()])).collect()),
         ("group_by" | "count_by", [List(l), f]) => {

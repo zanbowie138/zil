@@ -22,6 +22,9 @@ pub fn img(args: &[Value]) -> Call {
             };
             let bytes = crate::host::get().read(path).map_err(|e| Fail::Arg(0, format!("can't open {path}: {e}")))?;
             let pic = image::load_from_memory(&bytes).map_err(|e| Fail::Arg(0, format!("can't open {path}: {e}")))?;
+            // Braille samples the most: 2×4 dots for each of width × width·aspect/2 cells.
+            let aspect = pic.height() as f64 / pic.width().max(1) as f64;
+            crate::state::check_len((width as f64 * width as f64 * aspect * 4.0) as usize, "pixels").map_err(Fail::Msg)?;
             Value::str(draw(&pic, width, mode))
         }
         _ => return Err(Fail::BadArgs),

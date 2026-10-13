@@ -96,7 +96,7 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Cal
     use Value::*;
     Ok(match (name, args) {
         ("table", [t @ Table(_)]) => t.clone(),
-        ("table", [List(l)]) => Value::table(value::Table::from_maps(&l.borrow()).ok_or_else(|| Fail::Arg(0, "every item must be a map".into()))?),
+        ("table", [List(l)]) => Value::table(value::Table::from_maps(&l.borrow()).map_err(|e| Fail::Arg(0, e))?),
         ("where", [Table(t), f]) => {
             let mut rows = Vec::new();
             for (i, r) in t.rows.iter().enumerate() {

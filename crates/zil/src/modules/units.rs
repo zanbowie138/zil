@@ -378,7 +378,7 @@ fn all_units() -> Value {
         let def = lookup(name).expect("user unit is registered");
         maps.push(entry(name, name, desc, vec![], def.scale.get(), &def.dim, "user"));
     }
-    Value::table(Table::from_maps(&maps).expect("all maps"))
+    Value::table(Table::from_maps(&maps).expect("all maps, few cells"))
 }
 
 /// The unit a kind is defined in, as (name, power) terms: its named SI unit (`J`, `lx`), else SI and user bases.
