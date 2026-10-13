@@ -138,13 +138,17 @@ pub struct Limits {
     pub seconds: Option<f64>,
     /// Nested user fn calls; never above the platform's `MAX_DEPTH`.
     pub depth: usize,
+    /// Items in one list, map or range, and characters in one string, made by an operator or builtin.
+    pub len: usize,
+    /// Bits in one exact int or fraction.
+    pub bits: u64,
     /// Set from anywhere (a Ctrl-C handler, another thread) to stop the run; it clears once it does.
     pub interrupt: Arc<AtomicBool>,
 }
 
 impl Default for Limits {
     fn default() -> Limits {
-        Limits { steps: u64::MAX, seconds: None, depth: MAX_DEPTH, interrupt: Default::default() }
+        Limits { steps: u64::MAX, seconds: None, depth: MAX_DEPTH, len: 10_000_000, bits: 1 << 22, interrupt: Default::default() }
     }
 }
 
@@ -203,6 +207,7 @@ impl Interp {
     pub fn run(&mut self, prog: &[Expr]) -> Result<Value, Error> {
         let (globals, state) = (self.globals.clone(), self.state.clone());
         self.steps = 0;
+        self.share_caps();
         self.deadline = self.limits.seconds.and_then(|s| state.host.now().checked_add(jiff::SignedDuration::try_from_secs_f64(s).ok()?).ok());
         crate::state::enter(&state, || {
             let mut last = Value::Nil;
@@ -215,7 +220,13 @@ impl Interp {
 
     pub fn call(&mut self, f: &Value, args: Vec<Value>, span: &Span) -> Result<Value, Error> {
         let state = self.state.clone();
+        self.share_caps();
         crate::state::enter(&state, || self.call_at(f, args, span, &[], None))
+    }
+
+    fn share_caps(&self) {
+        self.state.max_len.set(self.limits.len);
+        self.state.max_bits.set(self.limits.bits);
     }
 
     /// `call` with each argument's span and the callee's name as written, for sharper errors.
@@ -910,6 +921,20 @@ fib(10)";
         assert!(!it.limits.interrupt.load(Ordering::Relaxed));
         it.limits.depth = 10;
         assert_eq!(run(&mut it, "g = |n| g(n + 1)\ng(0)"), "recursion too deep");
+        it.limits.len = 100;
+        it.limits.bits = 1000;
+        for src in [
+            "\"ab\" * 51",
+            "s = \"ab\"; while true { s = s + s }",
+            "x = [1]; while true { x = x + x }",
+            "0..101",
+            "\"\".pad(101)",
+            "x = 3; while true { x = x * x }",
+            "2 ** 1001",
+            "factorial(200)",
+        ] {
+            assert!(run(&mut it, src).ends_with("result too large"), "{src}");
+        }
     }
 
     #[test]

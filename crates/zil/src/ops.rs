@@ -142,10 +142,11 @@ fn exact_op(op: BinOp, a: &Value, b: &Value, x: BigRational, y: BigRational) -> 
         }
         _ => return Err(mismatch(op, a, b)),
     };
+    crate::state::check_bits(r.numer().bits().max(r.denom().bits()))?;
     Ok(exact(r, base, as_frac))
 }
 
-/// Exact power, refusing results over ~4M bits (about 1.2M digits).
+/// Exact power, refusing results over the session's bit cap.
 fn pow(x: BigRational, e: BigInt) -> Result<BigRational, String> {
     if x.is_zero() && e.is_negative() {
         return Err("division by zero".into());
@@ -161,8 +162,8 @@ fn pow(x: BigRational, e: BigInt) -> Result<BigRational, String> {
         }));
     }
     let bits = x.numer().bits().max(x.denom().bits());
-    match e.to_i32() {
-        Some(n) if bits.saturating_mul(n.unsigned_abs() as u64) <= 1 << 22 => Ok(x.pow(n)),
-        _ => Err("result too large\nnote: exact results stop at about 1.2 million digits; a float base like `2.0 ** n` gives an estimate".into()),
-    }
+    let hint = |e: String| e + "; a float base like `2.0 ** n` gives an estimate";
+    let Some(n) = e.to_i32() else { return Err(hint("result too large\nnote: exact powers take exponents up to 2^31".into())) };
+    crate::state::check_bits(bits.saturating_mul(n.unsigned_abs() as u64)).map_err(hint)?;
+    Ok(x.pow(n))
 }

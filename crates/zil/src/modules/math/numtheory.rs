@@ -67,7 +67,10 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             out.sort();
             Value::list(out.into_iter().map(big).collect())
         }
-        ("factorial", [Int(n, _)]) if (0..=20_000).contains(n) => big((1..=*n).map(BigInt::from).product()),
+        ("factorial", [Int(n, _)]) if (0..=20_000).contains(n) => {
+            crate::state::check_bits((*n as f64 * (*n as f64).log2()) as u64)?;
+            big((1..=*n).map(BigInt::from).product())
+        }
         ("factorial", [Int(n, _)]) => return Err(Fail::Arg(0, format!("n must be from 0 to 20000, got {n}"))),
         ("choose", [Int(n, _), Int(k, _)]) if *n >= 0 && *k >= 0 => {
             if k > n {

@@ -56,6 +56,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
                 _ => return Err(Fail::Arg(2, "fill must be one character".into())),
             };
             let s = s.to_string();
+            crate::state::check_len((*w).max(0) as usize, "characters")?;
             let gap = ((*w).max(0) as usize).saturating_sub(s.chars().count());
             let (l, r) = match name {
                 "pad" => (0, gap),

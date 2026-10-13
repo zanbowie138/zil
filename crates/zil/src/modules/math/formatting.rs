@@ -266,6 +266,7 @@ pub fn render(v: &Value, sp: &Spec) -> Result<String, String> {
     if let Some(u) = unit {
         s = format!("{s} {u}");
     }
+    crate::state::check_len(sp.width, "characters")?;
     let pad = sp.width.saturating_sub(s.chars().count());
     if sp.zero && sp.align.is_none() && numeric {
         // Zeros go after the sign and any `#` prefix: `{255:#06x}` is `0x00ff`.

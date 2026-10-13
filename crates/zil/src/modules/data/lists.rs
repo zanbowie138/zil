@@ -145,15 +145,14 @@ fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
     Some(match (op, a, b) {
         (BinOp::Range, Int(x, _), Int(y, _)) => range(*x, *y),
         (BinOp::RangeIncl, Int(x, _), Int(y, _)) => y.checked_add(1).ok_or_else(|| "range too large".into()).and_then(|y| range(*x, y)),
-        (BinOp::Add, List(x), List(y)) => Ok(Value::list(x.borrow().iter().chain(y.borrow().iter()).cloned().collect())),
+        (BinOp::Add, List(x), List(y)) => crate::state::check_len(x.borrow().len() + y.borrow().len(), "items")
+            .map(|_| Value::list(x.borrow().iter().chain(y.borrow().iter()).cloned().collect())),
         _ => return None,
     })
 }
 
 fn range(a: i64, b: i64) -> Result<Value, String> {
-    if b.saturating_sub(a) > 10_000_000 {
-        return Err(format!("range too large\nnote: ranges hold at most 10,000,000 items; this one has {}", b.saturating_sub(a)));
-    }
+    crate::state::check_len(b.saturating_sub(a).try_into().unwrap_or(0), "items")?;
     Ok(Value::list((a..b).map(Value::int).collect()))
 }
 

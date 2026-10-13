@@ -107,7 +107,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             };
             Value::list(l.borrow().iter().filter(|v| hit(v)).cloned().collect())
         }
-        ("repeat", [Str(s), Int(n, _)]) => Value::str(s.repeat((*n).max(0) as usize)),
+        ("repeat", [Str(s), Int(n, _)]) => repeat(s, *n)?,
         // Every number in the text; a `-` glued to a word or number (2026-10-06) is a separator, not a sign.
         ("nums", [Str(s)]) => {
             let re = regex::Regex::new(r"-?\d+(\.\d+)?([eE][+-]?\d+)?").unwrap();
@@ -126,11 +126,20 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
 /// `+` with a string on either side concatenates; `str * n` repeats.
 fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
     use Value::*;
-    Some(Ok(match (op, a, b) {
-        (BinOp::Add, Str(_), _) | (BinOp::Add, _, Str(_)) => Value::str(format!("{a}{b}")),
-        (BinOp::Mul, Str(s), Int(n, _)) | (BinOp::Mul, Int(n, _), Str(s)) => Value::str(s.repeat((*n).max(0) as usize)),
+    Some(match (op, a, b) {
+        (BinOp::Add, Str(_), _) | (BinOp::Add, _, Str(_)) => {
+            let s = format!("{a}{b}");
+            crate::state::check_len(s.len(), "bytes").map(|_| Value::str(s))
+        }
+        (BinOp::Mul, Str(s), Int(n, _)) | (BinOp::Mul, Int(n, _), Str(s)) => repeat(s, *n),
         _ => return None,
-    }))
+    })
+}
+
+fn repeat(s: &str, n: i64) -> Result<Value, String> {
+    let n = n.max(0) as usize;
+    crate::state::check_len(s.len().saturating_mul(n), "bytes")?;
+    Ok(Value::str(s.repeat(n)))
 }
 
 fn strs<'a>(it: impl Iterator<Item = &'a str>) -> Value {

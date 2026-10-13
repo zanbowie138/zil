@@ -19,6 +19,9 @@ pub struct State {
     /// Off in every new session; `allow_network_access()` turns it on for good.
     pub network: Cell<bool>,
     pub stopwatch: Cell<Option<Timestamp>>,
+    /// `Interp::limits`' size caps, copied in by `run` and `call` so builtins and operators can read them.
+    pub max_len: Cell<usize>,
+    pub max_bits: Cell<u64>,
 }
 
 impl State {
@@ -32,6 +35,8 @@ impl State {
             rates_error: Default::default(),
             network: Cell::new(false),
             stopwatch: Cell::new(None),
+            max_len: Cell::new(usize::MAX),
+            max_bits: Cell::new(u64::MAX),
         })
     }
 }
@@ -49,6 +54,33 @@ pub fn set_default_host(host: Rc<dyn Host>) {
 /// The running session's state.
 pub fn with<T>(f: impl FnOnce(&State) -> T) -> T {
     f(&CURRENT.with_borrow(Rc::clone))
+}
+
+/// Errors unless `n` items (of `what`) fit the running session's size cap.
+pub fn check_len(n: usize, what: &str) -> Result<(), String> {
+    let max = with(|s| s.max_len.get());
+    if n > max {
+        Err(format!(
+            "result too large
+note: the limit is {max} {what}; this one has {n}"
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+/// Errors unless an exact number of `bits` bits fits the running session's size cap.
+pub fn check_bits(bits: u64) -> Result<(), String> {
+    let max = with(|s| s.max_bits.get());
+    if bits > max {
+        Err(format!(
+            "result too large
+note: exact results stop at {max} bits, about {} digits",
+            (max as f64 * std::f64::consts::LOG10_2) as u64
+        ))
+    } else {
+        Ok(())
+    }
 }
 
 /// Runs `f` with `state` as the running session's, then puts back the one before.
