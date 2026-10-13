@@ -1,7 +1,7 @@
 //! Units: quantities with dimensions, arithmetic and conversion between them, live currency rates, decibels.
 
 pub mod constants;
-pub mod goofy;
+pub mod informal;
 pub mod kitchen;
 pub mod money;
 
@@ -85,7 +85,7 @@ pub const MODULE: Module = Module {
     convert: Some(convert),
     topic: Some(topic),
     units: TABLE,
-    children: &[constants::MODULE, money::MODULE, goofy::MODULE, kitchen::MODULE],
+    children: &[constants::MODULE, money::MODULE, informal::MODULE, kitchen::MODULE],
     ..Module::EMPTY
 };
 
@@ -93,8 +93,8 @@ pub const MODULE: Module = Module {
 const FNS: &[Doc] = &[
     doc("simplify", "simplify(q: quantity)", "the quantity in the prefixed unit of the same family that reads best, like `1.2 m` or `3.6 kW`; also `to best`",
         &["0.0012 km to best", "3600 J/s to best", "1 kg*m^2/s^2 to best", "1.5e9 B.simplify"], &[]),
-    doc("all_units", "all_units()", "every unit as a table: {name, full, desc, aliases, kind, si, source}; source is units, goofy, currency or user",
-        &["all_units().len", r#"all_units().filter(|u| u.kind == "length").map(|u| u.name).take(5)"#, r#"all_units().filter(|u| u.source == "goofy")[0]"#], &["simplify"]),
+    doc("all_units", "all_units()", "every unit as a table: {name, full, desc, aliases, kind, si, source}; source is units, informal, currency or user",
+        &["all_units().len", r#"all_units().filter(|u| u.kind == "length").map(|u| u.name).take(5)"#, r#"all_units().filter(|u| u.source == "informal")[0]"#], &["simplify"]),
     doc("db", "db(ratio: num, kind?: str)", "a power ratio in decibels (10 log10); kind \"amplitude\" for voltage or pressure ratios (20 log10)", &["db(2)", "db(1000)", r#"db(2, "amplitude")"#], &["from_db", "log"]),
     doc("from_db", "from_db(db: num, kind?: str)", "decibels back to a power ratio, or an amplitude ratio with \"amplitude\"", &["from_db(3)", "from_db(-6, \"amplitude\")"], &["db"]),
 ];
@@ -142,7 +142,28 @@ pub fn simplify(x: f64, u: &Unit) -> Value {
             let t = unit(row.0.split(' ').next().unwrap()).expect("table unit");
             Value::Qty(u.to_si(x) / t.scale(), t)
         }
+        None if u.0.len() > 1 => merge(x, u),
         _ => Value::Qty(x, u.clone()),
+    }
+}
+
+/// With no table unit for the whole dimension, terms of one kind join the first (`s*min/tile` is
+/// `s^2/tile`) and the lead term takes its best prefix (`10 m*km/tile` is `1 ha/tile`).
+fn merge(x: f64, u: &Unit) -> Value {
+    let mut terms: Vec<(Rc<UnitDef>, i8)> = vec![];
+    for (d, p) in &u.0 {
+        match terms.iter_mut().find(|(t, _)| t.dim == d.dim && d.dim != NONE) {
+            Some(t) => t.1 += p,
+            None => terms.push((d.clone(), *p)),
+        }
+    }
+    terms.retain(|(_, p)| *p != 0);
+    let merged = Unit(terms);
+    let x = x * u.scale() / merged.scale();
+    let Some((lead, rest)) = merged.0.split_first() else { return Value::qty(x, merged) };
+    match simplify(x, &Unit(vec![lead.clone()])) {
+        Value::Qty(y, t) => Value::qty(y, t.mul(&Unit(rest.to_vec()), 1)),
+        _ => Value::qty(x, merged),
     }
 }
 
@@ -291,7 +312,7 @@ fn topic(topic: &str) -> bool {
         out!("{}{}", paint(Role::Name, name), if full == name { String::new() } else { format!(": {full}") });
         out!("  {desc}");
         let row = |label: &str, text: String| out!("  {}  {text}", paint(Role::Dim, &format!("{label:<6}")));
-        // A goofy-only kind (gee) has no name and no real units to compare with.
+        // An informal-only kind (gee) has no name and no real units to compare with.
         let Some(kind) = kind else {
             row("equals", code(&format!("1 {name} = {}", eval(&format!("1 {name} to {}", base_name(dim))))));
             return true;
@@ -357,7 +378,7 @@ fn all_units() -> Value {
         ]))
     };
     let mut maps = Vec::new();
-    for (source, table) in [("units", TABLE), ("goofy", goofy::TABLE)] {
+    for (source, table) in [("units", TABLE), ("informal", informal::TABLE)] {
         for (names, scale, _, dim, about) in table {
             let mut names = names.split(' ');
             let name = names.next().unwrap();
@@ -578,7 +599,7 @@ pub fn user_units() -> Vec<String> {
 
 /// Every unit row: the real ones, then those children add.
 pub fn rows() -> impl Iterator<Item = &'static Row> {
-    TABLE.iter().chain(goofy::TABLE)
+    TABLE.iter().chain(informal::TABLE)
 }
 
 pub fn builtin_units() -> HashMap<String, Rc<UnitDef>> {
@@ -591,7 +612,7 @@ pub fn builtin_units() -> HashMap<String, Rc<UnitDef>> {
         }
     }
     // `banana_for_scale`.
-    for (names, ..) in goofy::TABLE {
+    for (names, ..) in informal::TABLE {
         let primary = names.split(' ').next().unwrap();
         map.insert(format!("{primary}_for_scale"), map[primary].clone());
     }
@@ -675,7 +696,7 @@ mod tests {
 
     #[test]
     fn units_lists_every_source() {
-        for source in ["units", "goofy", "currency", "user"] {
+        for source in ["units", "informal", "currency", "user"] {
             assert_eq!(show(&format!(r#"unit widget; all_units().filter(|u| u.source == "{source}").len > 0"#)), "true", "{source}");
         }
         assert_eq!(show(r#"all_units().filter(|u| u.name == "mi")[0].si"#), "1609.34 m");
@@ -786,6 +807,8 @@ unit * 2"
         assert_eq!(show("20 C to best"), "20 C");
         assert_eq!(show("5 cd to best"), "5 cd");
         assert_eq!(show("0.00002 m to best"), "20 µm");
+        assert_eq!(show("unit tile\n60 s*min/tile to best"), "3600 s^2/tile");
+        assert_eq!(show("unit tile\n10 m*km/tile to best"), "1 ha/tile");
         assert!(try_eval("5 to best").is_err());
         assert!(try_eval("5 km + 1 kg").is_err());
         assert!(try_eval("5 km to kg").is_err());

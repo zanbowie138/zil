@@ -1,20 +1,19 @@
 {
   "name": "zil-site",
   "private": true,
-  "description": "The docs site: the mdBook reference, the sandbox, and the wasm build both run. Needs mdbook, the wasm32-unknown-unknown target and wasm-bindgen-cli at Cargo.lock's wasm-bindgen version.",
+  "description": "The site: the Starlight reference, the Svelte sandbox, and the wasm build both run. Needs the wasm32-unknown-unknown target and wasm-bindgen-cli at Cargo.lock's wasm-bindgen version.",
   "type": "module",
   "packageManager": "pnpm@12.6.0",
   "scripts": {
-    "build": "pnpm build:docs && pnpm build:sandbox && node docs/stage.mjs site",
-    "build:docs": "pnpm book && mdbook build docs/book",
-    "build:sandbox": "pnpm wasm && pnpm js",
-    "serve": "pnpm build && sirv site --dev --port 8765",
-    "sandbox": "pnpm build:sandbox && sirv docs/sandbox --dev --port 8765",
-    "book": "cargo run --release -- --docs docs/book/src",
-    "wasm": "cargo wasm && wasm-bindgen --target web --no-typescript --out-dir docs/sandbox/pkg --out-name zil target/wasm32-unknown-unknown/wasm/zil_wasm.wasm && node docs/stage.mjs examples",
-    "js": "esbuild docs/editor/app.js --bundle --format=esm --minify --sourcemap --outfile=docs/sandbox/app.js"
+    "build": "pnpm build:docs && pnpm wasm && astro build --root docs",
+    "build:docs": "cargo run --release -- --docs docs/src/content/docs",
+    "wasm": "cargo wasm && wasm-bindgen --target web --no-typescript --out-dir docs/src/lib/pkg --out-name zil target/wasm32-unknown-unknown/wasm/zil_wasm.wasm",
+    "dev": "astro dev --root docs",
+    "preview": "astro preview --root docs"
   },
   "devDependencies": {
+    "@astrojs/starlight": "^0.42.6",
+    "@astrojs/svelte": "^9.0.1",
     "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.11.1",
     "@codemirror/language": "^6.12.4",
@@ -22,7 +21,8 @@
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.13",
     "@lezer/highlight": "^1.2.5",
-    "esbuild": "^0.28.2",
-    "sirv-cli": "^3.0.1"
+    "astro": "^7.3.8",
+    "bits-ui": "^2.19.5",
+    "svelte": "^5.57.2"
   }
 }

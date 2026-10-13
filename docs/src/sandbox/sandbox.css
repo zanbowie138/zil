@@ -1,0 +1,155 @@
+/* The sandbox (Sandbox.svelte and its parts). Global, not scoped: CodeMirror, Bits UI and wasm output build their own DOM. */
+.sandbox { height: calc(100dvh - var(--sl-nav-height)); margin: 0; display: grid; grid-template-columns: 296px minmax(0, 1fr) minmax(0, 1fr); background: var(--panel); color: var(--ink); font: 14px/1.5 var(--sans); }
+.sandbox.repl { grid-template-columns: 296px minmax(0, 1fr); }
+.sandbox:not(.repl) .repl-only, .sandbox.repl .editor-only { display: none; }
+.sandbox button, .sandbox input { font: inherit; color: inherit; }
+.sandbox :is(button, input, [role="combobox"]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sandbox p code { background: var(--sunk); padding: 1px 4px; border-radius: 4px; font: .92em var(--mono); }
+.sandbox .pane { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.sandbox .pane + .pane { border-left: 1px solid var(--line); }
+.sandbox .head { display: flex; align-items: center; gap: 10px; height: 48px; flex: none; padding: 0 12px 0 16px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.sandbox .head .title { font-weight: 500; color: var(--ink); }
+.sandbox .spacer { flex: 1; }
+
+/* segmented controls: Bits UI toggle groups */
+.sandbox .modes { display: inline-flex; gap: 2px; padding: 3px; background: var(--sunk); border-radius: 9px; }
+.sandbox .modes button { border: 0; background: none; padding: 3px 12px; border-radius: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.sandbox .modes button:hover { color: var(--ink); }
+.sandbox .modes button[data-state="on"] { background: var(--panel); color: var(--ink); font-weight: 500; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
+
+/* the Live switch */
+.sandbox .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; }
+.sandbox .switch { display: inline-flex; align-items: center; width: 28px; height: 16px; padding: 2px; border: 0; border-radius: 999px; background: var(--line); cursor: pointer; transition: background .12s; }
+.sandbox .switch[data-state="checked"] { background: var(--accent); }
+.sandbox .thumb { display: block; width: 12px; height: 12px; border-radius: 50%; background: var(--panel); box-shadow: 0 1px 2px rgb(0 0 0 / 0.2); transition: translate .12s; }
+.sandbox .thumb[data-state="checked"] { translate: 12px 0; }
+
+/* left rail: the tour, then the searchable catalog */
+.sandbox .rail { background: var(--bg); }
+.sandbox .search { flex: none; padding: 12px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; }
+.sandbox .search input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); }
+.sandbox .search input:focus-visible { outline-offset: 0; }
+.sandbox .search .btn { padding: 0 10px; }
+.sandbox .paste { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.sandbox .scroll { flex: 1; overflow: auto; padding: 4px 12px 24px; }
+.sandbox .scroll h3 { margin: 16px 8px 4px; font: 600 11px var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.sandbox .section-head { margin: 0; }
+.sandbox .summary { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px; border: 0; border-radius: 7px; background: none; cursor: pointer; font-weight: 500; font-size: 13px; text-align: left; }
+.sandbox .summary::before { content: ""; flex: none; width: 6px; height: 6px; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: rotate(-45deg); transition: transform .12s; margin-right: 2px; }
+.sandbox .summary[data-state="open"]::before { transform: rotate(45deg); }
+.sandbox .summary:hover { background: var(--sunk); }
+.sandbox .summary small { margin-left: auto; color: var(--faint); font-weight: 400; font-variant-numeric: tabular-nums; }
+.sandbox .section[data-state="open"] { padding-bottom: 6px; }
+.sandbox .try { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 6px 8px 6px 22px; border-radius: 7px; cursor: pointer; }
+.sandbox .try:hover { background: var(--sunk); }
+.sandbox .try[aria-current] { background: var(--accent-soft); }
+.sandbox .try > span { display: block; font-size: 13px; }
+.sandbox .try code { display: block; font: 12px/1.5 var(--mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sandbox .empty { margin: 16px 8px; color: var(--muted); font-size: 13px; }
+.sandbox .credits { margin: 24px 8px 0; font-size: 12px; color: var(--faint); }
+.sandbox .credits a { color: inherit; }
+
+/* the tour card */
+.sandbox .tour { flex: none; margin: 12px; padding: 14px 16px; border-radius: 10px; background: var(--panel); border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); box-shadow: var(--shadow); }
+.sandbox .tour header { display: flex; align-items: center; font-size: 12px; font-weight: 600; color: var(--accent); }
+.sandbox .tour header span { flex: 1; margin-left: 4px; }
+.sandbox .tour .chapter { font: inherit; color: inherit; background: none; border: 0; border-radius: 5px; padding: 2px 4px; margin-left: -4px; cursor: pointer; }
+.sandbox .tour .chapter::after { content: " ▾"; font-size: 10px; }
+.sandbox .tour .chapter:hover { background: var(--sunk); }
+.sandbox .tour .x { border: 0; background: none; font-size: 18px; line-height: 1; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 5px; }
+.sandbox .tour .x:hover { background: var(--sunk); color: var(--ink); }
+.sandbox .tour p { margin: 8px 0 10px; font-size: 13.5px; }
+.sandbox .tour pre { margin: 0 0 12px; padding: 8px 10px; border-radius: 7px; background: var(--sunk); font: 12.5px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.sandbox .tour footer { display: flex; gap: 8px; align-items: center; }
+.sandbox .tour footer .btn { height: 28px; font-size: 13px; }
+
+/* the tour's chapter menu: a Bits UI select, portaled to <body> */
+.menu { z-index: 50; min-width: 200px; max-height: 60vh; overflow: auto; padding: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); font: 13px var(--sans); color: var(--ink); }
+.menu-item { padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+.menu-item[data-highlighted] { background: var(--sunk); }
+.menu-item[data-selected] { color: var(--accent); font-weight: 500; }
+
+/* CodeMirror */
+.sandbox .editor { flex: 1; min-height: 0; background: var(--panel); }
+.sandbox .editor .cm-editor { height: 100%; }
+.sandbox .cm-editor { background: transparent; color: var(--ink); }
+.sandbox .cm-editor.cm-focused { outline: none; }
+.sandbox .cm-editor .cm-scroller { font: 13.5px/1.65 var(--mono); }
+.sandbox .editor .cm-content { padding: 16px 0; }
+.sandbox .cm-editor .cm-gutters { background: var(--panel); border: 0; color: var(--faint); }
+.sandbox .cm-editor .cm-lineNumbers .cm-gutterElement { padding: 0 12px 0 16px; }
+.sandbox .cm-editor .cm-activeLine { background: color-mix(in srgb, var(--sunk) 55%, transparent); }
+.sandbox .cm-editor .cm-activeLineGutter { background: transparent; color: var(--muted); }
+.sandbox .cm-editor .cm-cursor { border-left-color: var(--ink); }
+.sandbox .cm-editor .cm-selectionBackground, .sandbox .cm-editor.cm-focused .cm-selectionBackground { background: color-mix(in srgb, var(--accent) 22%, transparent) !important; }
+.sandbox .cm-editor .cm-matchingBracket { background: color-mix(in srgb, var(--accent) 18%, transparent); outline: none; }
+.sandbox .cm-editor .cm-placeholder { color: var(--faint); }
+.zil-inline { margin-left: 2.5em; color: var(--muted); font-style: italic; white-space: pre; }
+.zil-inline.bad { color: var(--bad); }
+.cm-tooltip { background: var(--panel) !important; color: var(--ink); border: 1px solid var(--line) !important; border-radius: 8px; box-shadow: var(--shadow); overflow: hidden; }
+.cm-tooltip .cm-tooltip-arrow { display: none; }
+.cm-tooltip-autocomplete > ul { font: 13px/1.5 var(--mono) !important; max-height: 16em; }
+.cm-tooltip-autocomplete > ul > li { padding: 2px 10px 2px 6px !important; }
+.cm-tooltip-autocomplete > ul > li[aria-selected] { background: var(--accent-soft) !important; color: var(--ink) !important; }
+.cm-completionDetail { margin-left: 1em; color: var(--faint); font-style: normal !important; }
+.cm-completionMatchedText { text-decoration: none !important; color: var(--accent); font-weight: 500; }
+.cm-completionIcon { width: 1.4em !important; opacity: .7 !important; }
+.cm-completionIcon-unit::after { content: "u"; color: var(--u); }
+.cm-completionIcon-method::after, .cm-completionIcon-function::after { color: var(--f); }
+.cm-tooltip.cm-completionInfo { padding: 0 !important; max-width: 360px; }
+.zil-doc, .zil-sig { padding: 8px 12px; max-width: 420px; font: 13px/1.5 var(--sans); }
+.zil-doc code, .zil-sig div { display: block; font: 12.5px/1.5 var(--mono); color: var(--f); white-space: pre-wrap; }
+.zil-sig b { color: var(--accent); font-weight: 600; }
+.zil-doc p, .zil-sig p { margin: 4px 0 0; }
+.zil-sig p { color: var(--muted); font-size: 12.5px; }
+.zil-doc footer { margin-top: 6px; font-size: 12px; color: var(--faint); }
+.zil-doc .link { border: 0; background: none; padding: 0; font: 500 12px var(--mono); color: var(--accent); text-decoration: underline; cursor: pointer; }
+
+/* output */
+.sandbox .out { flex: 1; overflow: auto; padding: 16px 20px; background: var(--panel); font: 13.5px/1.65 var(--term); }
+.sandbox .out pre { margin: 0; font: inherit; white-space: pre; }
+.sandbox .out .printed + .result, .sandbox .out .printed + .error { margin-top: 12px; }
+.sandbox .result { display: flex; gap: 10px; }
+.sandbox .result::before { content: "→"; color: var(--accent); font-weight: 500; }
+.sandbox .error { color: var(--ink); background: var(--bad-soft); border-radius: 8px; padding: 12px 14px; overflow: auto; }
+.sandbox .error pre { --ansi-1: var(--bad); }
+.sandbox .note { color: var(--muted); font-family: var(--sans); }
+.sandbox .status { font-variant-numeric: tabular-nums; }
+.sandbox .status.busy::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+
+/* REPL: a transcript with the prompt as its last line */
+.sandbox .log { flex: 1; overflow: auto; padding: 16px 20px 32px; background: var(--panel); font: 13.5px/1.65 var(--term); cursor: text; }
+.sandbox .log pre { margin: 0; font: inherit; white-space: pre; }
+.sandbox .log a[data-zil] { cursor: pointer; text-decoration: none; border-radius: 3px; color: inherit; }
+.sandbox .log a[data-zil]:hover { background: var(--accent-soft); text-decoration: underline; text-decoration-color: var(--accent); }
+.sandbox .entry { margin-bottom: 12px; }
+.sandbox .entry > * + * { margin-top: 2px; }
+.sandbox .entry .error { margin-top: 6px; }
+.sandbox .line { display: flex; gap: 10px; }
+.sandbox .line > pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.sandbox .ps { flex: none; color: var(--accent); font-weight: 500; user-select: none; }
+.sandbox .input { flex: 1; min-width: 0; }
+.sandbox .input .cm-scroller { font: 13.5px/1.65 var(--term); }
+.sandbox .input .cm-content { padding: 0; }
+.sandbox .input .cm-line { padding: 0; }
+.sandbox .log .note { margin: 0 0 12px; font-size: 13px; }
+
+@media (max-width: 1100px) {
+  .sandbox { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .sandbox .rail { grid-column: 1 / -1; grid-row: 2; border-top: 1px solid var(--line); max-height: 40vh; }
+  .sandbox .rail.pane { border-left: 0; }
+  .sandbox.repl { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .sandbox { display: flex; flex-direction: column; height: auto; }
+  .sandbox .pane + .pane { border-left: 0; border-top: 1px solid var(--line); }
+  .sandbox .editor { min-height: 46vh; }
+  .sandbox .out { min-height: 28vh; }
+  .sandbox .log { min-height: 60vh; }
+  .sandbox .rail { order: 3; max-height: none; }
+  .sandbox .rail:has(.tour) { order: 0; }
+  .sandbox .head { padding-left: 16px; }
+  .sandbox .hide-sm { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .sandbox .status.busy::before { animation: none; } .sandbox .summary::before, .sandbox .switch, .sandbox .thumb { transition: none; } }

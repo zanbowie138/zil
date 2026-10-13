@@ -1,13 +1,10 @@
 /target
 /.idea
-/docs/book/book
 /install.cmd
-/docs/book/src
-/docs/sandbox/pkg
-/docs/sandbox/examples
-/node_modules
+node_modules
 /site
-/docs/sandbox/app.js
-/docs/sandbox/app.js.map
+/docs/.astro
+/docs/src/content/docs
+/docs/src/lib/pkg
 /CLAUDE.md
 /ROADMAP*.md

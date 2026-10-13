@@ -1,0 +1,77 @@
+/* The site's palette and fonts, as zil's own tokens (--bg, --ink, --accent, the --k.. syntax colors, ANSI colors for output)
+   and mapped onto Starlight's. Dark is the default and [data-theme="light"] the override, as Starlight does it. */
+:root {
+  --bg: #131312; --panel: #1a1a18; --sunk: #222220; --ink: #ebe9e3; --muted: #9a958b; --faint: #67635b; --line: #2d2c29;
+  --accent: #ff7b3f; --accent-ink: #1a0d06; --accent-soft: #3a2116; --bad: #ff7a6b; --bad-soft: #3a1c18;
+  --k: #ff9a62; --s: #a5d46a; --n: #5ccfd6; --f: #8fb0ff; --u: #d7a2ef; --c: #6f6b62;
+  --ansi-fg: var(--ink); --ansi-bg: var(--panel);
+  --ansi-0: #3a3935; --ansi-1: #ff7a6b; --ansi-2: #a5d46a; --ansi-3: #e8c45a; --ansi-4: #8fb0ff; --ansi-5: #e39ad8; --ansi-6: #5ccfd6; --ansi-7: #c9c5bb;
+  --ansi-8: #77736b; --ansi-9: #ff9d91; --ansi-10: #c4ec8f; --ansi-11: #f5d97f; --ansi-12: #b3c9ff; --ansi-13: #f0b8e8; --ansi-14: #8ae4e9; --ansi-15: #ffffff;
+  --shadow: 0 6px 24px rgb(0 0 0 / 0.5), 0 1px 3px rgb(0 0 0 / 0.4);
+
+  --sl-color-white: #faf8f3; --sl-color-gray-1: #ebe9e3; --sl-color-gray-2: #c9c5bb; --sl-color-gray-3: #9a958b;
+  --sl-color-gray-4: #67635b; --sl-color-gray-5: #3a3935; --sl-color-gray-6: #1d1d1b; --sl-color-black: #131312;
+  --sl-color-accent-low: #3a2116; --sl-color-accent: #ff7b3f; --sl-color-accent-high: #ffc2a3;
+  --sl-color-hairline: var(--line); --sl-color-hairline-light: var(--line); --sl-color-hairline-shade: var(--line);
+  --sl-color-bg-inline-code: var(--sunk);
+}
+:root[data-theme="light"] {
+  --bg: #f6f5f1; --panel: #fffefb; --sunk: #efede7; --ink: #1d1c1a; --muted: #6e6a62; --faint: #a6a196; --line: #e3e0d8;
+  --accent: #c8440f; --accent-ink: #fff; --accent-soft: #fbe9df; --bad: #b42318; --bad-soft: #fdecea;
+  --k: #b3420e; --s: #3f7a12; --n: #0f6e76; --f: #2849b8; --u: #8a3aa8; --c: #9b968b;
+  --ansi-0: #1d1c1a; --ansi-1: #c4281c; --ansi-2: #3f7a12; --ansi-3: #a86a00; --ansi-4: #2849b8; --ansi-5: #9c2f8f; --ansi-6: #0f6e76; --ansi-7: #6e6a62;
+  --ansi-8: #8a857b; --ansi-9: #e0442f; --ansi-10: #58a11e; --ansi-11: #c99400; --ansi-12: #4469e0; --ansi-13: #c044b0; --ansi-14: #1693a0; --ansi-15: #1d1c1a;
+  --shadow: 0 6px 24px rgb(0 0 0 / 0.12), 0 1px 3px rgb(0 0 0 / 0.08);
+
+  --sl-color-white: #1d1c1a; --sl-color-gray-1: #2b2a27; --sl-color-gray-2: #3a3833; --sl-color-gray-3: #6e6a62;
+  --sl-color-gray-4: #a6a196; --sl-color-gray-5: #d9d5cc; --sl-color-gray-6: #efede7; --sl-color-gray-7: #f6f5f1; --sl-color-black: #fffefb;
+  --sl-color-accent-low: #fbe9df; --sl-color-accent: #c8440f; --sl-color-accent-high: #7d2a08;
+}
+:root {
+  --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Menlo, monospace;
+  /* Output: Google's Plex Mono subsets lack box drawing and arrows, and fallback glyphs of another width skew boxes. */
+  --term: "Cascadia Mono", Menlo, "DejaVu Sans Mono", Consolas, ui-monospace, monospace;
+  --sl-font: var(--sans); --sl-font-mono: var(--mono);
+}
+
+kbd { font: 500 11px var(--mono); padding: 1px 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); background: var(--panel); }
+
+/* the site title: zil plus the accent square */
+.site-title { gap: 2px; align-items: baseline; font: 600 1.35rem var(--mono); letter-spacing: -0.02em; color: var(--sl-color-white); }
+.site-title::after { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--accent); }
+
+/* asides: a tip in the accent instead of Starlight's purple */
+.starlight-aside--tip { --sl-color-asides-text-accent: var(--accent); --sl-color-asides-border: var(--accent); background-color: var(--accent-soft); }
+
+/* buttons, for the sandbox and the docs' Run buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap; text-decoration: none; }
+.btn:hover { background: var(--sunk); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 500; }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.primary kbd { background: transparent; color: inherit; border-color: color-mix(in srgb, currentColor 35%, transparent); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* highlighted code outside Expressive Code: the sandbox's transcript, catalog and tour, and docs examples once edited */
+.hljs-keyword, .hljs-operator { color: var(--k); } .hljs-string { color: var(--s); } .hljs-number, .hljs-literal { color: var(--n); }
+.hljs-title { color: var(--f); } .hljs-type { color: var(--u); }
+.hljs-comment, .zil-result { color: var(--c); font-style: italic; }
+
+/* reference pages */
+.sl-markdown-content .sig { display: block; padding: 6px 10px; border-radius: 7px; background: var(--sunk); font: 13px/1.5 var(--mono); color: var(--f); white-space: pre-wrap; overflow-wrap: anywhere; }
+.sl-markdown-content h3 { font-size: var(--sl-text-xl); }
+.sl-markdown-content .generated { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); font-size: var(--sl-text-xs); color: var(--sl-color-gray-3); }
+
+/* runnable examples (lib/runnable.js) */
+.zil-run { position: relative; }
+.zil-run pre { caret-color: var(--ink); }
+.zil-run code:focus { outline: none; }
+.zil-run:focus-within .frame pre { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); }
+.zil-run .zil-result { color: var(--muted); font-style: normal; }
+.zil-tools { position: absolute; top: 6px; right: 44px; z-index: 1; display: flex; gap: 4px; opacity: 0; transition: opacity .12s; }
+.zil-run:hover .zil-tools, .zil-run:focus-within .zil-tools, .zil-run.busy .zil-tools { opacity: 1; }
+.zil-tools .btn { height: 28px; padding: 0 10px; font-size: 13px; box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); }
+.zil-tools .btn.primary::before { content: ""; border: 0.38em solid transparent; border-left: 0.56em solid currentColor; border-right: 0; margin-right: -1px; }
+.zil-tools a.btn { color: var(--muted); }
+.zil-tools a.btn:hover { color: var(--ink); }
+@media (hover: none) { .zil-tools { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .zil-tools { transition: none; } }

@@ -1,4 +1,4 @@
-//! Goofy units: bananas for scale, smoots, fortnights, and friends. Real units that happen to be silly too.
+//! Informal units: bananas for scale, smoots, fortnights, and friends. Real units that happen to be silly too.
 
 use super::{DATA, DOSE, Dim, PER_TIME, Row, d, unit};
 use crate::interp::Interp;
@@ -7,11 +7,11 @@ use crate::modules::{Call, Doc, Fail, Module, doc};
 use crate::value::Value;
 
 pub const MODULE: Module = Module {
-    name: "goofy",
+    name: "informal",
     about: "bananas for scale, smoots, fortnights; every item also works as item_for_scale",
     #[rustfmt::skip]
     examples: &[
-        ("goofy", &[
+        ("informal", &[
             ("height in bananas", "1.8 m to banana_for_scale"),
             ("the classic speed unit", "1 mph to furlong/fortnight"),
             ("Harvard Bridge", "364.4 smoot to m"),
@@ -28,7 +28,7 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("for_scale", "for_scale(q: quantity)", "the quantity in whichever goofy unit gives the most relatable count", &["1.8 m.for_scale", "70 kg.for_scale", "2 h.for_scale"], &[]),
+    doc("for_scale", "for_scale(q: quantity)", "the quantity in whichever informal unit gives the most relatable count", &["1.8 m.for_scale", "70 kg.for_scale", "2 h.for_scale"], &[]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -41,7 +41,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
                 .filter(|row| row.3 == u.dim())
                 .map(|row| (row.0.split(' ').next().unwrap(), si / row.1))
                 .min_by(|a, b| (a.1.abs().log10() - 0.5).abs().total_cmp(&(b.1.abs().log10() - 0.5).abs()));
-            let (name, n) = best.ok_or_else(|| format!("no goofy unit measures `{u}`"))?;
+            let (name, n) = best.ok_or_else(|| format!("no informal unit measures `{u}`"))?;
             Ok(Value::Qty(n, unit(name)?))
         }
         _ => Err(Fail::BadArgs),
@@ -167,7 +167,7 @@ mod tests {
     use crate::interp::tests::show;
 
     #[test]
-    fn goofy() {
+    fn informal() {
         assert_eq!(show("1.78 m to banana_for_scale"), "10 banana");
         assert_eq!(show("2 banana to cm"), "35.6 cm");
         assert_eq!(show("1 fortnight to d"), "14 d");

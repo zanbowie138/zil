@@ -1,8 +1,8 @@
-//! Written guides shared by `help` and the book: the highlights, the syntax tour and the advanced recipes.
+//! Written guides shared by `help` and the docs: the highlights, the syntax tour and the advanced recipes.
 
 use crate::modules::Section;
 
-/// Things most languages can't do in one line: heads `help("examples")` and the mdBook index.
+/// Things most languages can't do in one line: heads `help("examples")` and the docs index.
 #[rustfmt::skip]
 pub const HIGHLIGHTS: &[Section] = &[(
     "a taste",

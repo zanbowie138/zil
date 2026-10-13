@@ -19,7 +19,6 @@ fn run_or_exit(interp: &mut Interp, name: &str, src: &str) -> Value {
 const USAGE: &str = "usage: zil                        start the REPL
        zil -e <code> [args...]   evaluate code and print the result
        zil <file.zil> [args...]  run a script; args() lists the extra arguments
-       zil --docs <dir>          write the mdBook reference into dir
        zil --version             print the version";
 
 fn main() {

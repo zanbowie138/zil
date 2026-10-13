@@ -1,4 +1,4 @@
-/*! CodeMirror and Lezer (bundled into app.js), https://codemirror.net
+/*! CodeMirror and Lezer (bundled into the sandbox), https://codemirror.net
  * Copyright (C) 2018-2024 by Marijn Haverbeke <marijn@haverbeke.berlin> and others. MIT License:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -16,7 +16,7 @@ import { HighlightStyle, StreamLanguage, bracketMatching, indentUnit, syntaxHigh
 import { Compartment, EditorState, Prec, StateEffect, StateField } from "@codemirror/state";
 import { Decoration, EditorView, WidgetType, drawSelection, hoverTooltip, keymap, showTooltip } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
-import { KEYWORDS, tokenAt, vocab } from "../sandbox/client.js";
+import { KEYWORDS, tokenAt, vocab } from "./client.js";
 
 export { EditorState, EditorView, Prec, keymap };
 

@@ -1,18 +1,17 @@
-//! `zil --docs <dir>`: the mdBook reference, rendered from the same module tree as `help`, one page per module.
+//! `zil --docs <dir>`: the reference as Starlight MDX pages, rendered from the same module tree as `help`, one page per module,
+//! plus `sidebar.json`, which `docs/astro.config.mjs` reads. A build step for the site, not a user-facing command.
 //! Example results are evaluated live, so the pages are build output: CI regenerates them on deploy.
 
 use std::fmt::Write;
 use std::path::Path;
-use zil::guide::{ADVANCED, ADVANCED_UNRUN, HIGHLIGHTS};
+use zil::guide::{ADVANCED, ADVANCED_UNRUN, HIGHLIGHTS, SYNTAX};
 use zil::help::eval;
-use zil::modules::{ALL, Doc, Module, Section, modules, units};
+use zil::modules::{ALL, Doc, Module, Section, TREE, modules, units};
 
-/// Prefix of the line holding an example's result.
+/// Prefix of the line holding an example's result; the zil grammar and `runnable.js` know it.
 const RESULT: &str = "# → ";
-/// Prefix of the "generated on" note.
-const NOTE: &str = "> Example results generated on ";
 
-/// Writes every page into `dir` (an mdBook `src`).
+/// Writes every page into `dir`.
 pub fn write(dir: &Path) -> std::io::Result<()> {
     std::fs::create_dir_all(dir)?;
     for (name, page) in pages() {
@@ -23,117 +22,164 @@ pub fn write(dir: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-/// (file name, markdown) for every page.
+/// (file name, contents) for every page.
 fn pages() -> Vec<(String, String)> {
     let date = jiff::Zoned::now().date();
-    let note = format!(
-        "{NOTE}{date}.\n> Ones using `now`, `today` or randomness will differ when you run them:\n> press **Run** on any example to run it in your browser, after editing it if you like.\n"
-    );
-    let mut summary = String::from("# Summary\n\n[Overview](index.md)\n\n- [Advanced examples](advanced.md)\n");
-    let mut index = format!("# zil\n\nAn expression calculator and scripting language with units, dates, exact fractions and big ints.\n\n{note}");
-    sections(&mut index, HIGHLIGHTS);
-    index.push_str("\n## Modules\n\n| module | about |\n|---|---|\n");
-    let mut out = vec![("advanced.md".into(), advanced(&note))];
+    // Under docs/, so the reference is served at /docs/ and the landing page (src/pages/index.astro) has the root.
+    let mut out = vec![("docs/index.mdx".to_string(), index(date)), ("docs/syntax.mdx".into(), syntax(date)), ("docs/advanced.mdx".into(), advanced(date))];
     for (path, m) in ALL.iter() {
-        let depth = path.matches('.').count();
-        writeln!(summary, "{}- [{}]({})", "  ".repeat(depth), m.name, file(path)).unwrap();
-        writeln!(index, "| [{path}]({}) | {} |", file(path), m.about).unwrap();
-        out.push((file(path), page(path, m, &note)));
+        out.push((format!("docs/{}.mdx", path.replace('.', "/")), page(path, m, date)));
     }
-    out.push(("SUMMARY.md".into(), summary));
-    out.push(("index.md".into(), index));
+    out.push(("sidebar.json".into(), sidebar()));
     out
 }
 
+/// A module's page URL: `math.trig` is `/docs/math/trig/`.
+fn url(path: &str) -> String {
+    format!("/docs/{}/", path.replace('.', "/"))
+}
+
+/// Frontmatter, the components pages use, and the note on generated results at the end.
+fn layout(title: &str, about: &str, extra: &str, body: &str, date: jiff::civil::Date) -> String {
+    format!(
+        "---\ntitle: {}\ndescription: {}\n{extra}---\nimport {{ Aside, Badge, CardGrid, LinkCard }} from \"@astrojs/starlight/components\";\n\n{body}\n\
+         <p class=\"generated\">Example results generated on {date}. Ones using `now`, `today` or randomness will differ when you run them.</p>\n",
+        json(title),
+        json(&about.replace('`', ""))
+    )
+}
+
+fn index(date: jiff::civil::Date) -> String {
+    let mut s = String::from(
+        "<Aside type=\"tip\">Every example here runs in your browser. Edit one and press **Run**, or <kbd>Ctrl</kbd> <kbd>↵</kbd>. \
+         Press <kbd>Ctrl</kbd> <kbd>K</kbd> to search.</Aside>\n\n",
+    );
+    sections(&mut s, HIGHLIGHTS);
+    s.push_str("<CardGrid>\n");
+    s.push_str("<LinkCard title=\"Syntax\" href=\"/docs/syntax/\" description=\"Values, calls, pipes, lambdas and statements on one page\" />\n");
+    s.push_str("<LinkCard title=\"Advanced examples\" href=\"/docs/advanced/\" description=\"Longer recipes that combine several modules\" />\n");
+    s.push_str("</CardGrid>\n\n## Modules\n\n<CardGrid>\n");
+    for (path, m) in ALL.iter().filter(|(p, _)| !p.contains('.')) {
+        card(&mut s, path, m);
+    }
+    s.push_str("</CardGrid>\n");
+    layout("Overview", "A terse calculator and scripting language for units, dates and much more.", "", &s, date)
+}
+
+/// A link to a module, with how many functions it and its submodules have, and the submodules' names.
+fn card(s: &mut String, path: &str, m: &Module) {
+    fn count(m: &Module) -> usize {
+        m.fns.len() + m.children.iter().map(count).sum::<usize>()
+    }
+    let mut about = format!("{} · {} functions", m.about.replace('`', ""), count(m));
+    if !m.children.is_empty() {
+        write!(about, " · {}", m.children.iter().map(|c| c.name).collect::<Vec<_>>().join(", ")).unwrap();
+    }
+    writeln!(s, "<LinkCard title={} href=\"{}\" description={} />", jsx(m.name), url(path), jsx(&about)).unwrap();
+}
+
+fn syntax(date: jiff::civil::Date) -> String {
+    let mut s = String::from("The language at a glance. `help(\"syntax\")` shows the same in the REPL.\n\n");
+    // Its last section points here.
+    let syntax: Vec<_> = SYNTAX.iter().filter(|(heading, _)| *heading != "more").copied().collect();
+    sections(&mut s, &syntax);
+    layout("Syntax", "Values, calls, pipes, lambdas and statements on one page.", "sidebar:\n  order: 1\n", &s, date)
+}
+
 /// Recipes combining several modules: a heading each, the modules it uses, then the script with its result.
-fn advanced(note: &str) -> String {
-    let mut s = format!("# Advanced examples\n\nLonger recipes that combine several modules.\n\n{note}");
+fn advanced(date: jiff::civil::Date) -> String {
+    let mut s = String::from("Longer recipes that combine several modules.\n\n");
     let unrun = std::iter::once((ADVANCED_UNRUN, false));
     for ((theme, recipes), run) in ADVANCED.iter().map(|t| (*t, true)).chain(unrun) {
-        writeln!(s, "\n## {theme}").unwrap();
+        writeln!(s, "## {}\n", prose(theme)).unwrap();
         for (title, uses, src) in recipes {
-            writeln!(s, "\n### {title}\n\n*{uses}*\n\n```zil").unwrap();
+            writeln!(s, "### {}\n\n<Badge text={} />\n", prose(title), jsx(uses)).unwrap();
+            let mut code = String::new();
             if run {
-                example(&mut s, src);
+                example(&mut code, src);
             } else {
-                writeln!(s, "{src}").unwrap();
+                writeln!(code, "{src}").unwrap();
             }
-            s.push_str("```\n");
+            block(&mut s, &code);
         }
     }
-    s
+    layout("Advanced examples", "Longer recipes that combine several modules.", "", &s, date)
 }
 
-/// A module's page file: `math.trig` is `math/trig.md`.
-fn file(path: &str) -> String {
-    format!("{}.md", path.replace('.', "/"))
-}
-
-fn page(path: &str, m: &Module, note: &str) -> String {
-    let mut s = format!("# {path}\n\n{}\n\n{note}", m.about);
+fn page(path: &str, m: &Module, date: jiff::civil::Date) -> String {
+    let mut s = String::new();
+    writeln!(s, "{}\n", inline(m.about)).unwrap();
+    if !m.children.is_empty() {
+        s.push_str("<CardGrid>\n");
+        for c in m.children {
+            card(&mut s, &format!("{path}.{}", c.name), c);
+        }
+        s.push_str("</CardGrid>\n\n");
+    }
+    if !m.fns.is_empty() {
+        for f in m.fns {
+            writeln!(s, "- [`{0}`](#{1}) {2}", f.name, anchor(f.name), inline(f.desc)).unwrap();
+        }
+        s.push('\n');
+    }
     sections(&mut s, m.guide);
     let kinds = units::kinds(m.units);
     if !kinds.is_empty() {
-        s.push_str("\n## Units\n\n| kind | names |\n|---|---|\n");
+        s.push_str("## Units\n\n| kind | units |\n| --- | --- |\n");
         for (kind, rows) in kinds {
-            let names: Vec<_> = rows.iter().map(|r| r.0.replace(' ', ", ")).collect();
+            let names: Vec<_> = rows.iter().map(|r| prose(&r.0.replace(' ', ", "))).collect();
             writeln!(s, "| {kind} | {} |", names.join("; ")).unwrap();
         }
+        s.push('\n');
     }
-    if !m.children.is_empty() {
-        s.push_str("\n## Submodules\n\n| module | about |\n|---|---|\n");
-        for c in m.children {
-            writeln!(s, "| [{0}]({1}/{0}.md) | {2} |", c.name, m.name, c.about).unwrap();
-        }
-    }
-    // Links from this page climb back to the book root first.
-    let root = "../".repeat(path.matches('.').count());
     if !m.fns.is_empty() {
-        s.push_str("\n## Functions\n\n| function | description |\n|---|---|\n");
+        s.push_str("## Functions\n\n");
         for f in m.fns {
-            writeln!(s, "| [`{}`](#{}) | {} |", f.sig.replace('|', "\\|"), f.name, f.desc.replace('|', "\\|")).unwrap();
-        }
-        for f in m.fns {
-            function(&mut s, f, &root);
+            function(&mut s, f);
         }
     }
     if !m.examples.is_empty() {
-        s.push_str("\n## More examples\n");
+        s.push_str("## More examples\n\n");
         sections(&mut s, m.examples);
     }
-    s
+    layout(path, m.about, "", &s, date)
 }
 
-fn function(s: &mut String, f: &Doc, root: &str) {
-    writeln!(s, "\n### {}\n\n`{}`: {}", f.name, f.sig, f.desc).unwrap();
+fn function(s: &mut String, f: &Doc) {
+    writeln!(s, "### {}\n\n<code class=\"sig\">{}</code>\n\n{}\n", f.name, jsx_text(f.sig), inline(f.desc)).unwrap();
     if !f.examples.is_empty() || !f.shown.is_empty() {
-        s.push_str("\n```zil\n");
+        let mut code = String::new();
         for ex in f.examples {
-            example(s, ex);
+            example(&mut code, ex);
         }
         for ex in f.shown {
-            writeln!(s, "{ex}").unwrap();
+            writeln!(code, "{ex}").unwrap();
         }
-        s.push_str("```\n");
+        block(s, &code);
     }
     if !f.see.is_empty() {
-        let home = |n: &str| modules().find(|m| m.fns.iter().any(|g| g.name == n)).map_or(String::new(), |m| file(zil::modules::path(m)));
-        let links: Vec<_> = f.see.iter().map(|n| format!("[{n}]({root}{}#{n})", home(n))).collect();
-        writeln!(s, "\nSee also: {}", links.join(", ")).unwrap();
+        let links: Vec<_> = f.see.iter().map(|n| format!("[`{n}`]({}#{})", home(n), anchor(n))).collect();
+        writeln!(s, "See also {}\n", links.join(", ")).unwrap();
     }
+}
+
+/// The URL of the page documenting function `name`.
+fn home(name: &str) -> String {
+    modules().find(|m| m.fns.iter().any(|g| g.name == name)).map_or(String::new(), |m| url(zil::modules::path(m)))
 }
 
 /// Each section as a heading and a code block of `# label`, example, result.
 fn sections(s: &mut String, guide: &[Section]) {
     for (heading, rows) in guide {
-        writeln!(s, "\n### {heading}\n\n```zil").unwrap();
+        writeln!(s, "### {}\n", prose(heading)).unwrap();
+        let mut code = String::new();
         for (label, ex) in *rows {
-            writeln!(s, "# {label}").unwrap();
+            writeln!(code, "# {label}").unwrap();
             if !ex.is_empty() {
-                example(s, ex);
+                example(&mut code, ex);
             }
         }
-        s.push_str("```\n");
+        block(s, &code);
     }
 }
 
@@ -143,4 +189,75 @@ fn example(s: &mut String, ex: &str) {
     if v != ex {
         writeln!(s, "{RESULT}{}", v.replace('\n', &format!("\n{RESULT}"))).unwrap();
     }
+}
+
+/// A runnable code block; `runnable.js` adds the Run button.
+fn block(s: &mut String, code: &str) {
+    writeln!(s, "````zil\n{}\n````\n", code.trim_end()).unwrap();
+}
+
+/// The sidebar: the guides, then every module, a module with submodules as a collapsed group headed by its own page.
+fn sidebar() -> String {
+    fn items(ms: &[Module], prefix: &str) -> Vec<String> {
+        ms.iter()
+            .map(|m| {
+                let path = if prefix.is_empty() { m.name.to_string() } else { format!("{prefix}.{}", m.name) };
+                let slug = json(&format!("docs/{}", path.replace('.', "/")));
+                if m.children.is_empty() {
+                    return format!("{{\"slug\":{slug},\"label\":{}}}", json(m.name));
+                }
+                let mut inner = vec![format!("{{\"slug\":{slug},\"label\":\"overview\"}}")];
+                inner.extend(items(m.children, &path));
+                format!("{{\"label\":{},\"collapsed\":true,\"items\":[{}]}}", json(m.name), inner.join(","))
+            })
+            .collect()
+    }
+    let guides = r#"{"label":"Overview","link":"/docs/"},{"slug":"docs/syntax"},{"slug":"docs/advanced"}"#;
+    format!("[{guides},{{\"label\":\"Modules\",\"items\":[\n{}\n]}}]\n", items(TREE, "").join(",\n"))
+}
+
+fn json(s: &str) -> String {
+    let mut out = String::from('"');
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            c if (c as u32) < 0x20 => write!(out, "\\u{:04x}", c as u32).unwrap(),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
+/// A JSX attribute holding `s` as a JS string, so quotes and braces need no thought.
+fn jsx(s: &str) -> String {
+    format!("{{{}}}", json(s))
+}
+
+/// Text inside a JSX element: braces and angle brackets as entities.
+fn jsx_text(s: &str) -> String {
+    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('{', "&#123;").replace('}', "&#125;")
+}
+
+/// Plain text as MDX: markdown and JSX punctuation backslash-escaped.
+fn prose(s: &str) -> String {
+    let mut out = String::new();
+    for c in s.chars() {
+        if "\\`*_[]<>{}|#".contains(c) {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// Prose with `code` in backticks kept as code spans, which MDX leaves alone.
+fn inline(s: &str) -> String {
+    s.split('`').enumerate().map(|(i, part)| if i % 2 == 1 { format!("`{part}`") } else { prose(part) }).collect()
+}
+
+/// The id Starlight gives a heading (github-slugger): lowercase, spaces to `-`, other punctuation dropped.
+fn anchor(s: &str) -> String {
+    s.to_lowercase().chars().filter_map(|c| if c == ' ' { Some('-') } else { (c.is_alphanumeric() || c == '-' || c == '_').then_some(c) }).collect()
 }

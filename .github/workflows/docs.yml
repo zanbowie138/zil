@@ -11,7 +11,6 @@ jobs:
       TZ: America/Chicago
     steps:
       - uses: actions/checkout@v4
-      - uses: peaceiris/actions-mdbook@v2
       - run: rustup target add wasm32-unknown-unknown
       # Must match the wasm-bindgen version in Cargo.lock.
       - uses: taiki-e/install-action@v2
@@ -20,9 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 24, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build:docs
-      - run: pnpm build:sandbox
-      - run: node docs/stage.mjs site
+      - run: pnpm build
       # Not wrangler-action: it runs `pnpm add wrangler`, which pnpm refuses at a workspace root.
       - run: npx -y wrangler@4 pages deploy site --project-name=zil --branch=main
         env:

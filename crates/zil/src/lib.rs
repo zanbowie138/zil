@@ -1,4 +1,4 @@
-//! zil: an expression calculator and scripting language. The CLI is the `zil-cli` crate, the browser build `zil-wasm`.
+//! zil: a terse calculator and scripting language for units, dates and much more. The CLI is the `zil-cli` crate, the browser build `zil-wasm`.
 
 // Internals the CLI and the browser build reach into, until the Session API (roadmap Phase 3a) replaces them.
 #[doc(hidden)]

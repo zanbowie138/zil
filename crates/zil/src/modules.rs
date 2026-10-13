@@ -1,10 +1,10 @@
 //! Modules group builtins with everything else a feature owns: docs, operators, ordering,
 //! `to` conversions and magic identifiers. All are always loaded and share one flat namespace:
-//! nesting only shapes source files, `help` and the book, never how a name resolves.
+//! nesting only shapes source files, `help` and the docs, never how a name resolves.
 //!
 //! Adding a module:
 //! 1. Write `src/modules/<path>.rs` with a `pub const MODULE`; children go in `src/modules/<path>/<child>.rs`.
-//! 2. List it in its parent's `children` (or in `TREE` for a root). Help and the book follow the tree.
+//! 2. List it in its parent's `children` (or in `TREE` for a root). Help and the docs follow the tree.
 //! 3. If it has an `ident`, `binary`, `compare` or `convert` hook, add it to `DISPATCH` too.
 //!
 //! A `pub mod` under a module is a child `Module`; a private `mod` is just a helper file of its parent
@@ -143,7 +143,7 @@ pub struct Module {
     pub topic: Option<fn(&str) -> bool>,
     /// Unit rows it adds, listed by kind on its help and book pages.
     pub units: &'static [units::Row],
-    /// Submodules, shown under it in help and the book.
+    /// Submodules, shown under it in help and the docs.
     pub children: &'static [Module],
 }
 

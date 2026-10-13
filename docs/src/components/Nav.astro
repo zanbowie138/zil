@@ -1,0 +1,13 @@
+---
+// The header's links: the docs and the sandbox, then Starlight's social icons.
+import Default from "@astrojs/starlight/components/SocialIcons.astro";
+---
+
+<a class="nav" href="/docs/">Docs</a>
+<a class="nav" href="/play/">Sandbox</a>
+<Default />
+
+<style>
+  .nav { color: var(--sl-color-gray-2); font-size: var(--sl-text-sm); font-weight: 500; text-decoration: none; }
+  .nav:hover { color: var(--sl-color-white); }
+</style>

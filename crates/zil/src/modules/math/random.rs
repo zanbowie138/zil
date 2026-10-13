@@ -14,7 +14,7 @@ pub const MODULE: Module = Module {
     fns: FNS,
     #[rustfmt::skip]
     groups: &[
-        ("numbers and lists", &["rand", "choice", "shuffle"]),
+        ("numbers and lists", &["rand", "choice", "shuffle", "seed"]),
         ("dice and coins", &["roll", "coin"]),
         ("probability", &["birthday_paradox", "odds"]),
         ("oracles", &["fortune", "eight_ball", "yes_or_no", "excuse"]),
@@ -43,6 +43,7 @@ const EXAMPLES: &[Section] = &[
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
     doc("rand", "rand() / rand(a: num, b: num)", "float in [0, 1), or a number from a to b inclusive", &["rand()", "rand(1, 6)"], &["choice", "shuffle"]),
+    doc("seed", "seed(n: int)", "restart this session's random numbers from n, so the same seed gives the same rand, shuffle, maze…", &["seed(7); rand(1, 100)"], &["rand"]),
     doc("choice", "choice(xs: list)", "random item", &[r#"["rock", "paper", "scissors"].choice"#], &["rand", "shuffle"]),
     doc("shuffle", "shuffle(xs: list)", "shuffled copy", &["(1..6).shuffle"], &["choice"]),
     doc("roll", "roll(dice?: str)", "roll dice like \"3d6+2\", \"d20\", \"4d6kh3\" (keep highest 3) or \"2d20kl1\"; returns {total, rolls}. Default 1d6", &[r#"roll("3d6+2")"#, r#"roll("d%").total"#], &["rand", "coin"]),
@@ -64,6 +65,10 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("rand", [a, b]) if num(a).is_some() && num(b).is_some() => {
             let (a, b) = (num(a).unwrap(), num(b).unwrap());
             Float(a + crate::host::rng(|r| r.f64()) * (b - a))
+        }
+        ("seed", [Int(n, _)]) => {
+            crate::host::rng(|r| r.seed(*n as u64));
+            Nil
         }
         ("choice", [List(l)]) => {
             let l = l.borrow();
@@ -324,6 +329,7 @@ mod tests {
         assert!(matches!(eval("rand(1, 6)"), Value::Int(1..=6, _)));
         assert_eq!(eval("[1, 2, 3].shuffle.sort").to_string(), "[1, 2, 3]");
         assert!(try_eval("choice([])").is_err());
+        assert_eq!(show("seed(3); [rand(), maze(4, 2)]"), show("seed(3); [rand(), maze(4, 2)]"));
     }
 
     #[test]

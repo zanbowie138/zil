@@ -37,7 +37,7 @@ const FNS: &[Doc] = &[
     doc("spiral", "spiral(size?: int)", "an Ulam spiral: 1, 2, 3… wound out from the center with the primes as dots, which line up on diagonals; size characters wide (default 40)", &["spiral(20)"], &["is_prime"]),
     doc("starfield", "starfield(width: int, height: int, seed?: int)", "a random night sky; the same seed gives the same sky", &["starfield(30, 4, 7)"], &["negative"]),
     doc("mandelbrot", "mandelbrot(width?: int, height?: int)", "the Mandelbrot set in ASCII, default 72×24", &["mandelbrot(40, 12)"], &["life"]),
-    doc("life", "life(start: str, steps?: int)", "run Conway's Game of Life for steps (default 1) and draw the live cells; start is rows of # and . or one of \"glider\", \"blinker\", \"pulsar\", \"r_pentomino\"", &[r#"life("blinker")"#, r#"life("glider", 4)"#], &["maze"]),
+    doc("life", "life(start: str, steps?: int, wrap?: bool)", "run Conway's Game of Life for steps (default 1) and draw the live cells; start is rows of # and . or one of \"glider\", \"blinker\", \"pulsar\", \"r_pentomino\". With wrap, the board is start's own size and its edges join, so the result keeps that size", &[r#"life("blinker")"#, r#"life("glider", 4)"#], &["maze"]),
     doc("maze", "maze(width?: int, height?: int)", "a random perfect maze (one path between any two cells), default 20×10 cells", &["maze(6, 3)"], &["life"]),
 ];
 
@@ -246,11 +246,16 @@ fn toys(name: &'static str, args: &[Value]) -> Call {
                 .collect();
             Value::str(rows.join("\n"))
         }
-        ("life", [Str(start), rest @ ..]) if rest.len() <= 1 => {
-            let steps = match rest {
-                [] => 1,
-                [Int(n, _)] if (0..=10_000).contains(n) => *n,
+        ("life", [Str(start), rest @ ..]) if rest.len() <= 2 => {
+            let steps = match rest.first() {
+                None => 1,
+                Some(Int(n, _)) if (0..=10_000).contains(n) => *n,
                 _ => return Err(Fail::Arg(1, "steps must be an int from 0 to 10000".into())),
+            };
+            let wrap = match rest.get(1) {
+                None => false,
+                Some(Bool(b)) => *b,
+                _ => return Err(Fail::Arg(2, "wrap must be true or false".into())),
             };
             let pattern = PATTERNS.iter().find(|p| p.0 == &**start).map_or(&**start, |p| p.1);
             let mut live: HashSet<(i64, i64)> = HashSet::new();
@@ -263,11 +268,17 @@ fn toys(name: &'static str, args: &[Value]) -> Call {
                     }
                 }
             }
+            let size = (pattern.lines().map(|l| l.chars().count()).max().unwrap_or(0) as i64, pattern.lines().count() as i64);
+            let board = wrap.then_some(size);
             for _ in 0..steps {
-                live = step(&live);
+                live = step(&live, board);
                 if live.len() > 100_000 {
                     return Err("too many live cells".into());
                 }
+            }
+            if wrap {
+                let rows = (0..size.1).map(|y| (0..size.0).map(|x| if live.contains(&(x, y)) { '#' } else { '.' }).collect::<String>());
+                return Ok(Value::str(rows.collect::<Vec<_>>().join("\n")));
             }
             Value::str(draw(&live))
         }
@@ -305,13 +316,15 @@ fn toys(name: &'static str, args: &[Value]) -> Call {
     })
 }
 
-fn step(live: &HashSet<(i64, i64)>) -> HashSet<(i64, i64)> {
+/// One generation; on a `board` of (width, height) the edges join.
+fn step(live: &HashSet<(i64, i64)>, board: Option<(i64, i64)>) -> HashSet<(i64, i64)> {
     let mut counts = std::collections::HashMap::new();
     for (x, y) in live {
         for dx in -1..=1 {
             for dy in -1..=1 {
                 if (dx, dy) != (0, 0) {
-                    *counts.entry((x + dx, y + dy)).or_insert(0) += 1;
+                    let c = board.map_or((x + dx, y + dy), |(w, h)| ((x + dx).rem_euclid(w), (y + dy).rem_euclid(h)));
+                    *counts.entry(c).or_insert(0) += 1;
                 }
             }
         }
@@ -378,6 +391,10 @@ mod tests {
         assert_eq!(show(r#"life("glider", 4)"#), show(r#"life("glider", 0)"#));
         assert_eq!(show(r#"life("pulsar", 3)"#), show(r#"life("pulsar", 0)"#));
         assert_eq!(show(r##"life("#", 1)"##), "(empty)");
+        // On a wrapping 6×6 board a glider comes back where it started after 24 steps.
+        let g = ".#....\n..#...\n###...\n......\n......\n......";
+        assert_eq!(show(&format!("life({g:?}, 24, true)")), g);
+        assert_eq!(show(&format!("life({g:?}, 1, true)")).lines().count(), 6);
         let mz = show("maze(5, 3)");
         assert_eq!(mz.lines().count(), 7);
         assert!(mz.lines().all(|l| l.chars().count() == 22));

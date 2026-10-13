@@ -190,7 +190,7 @@ pub fn type_page(ty: &str) -> bool {
 
 /// `help()`: what zil is, its module tree, and how to dig deeper.
 fn overview() {
-    out!("{}: a calculator and scripting language.", paint(Role::ModulePath, "zil"));
+    out!("{}: a terse calculator and scripting language for units, dates and much more.", paint(Role::ModulePath, "zil"));
     let start = [
         (r#"help("examples")"#, "start here: a few dozen one-liners, module by module"),
         (r#"help("syntax")"#, "the language at a glance"),

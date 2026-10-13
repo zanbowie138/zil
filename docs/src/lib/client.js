@@ -1,4 +1,4 @@
-// The page side of zil in the browser, shared by the sandbox and the book's run buttons.
+// The page side of zil in the browser, shared by the sandbox and the docs' run buttons.
 
 /** A run longer than this is a runaway loop: its worker is killed and replaced. */
 export const LIMIT_MS = 10_000;
@@ -125,7 +125,7 @@ const CLASS = {
 
 export const escape = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 
-/** zil source as HTML, using highlight.js class names so mdBook's themes color it too. */
+/** zil source as HTML, using highlight.js class names, which theme.css colors. */
 export function highlight(src) {
   let out = "",
     last = 0;

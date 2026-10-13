@@ -1,11 +1,11 @@
-# zil
+# <img src="docs/public/apple-touch-icon.png" width="36" align="top" alt=""> zil
 
 [![crates.io](https://img.shields.io/crates/v/zil.svg)](https://crates.io/crates/zil)
-[![docs](https://img.shields.io/badge/docs-reference-blue)](https://zil.alexander-bui.com/docs/)
-[![sandbox](https://img.shields.io/badge/try_it-sandbox-orange)](https://zil.alexander-bui.com/)
+[![docs](https://img.shields.io/badge/docs-reference-blue)](https://zil.alexander-bui.com/)
+[![sandbox](https://img.shields.io/badge/try_it-sandbox-orange)](https://zil.alexander-bui.com/play/)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE.md)
 
-zil is a calculator and scripting language that understands units, currencies, dates and time zones.
+zil is a terse calculator and scripting language for units, dates and much more.
 
 The idea is to pack as much power as possible into as little syntax as possible. There are no imports, no type annotations and no boilerplate.
 Units attach to numbers just like you'd write them on paper. `to` converts anything into anything it can. Methods chain left to right, so
@@ -179,7 +179,6 @@ cargo install --git https://github.com/zanbowie138/zil zil-cli
 zil                        start the REPL
 zil -e <code> [args...]    evaluate code and print the result
 zil <file.zil> [args...]   run a script; args() lists the extra arguments
-zil --docs <dir>           write the mdBook reference into dir
 zil --version              print the version
 ```
 
@@ -193,11 +192,7 @@ echo "hi there" | zil -e 'input.upper'   # → HI THERE
 
 Most of the documentation is in the help menu: run `help` in the REPL for an overview, or `help(<name>)` for any function or unit.
 
-The full reference is available online at [zil.alexander-bui.com/docs](https://zil.alexander-bui.com/docs/). To build the reference locally:
-
-```sh
-cargo run -- --docs docs/book/src && mdbook serve docs/book
-```
+The full reference is available online at [zil.alexander-bui.com](https://zil.alexander-bui.com/). To build it locally, see below.
 
 ## Building
 
@@ -208,8 +203,9 @@ cargo build --release   # binary at target/release/zil
 cargo test
 ```
 
-To run the whole site locally (the sandbox, plus the reference at `/docs`), install mdbook, the `wasm32-unknown-unknown` target and
-`wasm-bindgen-cli` at the version in Cargo.lock, then run `pnpm install && pnpm serve` and open `localhost:8765`.
+The site is [Astro](https://astro.build) with [Starlight](https://starlight.astro.build): the reference at the root, generated from the module tree,
+and the sandbox at `/play/`. To run it locally, install the `wasm32-unknown-unknown` target and `wasm-bindgen-cli` at the version
+in Cargo.lock, then run `pnpm install && pnpm build:docs && pnpm wasm && pnpm dev`.
 
 ## Data sources
 

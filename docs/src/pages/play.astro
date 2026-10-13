@@ -1,0 +1,34 @@
+---
+// The sandbox, full width under Starlight's header.
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import Sandbox from "../sandbox/Sandbox.svelte";
+---
+
+<StarlightPage
+  frontmatter={{
+    title: "Sandbox",
+    description: "Run zil, a calculator language with units, dates and exact math, in your browser.",
+    template: "splash",
+    tableOfContents: false,
+    pagefind: false,
+  }}
+  hasSidebar={false}
+>
+  <div class="play"><Sandbox client:only="svelte" /></div>
+</StarlightPage>
+
+<style is:global>
+  /* Only the sandbox: no title panel, padding or width limit around it. */
+  :root:has(.play) {
+    --sl-content-width: 100%;
+    --sl-main-pad: 0;
+  }
+  :root:has(.play) main > .content-panel:first-child,
+  :root:has(.play) .sl-container > footer {
+    display: none;
+  }
+  :root:has(.play) main > .content-panel {
+    padding: 0;
+    border: 0;
+  }
+</style>
