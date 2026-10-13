@@ -1,4 +1,4 @@
-<!-- The Windows installer, built by .github/workflows/release.yml:
+<!-- The Windows installer, built by .github/workflows/binaries.yml:
      wix build packaging/zil.wxs -arch x64 -d Version=0.2.0 -d Bin=target/release -o zil.msi -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <!-- Never change the UpgradeCode: it is how a new version finds and replaces the old one. -->

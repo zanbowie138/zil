@@ -1,9 +1,7 @@
 name: docs
 on:
-  push:
-    branches: [main]
-    paths: [crates/**, docs/**, examples/**, Cargo.*, package.json, pnpm-lock.yaml]
-  workflow_dispatch:
+  release:
+    types: [published]
 permissions:
   contents: read
 jobs:
@@ -22,7 +20,9 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 24, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+      - run: pnpm build:docs
+      - run: pnpm build:sandbox
+      - run: node docs/stage.mjs site
       # Not wrangler-action: it runs `pnpm add wrangler`, which pnpm refuses at a workspace root.
       - run: npx -y wrangler@4 pages deploy site --project-name=zil --branch=main
         env:
