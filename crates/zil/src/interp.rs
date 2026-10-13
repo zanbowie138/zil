@@ -13,6 +13,8 @@ use num_rational::BigRational;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 // ponytail: closures hold their defining Env, so recursive fns form Rc cycles and leak; add a GC/arena if long-running scripts care.
 pub struct Closure {
@@ -117,10 +119,37 @@ pub struct Interp {
     pub input: Option<Rc<str>>,
     /// Command-line arguments after the script or `-e` code, for `args()`.
     pub args: Vec<String>,
-    /// Nested user fn calls, capped at `MAX_DEPTH` so runaway recursion errors instead of overflowing.
+    /// Nested user fn calls, capped at `limits.depth` so runaway recursion errors instead of overflowing.
     depth: usize,
+    pub limits: Limits,
+    /// Eval steps since the last `run` began.
+    steps: u64,
+    /// When the running `run` must stop, from `limits.seconds`.
+    deadline: Option<jiff::Timestamp>,
     state: Rc<State>,
 }
+
+/// Caps on one `run`, so untrusted code ends with an error instead of hanging. Builtins' own `call`s count toward the run.
+#[derive(Clone)]
+pub struct Limits {
+    /// Eval steps per `run`.
+    pub steps: u64,
+    /// Wall-clock seconds per `run`, read through `Host::now`.
+    pub seconds: Option<f64>,
+    /// Nested user fn calls; never above the platform's `MAX_DEPTH`.
+    pub depth: usize,
+    /// Set from anywhere (a Ctrl-C handler, another thread) to stop the run; it clears once it does.
+    pub interrupt: Arc<AtomicBool>,
+}
+
+impl Default for Limits {
+    fn default() -> Limits {
+        Limits { steps: u64::MAX, seconds: None, depth: MAX_DEPTH, interrupt: Default::default() }
+    }
+}
+
+/// How often, in steps, the clock and interrupt flag are checked.
+const CHECK_EVERY: u64 = 1 << 12;
 
 /// Fits in `crate::STACK` with room to spare in release; debug frames are ~10x bigger, so heavy bodies can still overflow there.
 #[cfg(not(target_arch = "wasm32"))]
@@ -154,7 +183,7 @@ impl Interp {
                 }
             }
         });
-        Interp { globals, input: None, args: vec![], depth: 0, state }
+        Interp { globals, input: None, args: vec![], depth: 0, limits: Limits::default(), steps: 0, deadline: None, state }
     }
 
     /// Shared handle to this session's units, rates and switches, for code that runs outside `run`, like completion.
@@ -173,6 +202,8 @@ impl Interp {
 
     pub fn run(&mut self, prog: &[Expr]) -> Result<Value, Error> {
         let (globals, state) = (self.globals.clone(), self.state.clone());
+        self.steps = 0;
+        self.deadline = self.limits.seconds.and_then(|s| state.host.now().checked_add(jiff::SignedDuration::try_from_secs_f64(s).ok()?).ok());
         crate::state::enter(&state, || {
             let mut last = Value::Nil;
             for stmt in prog {
@@ -201,7 +232,7 @@ impl Interp {
                     }
                     return Err(e);
                 }
-                if self.depth >= MAX_DEPTH {
+                if self.depth >= self.limits.depth.min(MAX_DEPTH) {
                     return Err(Error::new("recursion too deep", span.clone()));
                 }
                 let env = child(&c.env);
@@ -399,7 +430,31 @@ impl Interp {
         Ok(Value::Nil)
     }
 
+    /// Counts one eval step and stops the run when a limit is hit.
+    #[inline]
+    fn tick(&mut self, span: &Span) -> Result<(), Error> {
+        self.steps += 1;
+        if self.steps > self.limits.steps || self.steps.is_multiple_of(CHECK_EVERY) { self.check_limits(span) } else { Ok(()) }
+    }
+
+    /// `tick`'s slow path, out of line so `eval` stays small.
+    #[inline(never)]
+    fn check_limits(&mut self, span: &Span) -> Result<(), Error> {
+        let l = &self.limits;
+        let msg = if self.steps > l.steps {
+            format!("step limit reached\nnote: the limit is {} steps per run", l.steps)
+        } else if l.interrupt.swap(false, Ordering::Relaxed) {
+            "interrupted".into()
+        } else if self.deadline.is_some_and(|d| self.state.host.now() >= d) {
+            format!("time limit reached\nnote: the limit is {} s per run", l.seconds.unwrap_or_default())
+        } else {
+            return Ok(());
+        };
+        Err(Error::new(msg, span.clone()))
+    }
+
     fn eval(&mut self, e: &Expr, env: &Env) -> EResult {
+        self.tick(&e.span)?;
         let err = |msg: String| Ctl::Err(Error::new(msg, e.span.clone()));
         Ok(match &e.kind {
             ExprKind::Nil => Value::Nil,
@@ -839,6 +894,22 @@ fib(10)";
             assert_eq!(try_eval(&format!("{g}g(10_000_000)")).unwrap_err().msg, "recursion too deep");
         };
         std::thread::Builder::new().stack_size(crate::STACK).spawn(run).unwrap().join().unwrap();
+    }
+
+    #[test]
+    fn limits() {
+        let run = |it: &mut Interp, src: &str| it.run(&crate::parser::parse(src).unwrap()).unwrap_err().msg;
+        let mut it = Interp::new();
+        it.limits.steps = 10_000;
+        assert_eq!(run(&mut it, "while true {}"), "step limit reached");
+        // Callbacks from builtins count too.
+        assert_eq!(run(&mut it, "(1..1_000_000).map(|x| x)"), "step limit reached");
+        it.limits.steps = u64::MAX;
+        it.limits.interrupt.store(true, Ordering::Relaxed);
+        assert_eq!(run(&mut it, "while true {}"), "interrupted");
+        assert!(!it.limits.interrupt.load(Ordering::Relaxed));
+        it.limits.depth = 10;
+        assert_eq!(run(&mut it, "g = |n| g(n + 1)\ng(0)"), "recursion too deep");
     }
 
     #[test]
