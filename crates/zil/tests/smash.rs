@@ -2,7 +2,7 @@
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::rc::Rc;
-use zil::interp::Interp;
+use zil::Session;
 
 const ARGS: &[&str] = &[
     "0",
@@ -27,11 +27,12 @@ const ARGS: &[&str] = &[
 /// Calls every builtin with every combination of up to `arity` of `ARGS`.
 fn smash(arity: usize) {
     let fresh = || {
-        let mut it = Interp::with_host(Rc::new(zil::host::NullHost));
-        it.limits.steps = 100_000;
-        it.limits.len = 10_000;
-        it.limits.bits = 10_000;
-        it
+        let mut s = Session::new(Rc::new(zil::host::NullHost));
+        let l = s.limits();
+        l.steps = 100_000;
+        l.len = 10_000;
+        l.bits = 10_000;
+        s
     };
     let (mut layer, mut lists) = (vec![String::new()], vec![String::new()]);
     for _ in 0..arity {
@@ -43,7 +44,7 @@ fn smash(arity: usize) {
     for name in zil::modules::modules().flat_map(|m| m.fns).map(|f| f.name) {
         for args in &lists {
             let src = format!("{name}({args})");
-            if catch_unwind(AssertUnwindSafe(|| zil::run(&mut it, &src))).is_err() {
+            if catch_unwind(AssertUnwindSafe(|| it.eval(&src))).is_err() {
                 panics.push(src);
                 it = fresh();
             }

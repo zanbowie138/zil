@@ -126,6 +126,8 @@ pub fn default() -> Rc<dyn Host> {
     return Rc::new(NullHost);
 }
 
+pub use crate::state::set_default_host as set_default;
+
 /// The running session's host.
 pub fn get() -> Rc<dyn Host> {
     state::with(|s| s.host.clone())

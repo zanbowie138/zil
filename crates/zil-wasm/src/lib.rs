@@ -54,7 +54,7 @@ extern "C" {
 
 #[wasm_bindgen(start)]
 fn start() {
-    zil::state::set_default_host(Rc::new(JsHost));
+    zil::host::set_default(Rc::new(JsHost));
 }
 
 /// A session whose runaway code errors well inside the page's 10 s worker kill, so a REPL session survives it.

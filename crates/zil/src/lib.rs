@@ -6,15 +6,13 @@ pub mod ansi;
 #[doc(hidden)]
 pub mod ast;
 mod data;
-#[doc(hidden)]
-pub mod error;
+mod error;
 #[doc(hidden)]
 pub mod guide;
 #[doc(hidden)]
 pub mod help;
 pub mod host;
-#[doc(hidden)]
-pub mod interp;
+mod interp;
 #[doc(hidden)]
 pub mod lexer;
 #[doc(hidden)]
@@ -29,10 +27,8 @@ pub mod parser;
 pub mod repl;
 mod session;
 mod signature;
-#[doc(hidden)]
-pub mod state;
-#[doc(hidden)]
-pub mod value;
+mod state;
+mod value;
 
 use interp::Interp;
 use std::path::PathBuf;
@@ -59,8 +55,7 @@ pub fn cache_dir() -> Option<PathBuf> {
     Some(base.join("zil"))
 }
 
-#[doc(hidden)]
-pub fn run(interp: &mut Interp, src: &str) -> Result<Value, Error> {
+fn run(interp: &mut Interp, src: &str) -> Result<Value, Error> {
     interp.run(&parser::parse(src)?)
 }
 
