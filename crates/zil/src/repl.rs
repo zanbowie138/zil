@@ -44,7 +44,7 @@ pub fn help_call(src: &str) -> bool {
 
 /// Units convertible from the expression before a trailing `to`, for completion. Read from literals and `s`'s
 /// variables only: nothing is evaluated, so Tab has no side effects. Call it inside `s.enter` so user units count.
-pub fn conversions(s: &Session, before: &str) -> Option<Vec<String>> {
+fn conversions(s: &Session, before: &str) -> Option<Vec<String>> {
     use crate::ast::ExprKind::{Assign, Ident, Qty};
     use crate::modules::units::{known_dim, names_with_dim};
     let toks = lexer::lex(before).ok()?;
@@ -66,6 +66,47 @@ pub fn conversions(s: &Session, before: &str) -> Option<Vec<String>> {
         _ => return None,
     };
     Some(names_with_dim(dim))
+}
+
+/// Tab completions for `word`, given the text `before` it: after `to`, every unit the left side converts to; after `.`, only
+/// functions; otherwise builtins, constants, `to` targets, modules, units, help topics and the session's variables and units.
+pub fn complete(s: &Session, before: &str, word: &str) -> Vec<String> {
+    use crate::modules::{self, units};
+    static WORDS: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::new(|| {
+        let mut v: Vec<String> = modules::ALL.iter().map(|(path, _)| path.clone()).collect();
+        v.extend(
+            modules::modules()
+                .flat_map(|m| m.fns.iter().map(|f| f.name).chain(m.consts.iter().map(|c| c.0)).chain(m.targets.iter().map(|t| t.0)).chain([m.name]))
+                .map(String::from),
+        );
+        v.extend(units::TABLE.iter().flat_map(|u| u.0.split_whitespace()).map(String::from));
+        v.extend(units::DIMS.iter().map(|d| d.0.to_string()));
+        v.extend(["syntax", "examples", "advanced"].map(String::from));
+        v
+    });
+    let mut hits: Vec<String> = s.enter(|| {
+        if let Some(units) = conversions(s, before) {
+            units
+        } else if before.ends_with('.') {
+            s.names().into_iter().filter(|n| matches!(s.get(n), Some(Value::Fn(_) | Value::Builtin(..)))).collect()
+        } else if word.is_empty() {
+            vec![]
+        } else {
+            WORDS.iter().cloned().chain(s.names()).chain(units::user_units()).collect()
+        }
+    });
+    hits.retain(|n| n.starts_with(word));
+    hits.sort();
+    hits.dedup();
+    hits
+}
+
+/// A result as `-e` prints it: tables as a grid, everything else as its text.
+pub fn display(v: &Value, color: bool) -> String {
+    match v {
+        Value::Table(t) => crate::modules::data::tables::grid(t, color),
+        v => v.to_string(),
+    }
 }
 
 /// How the REPL shows a result.
@@ -117,6 +158,8 @@ mod tests {
         assert_eq!(help_shorthand("help(upper)"), None);
 
         let (mut it, mut n) = (Session::new(crate::host::get()), 0);
+        assert_eq!(complete(&it, "x.", "upp"), ["upper"]);
+        assert_eq!(complete(&it, "print(5 km to ", "ma"), ["marathon"]);
         let mut put = |src: &str| {
             let v = it.eval(src).unwrap();
             match record(&mut it, &mut n, &v) {

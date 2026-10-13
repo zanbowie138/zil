@@ -73,7 +73,7 @@ fn take_output() -> String {
 fn shown(v: &Value) -> String {
     match v {
         Value::Nil | Value::Fn(_) => String::new(),
-        Value::Table(t) => zil::modules::data::tables::grid(t, true),
+        Value::Table(_) => repl::display(v, true),
         Value::Str(s) if s.contains(['\n', '\x1b']) => s.to_string(),
         v => format!("{}{v:?}{RESET}", tint(v).code()),
     }

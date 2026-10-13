@@ -8,51 +8,16 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use zil::ansi::{RESET, Role, color_on, highlight};
 use zil::repl::{self, Shown, help_shorthand, unclosed};
-use zil::{Session, Value, cache_dir, help, modules};
+use zil::{Session, cache_dir, help};
 
-/// REPL tab completion over builtins, constants, `to` targets, units, help topics and
-/// variables in scope. After `.`, only functions; after `to`, every unit the left side converts to.
-struct Names(Vec<String>, Rc<RefCell<Session>>);
-
-impl Names {
-    fn new(session: Rc<RefCell<Session>>) -> Names {
-        let mut v: Vec<String> = modules::ALL.iter().map(|(path, _)| path.clone()).collect();
-        v.extend(
-            modules::modules()
-                .flat_map(|m| m.fns.iter().map(|f| f.name).chain(m.consts.iter().map(|c| c.0)).chain(m.targets.iter().map(|t| t.0)).chain([m.name]))
-                .map(String::from),
-        );
-        v.extend(modules::units::TABLE.iter().flat_map(|u| u.0.split_whitespace()).map(String::from));
-        v.extend(modules::units::DIMS.iter().map(|d| d.0.to_string()));
-        v.extend(["syntax", "examples", "advanced"].map(String::from));
-        v.sort();
-        v.dedup();
-        Names(v, session)
-    }
-}
+/// REPL tab completion through `repl::complete`, over the shared session.
+struct Names(Rc<RefCell<Session>>);
 
 impl rustyline::completion::Completer for Names {
     type Candidate = String;
     fn complete(&self, line: &str, pos: usize, _: &rustyline::Context<'_>) -> rustyline::Result<(usize, Vec<String>)> {
         let start = pos - line[..pos].chars().rev().take_while(|c| c.is_alphanumeric() || *c == '_').map(char::len_utf8).sum::<usize>();
-        let word = &line[start..pos];
-        // Units come from this session's own, user-made ones included.
-        let session = self.1.borrow();
-        let mut hits: Vec<String> = session.enter(|| {
-            if let Some(units) = repl::conversions(&session, &line[..start]) {
-                units
-            } else if line[..start].ends_with('.') {
-                session.names().into_iter().filter(|n| matches!(session.get(n), Some(Value::Fn(_) | Value::Builtin(..)))).collect()
-            } else if word.is_empty() {
-                vec![]
-            } else {
-                self.0.iter().cloned().chain(session.names()).chain(modules::units::user_units()).collect()
-            }
-        });
-        hits.retain(|n| n.starts_with(word));
-        hits.sort();
-        hits.dedup();
-        Ok((start, hits))
+        Ok((start, repl::complete(&self.0.borrow(), &line[..start], &line[start..pos])))
     }
 }
 
@@ -109,7 +74,7 @@ pub fn repl(session: Session) {
     let session = Rc::new(RefCell::new(session));
     let config = rustyline::Config::builder().completion_type(rustyline::CompletionType::List).build();
     let mut rl = rustyline::Editor::with_config(config).expect("terminal");
-    rl.set_helper(Some(Names::new(Rc::clone(&session))));
+    rl.set_helper(Some(Names(Rc::clone(&session))));
     let stashed = std::sync::Arc::default();
     rl.bind_sequence(
         rustyline::KeyEvent(rustyline::KeyCode::Char('q'), rustyline::Modifiers::ALT),
@@ -194,7 +159,7 @@ mod tests {
         let history = rustyline::history::DefaultHistory::new();
         let ctx = rustyline::Context::new(&history);
         let session = Rc::new(RefCell::new(Session::new(zil::host::get())));
-        let names = Names::new(Rc::clone(&session));
+        let names = Names(Rc::clone(&session));
         assert_eq!(names.complete("x.upp", 5, &ctx).unwrap(), (2, vec!["upper".to_string()]));
         assert!(names.complete("5 kilo", 6, &ctx).unwrap().1.contains(&"kilometers".to_string()));
         assert!(names.complete("x ", 2, &ctx).unwrap().1.is_empty());
@@ -221,7 +186,7 @@ mod tests {
         use rustyline::hint::Hinter;
         let history = rustyline::history::DefaultHistory::new();
         let ctx = rustyline::Context::new(&history);
-        let names = Names::new(Rc::new(RefCell::new(Session::new(zil::host::get()))));
+        let names = Names(Rc::new(RefCell::new(Session::new(zil::host::get()))));
         assert_eq!(names.hint("x.upp", 5, &ctx).as_deref(), Some("er"));
         assert_eq!(names.hint("x.upp", 3, &ctx), None);
         let line = names.highlight("if x 5 \"s\"", 0);

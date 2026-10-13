@@ -7,7 +7,7 @@ mod repl;
 
 use std::process::exit;
 use std::rc::Rc;
-use zil::{Error, STACK, Session, Value, ansi, help, modules};
+use zil::{Error, STACK, Session, Value, ansi, help};
 
 /// Run `src` and exit with status 1 on error.
 fn run_or_exit(session: &mut Session, name: &str, src: &str) -> Value {
@@ -42,8 +42,7 @@ fn real_main() {
             session.set_args(rest.to_vec());
             match help::live(repl::help_term(code), || run_or_exit(&mut session, "<-e>", code)) {
                 Value::Nil => {}
-                Value::Table(t) => println!("{}", modules::data::tables::grid(&t, ansi::color_on())),
-                v => println!("{v}"),
+                v => println!("{}", zil::repl::display(&v, ansi::color_on())),
             }
         }
         [flag, dir] if flag == "--docs" => docs::write(dir.as_ref()).unwrap_or_else(|e| {
