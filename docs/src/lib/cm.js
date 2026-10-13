@@ -244,7 +244,13 @@ const results = StateField.define({
         });
       return Decoration.set(widgets, true);
     }
-    return tr.docChanged ? deco.map(tr.changes) : deco;
+    if (!tr.docChanged) return deco;
+    // Keep each value at the end of its own line, not carried along by text typed where it sits (like Enter at the line's end).
+    const kept = [];
+    deco.between(0, tr.startState.doc.length, (from, _, d) => {
+      kept.push(Decoration.widget(d.spec).range(tr.state.doc.lineAt(tr.changes.mapPos(from, -1)).to));
+    });
+    return Decoration.set(kept, true);
   },
   provide: (f) => [
     EditorView.decorations.from(f),
