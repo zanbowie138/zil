@@ -21,11 +21,25 @@ pub struct Error {
     pub labels: Vec<(Span, String)>,
     pub notes: Vec<String>,
     pub help: Vec<String>,
+    /// Set when a session limit stopped the run, so embedders can tell it from an error in the code.
+    pub limit: Option<Limit>,
+}
+
+/// Which of `Interp::limits` was hit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Limit {
+    Steps,
+    Time,
+    Interrupt,
+    Depth,
+    Len,
+    Bits,
+    Output,
 }
 
 impl Error {
     pub fn new(msg: impl Into<String>, span: Span) -> Error {
-        let mut e = Error { msg: String::new(), labels: vec![(span, String::new())], notes: vec![], help: vec![] };
+        let mut e = Error { msg: String::new(), labels: vec![(span, String::new())], notes: vec![], help: vec![], limit: None };
         for line in msg.into().split('\n') {
             match (line.strip_prefix("note: "), line.strip_prefix("help: ")) {
                 (Some(n), _) => e.notes.push(n.into()),

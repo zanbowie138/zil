@@ -2,6 +2,7 @@
 
 use crate::Error;
 use crate::ast::{BinOp, Expr, ExprKind, FnDef, Pat, Radix, Target, UnOp};
+use crate::error::Limit;
 use crate::lexer::Span;
 use crate::modules::{self, data::tables, math::complex, math::uncertainty, units};
 use crate::ops::{binary, verb};
@@ -87,7 +88,7 @@ fn bind(pat: &Pat, v: Value, env: &Env, define: bool) -> Result<(), Error> {
 
 /// Non-local exits threaded through `?`.
 enum Ctl {
-    Err(Error),
+    Err(Box<Error>),
     Return(Value),
     Break(Span),
     Continue(Span),
@@ -98,7 +99,7 @@ impl Ctl {
     fn finish(self) -> Result<Value, Error> {
         match self {
             Ctl::Return(v) => Ok(v),
-            Ctl::Err(e) => Err(e),
+            Ctl::Err(e) => Err(*e),
             Ctl::Break(s) => Err(Error::new("`break` outside a loop", s)),
             Ctl::Continue(s) => Err(Error::new("`continue` outside a loop", s)),
         }
@@ -107,7 +108,7 @@ impl Ctl {
 
 impl From<Error> for Ctl {
     fn from(e: Error) -> Ctl {
-        Ctl::Err(e)
+        Ctl::Err(Box::new(e))
     }
 }
 
@@ -219,15 +220,23 @@ impl Interp {
             }
             Ok(last)
         })
+        .map_err(|e| self.tag(e))
     }
 
     pub fn call(&mut self, f: &Value, args: Vec<Value>, span: &Span) -> Result<Value, Error> {
         let state = self.state.clone();
         self.share_caps();
-        crate::state::enter(&state, || self.call_at(f, args, span, &[], None))
+        crate::state::enter(&state, || self.call_at(f, args, span, &[], None)).map_err(|e| self.tag(e))
+    }
+
+    /// Puts the size or output cap a builtin hit on its error.
+    fn tag(&self, mut e: Error) -> Error {
+        e.limit = e.limit.or(self.state.hit.take());
+        e
     }
 
     fn share_caps(&self) {
+        self.state.hit.set(None);
         self.state.max_len.set(self.limits.len);
         self.state.max_bits.set(self.limits.bits);
         self.state.max_output.set(self.limits.output);
@@ -248,7 +257,7 @@ impl Interp {
                     return Err(e);
                 }
                 if self.depth >= self.limits.depth.min(MAX_DEPTH) {
-                    return Err(Error::new("recursion too deep", span.clone()));
+                    return Err(Error { limit: Some(Limit::Depth), ..Error::new("recursion too deep", span.clone()) });
                 }
                 let env = child(&c.env);
                 for (p, a) in c.def.params.iter().zip(args) {
@@ -296,7 +305,7 @@ impl Interp {
             let ExprKind::Field(_, k) = &obj.kind else { unreachable!("only fields miss keys") };
             let at = obj.span.end - k.len()..obj.span.end;
             let hint = crate::error::did_you_mean(k, keys.iter().map(String::as_str));
-            Ctl::Err(Error::new(format!("map has no key `{k}`{hint}"), at))
+            Ctl::from(Error::new(format!("map has no key `{k}`{hint}"), at))
         };
         if let Value::Map(m) = &o
             && let Some(v) = m.borrow().get(key)
@@ -319,7 +328,7 @@ impl Interp {
             _ => {
                 let at = e.span.end - key.len()..e.span.end;
                 let hint = crate::error::did_you_mean(key, methods(env).iter().map(String::as_str));
-                Err(Ctl::Err(
+                Err(Ctl::from(
                     Error::new(format!("{} has no field or method `{key}`{hint}", o.type_name()), at)
                         .label(obj.span.clone(), format!("this is {}", crate::error::short(&o))),
                 ))
@@ -340,7 +349,7 @@ impl Interp {
                 }
                 other => {
                     let msg = format!("`to` needs a string here, not a {}", other.type_name());
-                    return Err(Ctl::Err(Error::new(msg, t.span.clone()).label(t.span.clone(), format!("this is {}", crate::error::short(&other)))));
+                    return Err(Ctl::from(Error::new(msg, t.span.clone()).label(t.span.clone(), format!("this is {}", crate::error::short(&other)))));
                 }
             },
             _ => target,
@@ -359,12 +368,12 @@ impl Interp {
                 if msg.starts_with("unknown unit") {
                     // ponytail: assumes the target is written compactly (`km/h`, not `km / h`).
                     let len = target_name(target).len() - 2;
-                    return Err(Ctl::Err(Error::new(msg, e.span.end.saturating_sub(len)..e.span.end)));
+                    return Err(Ctl::from(Error::new(msg, e.span.end.saturating_sub(len)..e.span.end)));
                 }
                 let e = Error::new(msg, x.span.clone());
-                Err(Ctl::Err(if written(x).is_some() { e } else { e.label(x.span.clone(), format!("this is {}", crate::error::short(&v))) }))
+                Err(Ctl::from(if written(x).is_some() { e } else { e.label(x.span.clone(), format!("this is {}", crate::error::short(&v))) }))
             }
-            None => Err(Ctl::Err(Error::new(format!("cannot convert {} to {}", v.type_name(), target_name(target)), e.span.clone()))),
+            None => Err(Ctl::from(Error::new(format!("cannot convert {} to {}", v.type_name(), target_name(target)), e.span.clone()))),
         }
     }
 
@@ -384,7 +393,7 @@ impl Interp {
                         let Some(f) = lookup(env, name) else {
                             let at = callee.span.end - name.len()..callee.span.end;
                             let hint = crate::error::did_you_mean(name, methods(env).iter().map(String::as_str));
-                            return Err(Ctl::Err(Error::new(format!("{} has no method `{name}`{hint}", o.type_name()), at)));
+                            return Err(Ctl::from(Error::new(format!("{} has no method `{name}`{hint}", o.type_name()), at)));
                         };
                         (f, vec![o])
                     }
@@ -410,7 +419,7 @@ impl Interp {
     /// `obj[idx]`; out of `eval` to keep its frame small.
     #[inline(never)]
     fn index(&mut self, e: &Expr, obj: &Expr, idx: &Expr, env: &Env) -> EResult {
-        let err = |msg: String| Ctl::Err(Error::new(msg, e.span.clone()));
+        let err = |msg: String| Ctl::from(Error::new(msg, e.span.clone()));
         Ok(match (self.eval(obj, env)?, self.eval(idx, env)?) {
             (Value::List(l), Value::Int(i, _)) => {
                 let l = l.borrow();
@@ -426,7 +435,7 @@ impl Interp {
             (Value::Table(t), Value::Int(i, _)) => t.row(list_index(i, t.rows.len()).ok_or_else(|| out_of_range(i, t.rows.len(), obj, idx))?),
             (Value::Table(t), Value::Str(k)) => t.column(&k).ok_or_else(|| {
                 let hint = crate::error::did_you_mean(&k, t.cols.iter().map(String::as_str));
-                Ctl::Err(Error::new(format!("table has no column `{k}`{hint}"), idx.span.clone()))
+                Ctl::from(Error::new(format!("table has no column `{k}`{hint}"), idx.span.clone()))
             })?,
             (o, i) => {
                 return Err(err(format!("cannot index {} with {}", o.type_name(), i.type_name())));
@@ -441,7 +450,7 @@ impl Interp {
             Some(x) => Some(self.eval(x, env)?),
             None => None,
         };
-        units::define(name, v.as_ref()).map_err(|m| Ctl::Err(Error::new(format!("unit: {m}"), span.clone())))?;
+        units::define(name, v.as_ref()).map_err(|m| Ctl::from(Error::new(format!("unit: {m}"), span.clone())))?;
         Ok(Value::Nil)
     }
 
@@ -456,21 +465,21 @@ impl Interp {
     #[inline(never)]
     fn check_limits(&mut self, span: &Span) -> Result<(), Error> {
         let l = &self.limits;
-        let msg = if self.steps > l.steps {
-            format!("step limit reached\nnote: the limit is {} steps per run", l.steps)
+        let (limit, msg) = if self.steps > l.steps {
+            (Limit::Steps, format!("step limit reached\nnote: the limit is {} steps per run", l.steps))
         } else if l.interrupt.swap(false, Ordering::Relaxed) {
-            "interrupted".into()
+            (Limit::Interrupt, "interrupted".into())
         } else if self.deadline.is_some_and(|d| self.state.host.now() >= d) {
-            format!("time limit reached\nnote: the limit is {} s per run", l.seconds.unwrap_or_default())
+            (Limit::Time, format!("time limit reached\nnote: the limit is {} s per run", l.seconds.unwrap_or_default()))
         } else {
             return Ok(());
         };
-        Err(Error::new(msg, span.clone()))
+        Err(Error { limit: Some(limit), ..Error::new(msg, span.clone()) })
     }
 
     fn eval(&mut self, e: &Expr, env: &Env) -> EResult {
         self.tick(&e.span)?;
-        let err = |msg: String| Ctl::Err(Error::new(msg, e.span.clone()));
+        let err = |msg: String| Ctl::from(Error::new(msg, e.span.clone()));
         Ok(match &e.kind {
             ExprKind::Nil => Value::Nil,
             ExprKind::Bool(b) => Value::Bool(*b),
@@ -503,7 +512,7 @@ impl Interp {
             ExprKind::Qty(n, spec) => {
                 let v = self.eval(n, env)?;
                 let n = num(&v).ok_or_else(|| {
-                    Ctl::Err(
+                    Ctl::from(
                         Error::new(format!("cannot attach a unit to a {}", v.type_name()), n.span.clone())
                             .label(n.span.clone(), format!("this is {}", crate::error::short(&v))),
                     )
@@ -631,7 +640,7 @@ impl Interp {
                         None => Ok(None),
                         Some(b) => match self.eval(b, env)? {
                             Value::Int(n, _) => Ok(Some(n)),
-                            v => Err(Ctl::Err(Error::new(format!("slice bounds must be int, got {}", v.type_name()), b.span.clone()))),
+                            v => Err(Ctl::from(Error::new(format!("slice bounds must be int, got {}", v.type_name()), b.span.clone()))),
                         },
                     }
                 };
@@ -681,7 +690,7 @@ impl Interp {
                     Value::Table(t) => t.maps(),
                     Value::Str(s) => s.chars().map(|c| Value::str(c.to_string())).collect(),
                     v => {
-                        return Err(Ctl::Err(
+                        return Err(Ctl::from(
                             Error::new(format!("cannot loop over a {}", v.type_name()), iter.span.clone())
                                 .label(iter.span.clone(), format!("this is {}", crate::error::short(&v))),
                         ));
@@ -772,7 +781,7 @@ fn out_of_range(i: i64, len: usize, obj: &Expr, idx: &Expr) -> Ctl {
         _ => "it".into(),
     };
     let items = if matches!(obj.kind, ExprKind::Str(_)) { "character" } else { "item" };
-    Ctl::Err(Error::new(format!("index {i} out of range"), idx.span.clone()).note(format!("{what} has {len} {items}{}", if len == 1 { "" } else { "s" })))
+    Ctl::from(Error::new(format!("index {i} out of range"), idx.span.clone()).note(format!("{what} has {len} {items}{}", if len == 1 { "" } else { "s" })))
 }
 
 /// A binary operator's error, labeling each operand with its value. Mismatched quantities are named
@@ -784,7 +793,7 @@ fn operands(msg: String, op: BinOp, (a, av): (&Expr, &Value), (b, bv): (&Expr, &
         }
         _ => msg,
     };
-    Ctl::Err(Error::new(msg, a.span.clone()).label(a.span.clone(), crate::error::short(av)).label(b.span.clone(), crate::error::short(bv)))
+    Ctl::from(Error::new(msg, a.span.clone()).label(a.span.clone(), crate::error::short(av)).label(b.span.clone(), crate::error::short(bv)))
 }
 
 #[cfg(test)]
@@ -914,9 +923,12 @@ fib(10)";
     #[test]
     fn limits() {
         let run = |it: &mut Interp, src: &str| it.run(&crate::parser::parse(src).unwrap()).unwrap_err().msg;
+        let kind = |it: &mut Interp, src: &str| it.run(&crate::parser::parse(src).unwrap()).unwrap_err().limit;
         let mut it = Interp::new();
+        assert_eq!(kind(&mut it, "1 + nil"), None);
         it.limits.steps = 10_000;
         assert_eq!(run(&mut it, "while true {}"), "step limit reached");
+        assert_eq!(kind(&mut it, "while true {}"), Some(Limit::Steps));
         // Callbacks from builtins count too.
         assert_eq!(run(&mut it, "(1..1_000_000).map(|x| x)"), "step limit reached");
         it.limits.steps = u64::MAX;
@@ -925,6 +937,7 @@ fib(10)";
         assert!(!it.limits.interrupt.load(Ordering::Relaxed));
         it.limits.depth = 10;
         assert_eq!(run(&mut it, "g = |n| g(n + 1)\ng(0)"), "recursion too deep");
+        assert_eq!(kind(&mut it, "g(0)"), Some(Limit::Depth));
         it.limits.len = 100;
         it.limits.bits = 1000;
         for src in [
@@ -945,8 +958,12 @@ fib(10)";
         ] {
             assert!(run(&mut it, src).ends_with("result too large"), "{src}");
         }
+        assert_eq!(kind(&mut it, "2 ** 1001"), Some(Limit::Bits));
+        assert_eq!(kind(&mut it, "0..101"), Some(Limit::Len));
+        assert_eq!(kind(&mut it, "1 + nil"), None, "a hit doesn't carry over to the next run");
         it.limits.output = 10;
         assert_eq!(run(&mut it, "print(\"12345\"); print(\"12345\")"), "print: output limit reached");
+        assert_eq!(kind(&mut it, "print(\"12345678901\")"), Some(Limit::Output));
         // The count starts over each run.
         assert!(it.run(&crate::parser::parse("print(\"123456789\")").unwrap()).is_ok());
     }

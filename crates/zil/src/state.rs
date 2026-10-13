@@ -1,6 +1,7 @@
 //! What a session owns beyond its variables: its host, random numbers, units, currency rates, the network switch, the
 //! stopwatch. Each `Interp` has its own, and code deep in units or rates reaches the running session's through `with`.
 
+use crate::error::Limit;
 use crate::host::{self, Host};
 use crate::modules::units::{UnitDef, builtin_units};
 use jiff::Timestamp;
@@ -25,6 +26,9 @@ pub struct State {
     pub max_output: Cell<usize>,
     /// Bytes printed since the last `run` began.
     pub printed: Cell<usize>,
+    /// The size or output cap the last failed check hit, for `run` and `call` to put on their error.
+    // ponytail: a check whose error a builtin swallows leaves this set, so a later unrelated error in the run would carry it; pass it inside the error if that happens
+    pub hit: Cell<Option<Limit>>,
 }
 
 impl State {
@@ -42,6 +46,7 @@ impl State {
             max_bits: Cell::new(u64::MAX),
             max_output: Cell::new(usize::MAX),
             printed: Cell::new(0),
+            hit: Cell::new(None),
         })
     }
 }
@@ -65,6 +70,7 @@ pub fn with<T>(f: impl FnOnce(&State) -> T) -> T {
 pub fn check_len(n: usize, what: &str) -> Result<(), String> {
     let max = with(|s| s.max_len.get());
     if n > max {
+        with(|s| s.hit.set(Some(Limit::Len)));
         Err(format!(
             "result too large
 note: the limit is {max} {what}; this one has {n}"
@@ -78,6 +84,7 @@ note: the limit is {max} {what}; this one has {n}"
 pub fn check_bits(bits: u64) -> Result<(), String> {
     let max = with(|s| s.max_bits.get());
     if bits > max {
+        with(|s| s.hit.set(Some(Limit::Bits)));
         Err(format!(
             "result too large
 note: exact results stop at {max} bits, about {} digits",
@@ -95,6 +102,7 @@ pub fn check_output(n: usize) -> Result<(), String> {
         s.printed.set(total);
         let max = s.max_output.get();
         if total > max {
+            s.hit.set(Some(Limit::Output));
             Err(format!(
                 "output limit reached
 note: the limit is {max} bytes per run"
