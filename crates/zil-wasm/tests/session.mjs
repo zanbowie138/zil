@@ -34,6 +34,13 @@ assert.strictEqual(s.eval("big == 2**80"), true);
 assert.strictEqual(s.eval('o.k[1]'), "s");
 assert.strictEqual(String(s.eval("w to m/s")), String(s.eval("3 km/h to m/s")));
 assert.strictEqual(s.get("nope"), undefined);
+const double = s.eval("double = |x| x * 2");
+assert.strictEqual(s.call(double, [21]), 42);
+assert.strictEqual(String(s.get("double")), String(double));
+assert.strictEqual(s.call(s.get("max"), [1, 3]), 3);
+assert.strictEqual(s.call(s.eval("[|x| x + 1]")[0], [1]), 2);
+assert.throws(() => s.call(double, []), ZilError);
+assert.throws(() => s.set("f", double), TypeError);
 assert.throws(() => s.set("bad", { type: "quantity", value: 1, unit: "zzz" }), TypeError);
 try { s.eval("1 +\n  nope"); assert.fail(); } catch (e) {
   assert.ok(e instanceof ZilError); assert.deepStrictEqual([e.message, e.line, e.column, e.limit], ["undefined variable `nope`", 2, 3, undefined]); assert.ok(e.render().includes("nope"));

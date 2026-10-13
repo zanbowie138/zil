@@ -34,6 +34,15 @@ impl Session {
         self.0.run(std::slice::from_ref(&stmt.0))
     }
 
+    /// Calls a function value (from `eval` or `get`) with `args`, under the same limits as `eval`.
+    pub fn call(&mut self, f: &Value, args: Vec<Value>) -> Result<Value, Error> {
+        if !matches!(f, Value::Fn(_) | Value::Builtin(..)) {
+            return Err(Error::new(format!("a {} isn't a function", f.type_name()), 0..0));
+        }
+        self.0.begin();
+        self.0.call(f, args, &(0..0))
+    }
+
     /// What the script's `args()` returns.
     pub fn set_args(&mut self, args: Vec<String>) {
         self.0.args = args
@@ -103,6 +112,10 @@ mod tests {
         s.set("y", Value::int(21));
         assert_eq!(s.eval("f(y)").unwrap().to_string(), "42");
         assert!(s.get("f").is_some() && s.get("nope").is_none());
+        let f = s.get("f").unwrap();
+        assert_eq!(s.call(&f, vec![Value::int(4)]).unwrap().to_string(), "8");
+        assert_eq!(s.call(&s.get("max").unwrap(), vec![Value::int(1), Value::int(3)]).unwrap().to_string(), "3");
+        assert!(s.call(&Value::int(1), vec![]).is_err());
         s.limits().steps = 1000;
         assert_eq!(s.eval("while true {}").unwrap_err().limit, Some(Limit::Steps));
         assert!(s.eval(r#"read_file("x")"#).is_err());

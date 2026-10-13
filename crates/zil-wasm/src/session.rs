@@ -13,7 +13,7 @@
 //! | list, set, map | `Array`, `Set`, `Map` |
 //! | table | `{type: "table", columns, rows}` |
 //! | regex | `{type: "regex", source}` |
-//! | function | `{type: "function"}`, which doesn't convert back |
+//! | function | a `ZilFunction`, for `session.call(f, [args])`; it doesn't convert back |
 //!
 //! Every tagged object's `toString()` is zil's display of the value. Going in, plain objects are maps too.
 
@@ -23,7 +23,7 @@ use num_bigint::BigInt as Big;
 use num_rational::BigRational;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
-use zil::Data;
+use zil::{Data, Value};
 
 #[wasm_bindgen(inline_js = "export function tag(o, text) { Object.defineProperty(o, 'toString', { value: () => text }); return o; }")]
 extern "C" {
@@ -71,12 +71,19 @@ impl JsSession {
     /// Runs `src`, returning the last statement's value. Throws a `ZilError`.
     pub fn eval(&mut self, src: &str) -> Result<JsValue, ZilError> {
         let v = self.0.eval(src).map_err(|e| ZilError::new(e, src))?;
-        Ok(self.to_js(&v.to_data()))
+        Ok(self.to_js(&v))
     }
 
     /// A global variable or builtin, or `undefined`.
     pub fn get(&self, name: &str) -> JsValue {
-        self.0.get(name).map_or(JsValue::UNDEFINED, |v| self.to_js(&v.to_data()))
+        self.0.get(name).map_or(JsValue::UNDEFINED, |v| self.to_js(&v))
+    }
+
+    /// Calls `f` with `args`, under the same limits as `eval`. Throws a `ZilError`, or a `TypeError` for an argument zil can't hold.
+    pub fn call(&mut self, f: &ZilFunction, args: Option<Array>) -> Result<JsValue, JsValue> {
+        let args = args.unwrap_or_default().iter().map(|a| self.0.from_data(from_js(&a)?).map_err(|e| type_error(&e))).collect::<Result<_, _>>()?;
+        let v = self.0.call(&f.0, args).map_err(|e| ZilError::new(e, ""))?;
+        Ok(self.to_js(&v))
     }
 
     /// Sets a global variable. Throws a `TypeError` for a value zil can't hold.
@@ -88,35 +95,69 @@ impl JsSession {
 }
 
 impl JsSession {
-    fn to_js(&self, d: &Data) -> JsValue {
-        let tagged = |kind: &str, fields: &[(&str, JsValue)]| {
-            let o = Object::new();
-            Reflect::set(&o, &"type".into(), &kind.into()).unwrap();
-            for (k, v) in fields {
-                Reflect::set(&o, &(*k).into(), v).unwrap();
+    fn to_js(&self, v: &Value) -> JsValue {
+        self.0.enter(|| to_js(v))
+    }
+}
+
+/// A zil function, to call with `session.call(f, [args])`.
+#[wasm_bindgen]
+pub struct ZilFunction(Value);
+
+#[wasm_bindgen]
+impl ZilFunction {
+    /// `"function"`, like the tagged objects' `type`.
+    #[wasm_bindgen(getter, js_name = type)]
+    pub fn kind(&self) -> String {
+        "function".into()
+    }
+
+    #[wasm_bindgen(js_name = toString)]
+    pub fn js_to_string(&self) -> String {
+        self.0.to_string()
+    }
+}
+
+fn to_js(v: &Value) -> JsValue {
+    let tagged = |kind: &str, fields: &[(&str, JsValue)]| {
+        let o = Object::new();
+        Reflect::set(&o, &"type".into(), &kind.into()).unwrap();
+        for (k, v) in fields {
+            Reflect::set(&o, &(*k).into(), v).unwrap();
+        }
+        tag(&o, &v.to_string()).into()
+    };
+    let all = |vs: &[Value]| vs.iter().map(to_js).collect::<Array>();
+    match v {
+        Value::Fn(_) | Value::Builtin(..) => ZilFunction(v.clone()).into(),
+        Value::List(l) => all(&l.borrow()).into(),
+        Value::Set(s) => js_sys::Set::new(&s.borrow().iter().map(to_js).collect::<Array>()).into(),
+        Value::Map(m) => {
+            let out = js_sys::Map::new();
+            for (k, v) in m.borrow().iter() {
+                out.set(&k.into(), &to_js(v));
             }
-            // Display only: rebuilding the value is how zil shows it, user units included.
-            let text = match d {
-                Data::Fn(s) => s.clone(),
-                d => self.0.from_data(d.clone()).map(|v| v.to_string()).unwrap_or_default(),
-            };
-            tag(&o, &text).into()
-        };
-        let all = |ds: &[Data]| ds.iter().map(|d| self.to_js(d)).collect::<Array>();
-        match d {
+            out.into()
+        }
+        Value::Table(t) => {
+            let columns: Array = t.cols.iter().map(JsValue::from).collect();
+            let rows: Array = t.rows.iter().map(|r| JsValue::from(all(r))).collect();
+            tagged("table", &[("columns", columns.into()), ("rows", rows.into())])
+        }
+        v => match v.to_data() {
             Data::Nil => JsValue::NULL,
-            Data::Bool(b) => (*b).into(),
-            Data::Int(n) if n.unsigned_abs() <= MAX_SAFE => (*n as f64).into(),
-            Data::Int(n) => BigInt::from(*n).into(),
-            Data::Big(n) => big(n),
+            Data::Bool(b) => b.into(),
+            Data::Int(n) if n.unsigned_abs() <= MAX_SAFE => (n as f64).into(),
+            Data::Int(n) => BigInt::from(n).into(),
+            Data::Big(n) => big(&n),
             Data::Frac(r) => {
                 let value = r.numer().to_string().parse::<f64>().unwrap_or(f64::NAN) / r.denom().to_string().parse::<f64>().unwrap_or(f64::NAN);
                 tagged("frac", &[("num", big(r.numer())), ("den", big(r.denom())), ("value", value.into())])
             }
-            Data::Float(x) => (*x).into(),
-            Data::Qty { value, unit } => tagged("quantity", &[("value", (*value).into()), ("unit", unit.into())]),
-            Data::Unc { value, error, unit } => tagged("uncertain", &[("value", (*value).into()), ("error", (*error).into()), ("unit", unit.into())]),
-            Data::Cplx { re, im } => tagged("complex", &[("re", (*re).into()), ("im", (*im).into())]),
+            Data::Float(x) => x.into(),
+            Data::Qty { value, unit } => tagged("quantity", &[("value", value.into()), ("unit", unit.into())]),
+            Data::Unc { value, error, unit } => tagged("uncertain", &[("value", value.into()), ("error", error.into()), ("unit", unit.into())]),
+            Data::Cplx { re, im } => tagged("complex", &[("re", re.into()), ("im", im.into())]),
             Data::Str(s) => s.into(),
             Data::Regex(s) => tagged("regex", &[("source", s.into())]),
             Data::Date(iso) => {
@@ -124,22 +165,9 @@ impl JsSession {
                 let tz = z.time_zone().iana_name().map_or_else(|| z.offset().to_string(), String::from);
                 tagged("date", &[("iso", iso.into()), ("tz", tz.into()), ("epochMs", (z.timestamp().as_millisecond() as f64).into())])
             }
-            Data::List(ds) => all(ds).into(),
-            Data::Set(ds) => js_sys::Set::new(&all(ds)).into(),
-            Data::Map(kvs) => {
-                let m = js_sys::Map::new();
-                for (k, d) in kvs {
-                    m.set(&k.into(), &self.to_js(d));
-                }
-                m.into()
-            }
-            Data::Table { cols, rows } => {
-                let columns: Array = cols.iter().map(JsValue::from).collect();
-                let rows: Array = rows.iter().map(|r| JsValue::from(all(r))).collect();
-                tagged("table", &[("columns", columns.into()), ("rows", rows.into())])
-            }
-            Data::Fn(_) => tagged("function", &[]),
-        }
+            // The containers and functions are handled above.
+            Data::List(_) | Data::Set(_) | Data::Map(_) | Data::Table { .. } | Data::Fn(_) => unreachable!(),
+        },
     }
 }
 
@@ -193,6 +221,7 @@ fn from_js(v: &JsValue) -> Result<Data, JsValue> {
             Some("complex") => Data::Cplx { re: num("re")?, im: num("im")? },
             Some("date") => Data::Date(text("iso")?),
             Some("regex") => Data::Regex(text("source")?),
+            Some("function") => return Err(type_error("a zil function can't be passed back in; call it with session.call")),
             Some("table") => Data::Table {
                 cols: Array::from(&field("columns"))
                     .iter()
@@ -200,7 +229,6 @@ fn from_js(v: &JsValue) -> Result<Data, JsValue> {
                     .collect::<Result<_, _>>()?,
                 rows: Array::from(&field("rows")).iter().map(|r| all(&r)).collect::<Result<_, _>>()?,
             },
-            Some("function") => return Err(type_error("a zil function can't be passed back in")),
             _ => Data::Map(
                 Object::entries(v.unchecked_ref())
                     .iter()

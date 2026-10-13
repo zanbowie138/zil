@@ -209,10 +209,8 @@ impl Interp {
 
     pub fn run(&mut self, prog: &[Expr]) -> Result<Value, Error> {
         let (globals, state) = (self.globals.clone(), self.state.clone());
-        self.steps = 0;
-        self.state.printed.set(0);
+        self.begin();
         self.share_caps();
-        self.deadline = self.limits.seconds.and_then(|s| state.host.now().checked_add(jiff::SignedDuration::try_from_secs_f64(s).ok()?).ok());
         crate::state::enter(&state, || {
             let mut last = Value::Nil;
             for stmt in prog {
@@ -221,6 +219,13 @@ impl Interp {
             Ok(last)
         })
         .map_err(|e| self.tag(e))
+    }
+
+    /// Starts a fresh run's budgets: steps, the deadline and the output count.
+    pub fn begin(&mut self) {
+        self.steps = 0;
+        self.state.printed.set(0);
+        self.deadline = self.limits.seconds.and_then(|s| self.state.host.now().checked_add(jiff::SignedDuration::try_from_secs_f64(s).ok()?).ok());
     }
 
     pub fn call(&mut self, f: &Value, args: Vec<Value>, span: &Span) -> Result<Value, Error> {
