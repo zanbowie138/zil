@@ -1,8 +1,8 @@
 //! What a REPL does with each input, shared by the terminal REPL (`zil-cli`) and the browser's (`zil-wasm`):
 //! when a line continues, `help topic` shorthand, and results saved and labeled as `_n`.
 
+use crate::Session;
 use crate::ansi::{RESET, Role, tint};
-use crate::interp::Interp;
 use crate::lexer::{self, Tok};
 use crate::value::Value;
 
@@ -53,17 +53,17 @@ pub enum Shown {
 }
 
 /// Saves a result as `_`, and as the next `_n` (counted in `n`) when it's numbered.
-pub fn record(interp: &mut Interp, n: &mut usize, v: &Value) -> Shown {
+pub fn record(s: &mut Session, n: &mut usize, v: &Value) -> Shown {
     let shown = match v {
         Value::Nil | Value::Fn(_) => return Shown::Hidden,
         Value::Str(s) if s.contains('\n') => Shown::Bare,
         _ => {
             *n += 1;
-            interp.set_global(&format!("_{n}"), v.clone());
+            s.set(&format!("_{n}"), v.clone());
             Shown::Numbered(*n)
         }
     };
-    interp.set_global("_", v.clone());
+    s.set("_", v.clone());
     shown
 }
 
@@ -90,9 +90,9 @@ mod tests {
         assert_eq!(help_shorthand("help"), Some(None));
         assert_eq!(help_shorthand("help(upper)"), None);
 
-        let (mut it, mut n) = (Interp::new(), 0);
+        let (mut it, mut n) = (Session::new(crate::host::get()), 0);
         let mut put = |src: &str| {
-            let v = crate::run(&mut it, src).unwrap();
+            let v = it.eval(src).unwrap();
             match record(&mut it, &mut n, &v) {
                 Shown::Hidden => "hidden".to_string(),
                 Shown::Bare => "bare".to_string(),

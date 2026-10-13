@@ -4,13 +4,11 @@ mod docs;
 mod repl;
 
 use std::process::exit;
-use zil::interp::Interp;
-use zil::value::Value;
-use zil::{Error, STACK, ansi, help, modules};
+use zil::{Error, STACK, Session, Value, ansi, help, modules};
 
 /// Run `src` and exit with status 1 on error.
-fn run_or_exit(interp: &mut Interp, name: &str, src: &str) -> Value {
-    zil::run(interp, src).unwrap_or_else(|e: Error| {
+fn run_or_exit(session: &mut Session, name: &str, src: &str) -> Value {
+    session.eval(src).unwrap_or_else(|e: Error| {
         report(name, src, e);
         exit(1)
     })
@@ -32,13 +30,13 @@ fn main() {
 }
 
 fn real_main() {
-    let mut interp = Interp::new();
+    let mut session = Session::new(zil::host::get());
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.as_slice() {
-        [] => repl::repl(&mut interp),
+        [] => repl::repl(session),
         [flag, code, rest @ ..] if flag == "-e" => {
-            interp.args = rest.to_vec();
-            match help::live(repl::help_term(code), || run_or_exit(&mut interp, "<-e>", code)) {
+            session.set_args(rest.to_vec());
+            match help::live(repl::help_term(code), || run_or_exit(&mut session, "<-e>", code)) {
                 Value::Nil => {}
                 Value::Table(t) => println!("{}", modules::data::tables::grid(&t, ansi::color_on())),
                 v => println!("{v}"),
@@ -51,12 +49,12 @@ fn real_main() {
         [flag] if flag == "-h" || flag == "--help" => println!("{USAGE}"),
         [flag] if flag == "-V" || flag == "--version" => println!("zil {}", env!("CARGO_PKG_VERSION")),
         [path, rest @ ..] if !path.starts_with('-') => {
-            interp.args = rest.to_vec();
+            session.set_args(rest.to_vec());
             let src = std::fs::read_to_string(path).unwrap_or_else(|e| {
                 eprintln!("zil: {path}: {e}");
                 exit(1)
             });
-            run_or_exit(&mut interp, path, &src);
+            run_or_exit(&mut session, path, &src);
         }
         _ => {
             eprintln!("{USAGE}");

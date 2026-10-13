@@ -245,13 +245,13 @@ mod tests {
     /// Every step runs in one session, as the sandbox's REPL would; the network one only has to parse.
     #[test]
     fn tour_runs() {
-        let (mut interp, mut n) = (crate::Interp::new(), 0);
+        let (mut interp, mut n) = (crate::Session::new(crate::host::get()), 0);
         for (text, src) in TOUR.iter().flat_map(|c| c.1) {
             assert_eq!(text.matches('`').count() % 2, 0, "{text}");
             if src.contains("allow_network_access") {
                 assert!(crate::parser::parse(src).is_ok(), "{src}");
             } else if !src.is_empty() {
-                let v = crate::run(&mut interp, src).unwrap_or_else(|e| panic!("{src}: {}", e.msg));
+                let v = interp.eval(src).unwrap_or_else(|e| panic!("{src}: {}", e.msg));
                 crate::repl::record(&mut interp, &mut n, &v);
             }
         }

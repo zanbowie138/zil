@@ -7,16 +7,14 @@ use wasm_bindgen::prelude::wasm_bindgen;
 use zil::ansi::{RESET, Role, strip_ansi, tint, to_html};
 use zil::ast::ExprKind;
 use zil::host::Host;
-use zil::interp::Interp;
 use zil::repl::{self, Shown};
-use zil::value::Value;
-use zil::{help, parser};
+use zil::{Session, Value, help, parser};
 
 thread_local! {
     /// What the program printed, since the last `take_output`.
     static OUT: RefCell<String> = const { RefCell::new(String::new()) };
-    /// The sandbox's REPL: one interpreter for the whole session, and how many results it has numbered.
-    static SESSION: RefCell<(Interp, usize)> = RefCell::new((sandboxed(), 0));
+    /// The sandbox's REPL: one session for the whole page, and how many results it has numbered.
+    static SESSION: RefCell<(Session, usize)> = RefCell::new((sandboxed(), 0));
 }
 
 /// The browser: output collects for the page to take, the clock and randomness come from JS, and HTTP goes through the
@@ -59,12 +57,12 @@ fn start() {
     zil::state::set_default_host(Rc::new(JsHost));
 }
 
-/// An interpreter whose runaway code errors well inside the page's 10 s worker kill, so a REPL session survives it.
-fn sandboxed() -> Interp {
-    let mut interp = Interp::new();
-    interp.limits.seconds = Some(5.0);
-    interp.limits.output = 1 << 20;
-    interp
+/// A session whose runaway code errors well inside the page's 10 s worker kill, so a REPL session survives it.
+fn sandboxed() -> Session {
+    let mut s = Session::new(zil::host::get());
+    s.limits().seconds = Some(5.0);
+    s.limits().output = 1 << 20;
+    s
 }
 
 /// Everything printed since the last call.
@@ -82,7 +80,7 @@ fn shown(v: &Value) -> String {
     }
 }
 
-/// Runs a script in a fresh interpreter: `[printed, result, error, lines]`, the first three HTML and possibly empty.
+/// Runs a script in a fresh session: `[printed, result, error, lines]`, the first three HTML and possibly empty.
 /// `lines` is JSON `[[line, text], ...]`: each 0-based line ending a statement with a one-line value, and the error's
 /// line, for the editor to show beside the code.
 #[wasm_bindgen]
@@ -97,11 +95,11 @@ pub fn run(src: &str) -> Vec<String> {
             (String::new(), e.render("sandbox", src, true))
         }
         Ok(prog) => {
-            let mut interp = sandboxed();
+            let mut session = sandboxed();
             let mut out = Ok(Value::Nil);
             for (i, stmt) in prog.iter().enumerate() {
                 let line = last_line(stmt.span.end);
-                out = interp.run(&prog[i..=i]);
+                out = session.run(&prog[i..=i]);
                 // A loop's value is just its last pass; `x = 5; x += 2` on one line shows only the last.
                 lines.retain(|l| l.0 != line);
                 match &out {
@@ -129,7 +127,7 @@ pub fn run(src: &str) -> Vec<String> {
     html
 }
 
-/// Runs a docs code block one top-level statement at a time in one interpreter, like typing it into the REPL.
+/// Runs a docs code block one top-level statement at a time in one session, like typing it into the REPL.
 /// Returns JSON `[[line, text], ...]`: plain text to show after each 0-based `line` that ends a statement with output.
 /// Assignments and loops stay quiet, so a recipe shows only what it prints and its last value.
 #[wasm_bindgen]
@@ -138,12 +136,12 @@ pub fn notebook(src: &str) -> String {
     let rows: Vec<(usize, String)> = match parser::parse(src) {
         Err(e) => vec![(last_line(src.len()), format!("error: {}", e.msg))],
         Ok(prog) => {
-            let mut interp = sandboxed();
+            let mut session = sandboxed();
             take_output();
             prog.iter()
                 .enumerate()
                 .filter_map(|(i, stmt)| {
-                    let r = interp.run(&prog[i..=i]);
+                    let r = session.run(&prog[i..=i]);
                     let line = last_line(stmt.span.end);
                     // `x = 5; x += 2; x` shows one result, like a REPL line.
                     let quiet = matches!(stmt.kind, ExprKind::Assign(..) | ExprKind::Unpack(..) | ExprKind::For(..) | ExprKind::While(..))
@@ -207,8 +205,8 @@ pub fn repl(src: &str) -> Vec<String> {
     let (shown, err) = help::linked(repl::help_call(src), || match repl::help_shorthand(src) {
         Some(topic) => (help::help(topic, true).unwrap_or_else(|e| e), String::new()),
         // Like the terminal REPL, a bare `help(...)` or `tip()` comes back colored; the log scrolls, so nothing wraps.
-        None => SESSION.with_borrow_mut(|(interp, n)| match help::live(repl::help_call(src).then_some((true, usize::MAX)), || zil::run(interp, src)) {
-            Ok(v) => match repl::record(interp, n, &v) {
+        None => SESSION.with_borrow_mut(|(session, n)| match help::live(repl::help_call(src).then_some((true, usize::MAX)), || session.eval(src)) {
+            Ok(v) => match repl::record(session, n, &v) {
                 Shown::Hidden => (String::new(), String::new()),
                 Shown::Bare => (v.to_string(), String::new()),
                 Shown::Numbered(k) => (repl::show(k, &v, true), String::new()),

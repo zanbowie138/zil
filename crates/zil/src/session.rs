@@ -1,7 +1,8 @@
 //! The embedding API: one sandboxed session of zil code.
 
+use crate::ast::Expr;
 use crate::host::Host;
-use crate::interp::{Interp, Limits, lookup};
+use crate::interp::{Interp, Limits, lookup, names};
 use crate::{Data, Error, Value};
 use std::rc::Rc;
 
@@ -27,6 +28,16 @@ impl Session {
         crate::run(&mut self.0, src)
     }
 
+    /// Runs already-parsed statements, e.g. one at a time to show each result.
+    pub fn run(&mut self, prog: &[Expr]) -> Result<Value, Error> {
+        self.0.run(prog)
+    }
+
+    /// What the script's `args()` returns.
+    pub fn set_args(&mut self, args: Vec<String>) {
+        self.0.args = args
+    }
+
     /// Sets a global variable.
     pub fn set(&mut self, name: &str, v: Value) {
         self.0.set_global(name, v)
@@ -37,9 +48,19 @@ impl Session {
         lookup(&self.0.globals(), name)
     }
 
+    /// Every global variable's name, builtins included.
+    pub fn names(&self) -> Vec<String> {
+        names(&self.0.globals())
+    }
+
+    /// Runs `f` with this session's units (user units too) and host in scope, for unit lookups outside `eval`.
+    pub fn enter<R>(&self, f: impl FnOnce() -> R) -> R {
+        crate::state::enter(&self.0.state(), f)
+    }
+
     /// The value `d` describes, with units resolved in this session (so user units work too).
     pub fn from_data(&self, d: Data) -> Result<Value, String> {
-        crate::state::enter(&self.0.state(), || Value::from_data(d))
+        self.enter(|| Value::from_data(d))
     }
 
     /// Caps on each `eval`; hitting one is an `Error` whose `limit` says which.

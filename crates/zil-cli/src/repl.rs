@@ -3,21 +3,19 @@
 use crate::report;
 use rustyline::error::ReadlineError;
 use std::borrow::Cow;
+use std::cell::RefCell;
 use std::rc::Rc;
 use zil::ansi::{RESET, Role, color_on, highlight};
-use zil::interp::{self, Interp};
 use zil::lexer::{self, Tok};
 use zil::repl::{self, Shown, help_shorthand, unclosed};
-use zil::state::{self, State};
-use zil::value::Value;
-use zil::{ast, cache_dir, help, modules, pager, parser, run};
+use zil::{Session, Value, ast, cache_dir, help, modules, pager, parser};
 
 /// REPL tab completion over builtins, constants, `to` targets, units, help topics and
 /// variables in scope. After `.`, only functions; after `to`, every unit the left side converts to.
-struct Names(Vec<String>, interp::Env, Rc<State>);
+struct Names(Vec<String>, Rc<RefCell<Session>>);
 
 impl Names {
-    fn new(interp: &Interp) -> Names {
+    fn new(session: Rc<RefCell<Session>>) -> Names {
         let mut v: Vec<String> = modules::ALL.iter().map(|(path, _)| path.clone()).collect();
         v.extend(
             modules::modules()
@@ -29,7 +27,7 @@ impl Names {
         v.extend(["syntax", "examples", "advanced"].map(String::from));
         v.sort();
         v.dedup();
-        Names(v, interp.globals(), interp.state())
+        Names(v, session)
     }
 
     /// Units convertible from the expression before a trailing `to`, read from literals and
@@ -47,7 +45,7 @@ impl Names {
         }
         let dim = match &e.kind {
             ast::ExprKind::Qty(_, spec) => modules::units::known_dim(spec)?,
-            ast::ExprKind::Ident(name) => match interp::lookup(&self.1, name) {
+            ast::ExprKind::Ident(name) => match self.1.borrow().get(name) {
                 Some(Value::Qty(_, u)) => u.dim(),
                 _ => modules::units::known_dim(&vec![(name.clone(), 1)])?,
             },
@@ -63,15 +61,16 @@ impl rustyline::completion::Completer for Names {
         let start = pos - line[..pos].chars().rev().take_while(|c| c.is_alphanumeric() || *c == '_').map(char::len_utf8).sum::<usize>();
         let word = &line[start..pos];
         // Units come from this session's own, user-made ones included.
-        let mut hits: Vec<String> = state::enter(&self.2, || {
+        let session = self.1.borrow();
+        let mut hits: Vec<String> = session.enter(|| {
             if let Some(units) = self.conversions(&line[..start]) {
                 units
             } else if line[..start].ends_with('.') {
-                interp::methods(&self.1)
+                session.names().into_iter().filter(|n| matches!(session.get(n), Some(Value::Fn(_) | Value::Builtin(..)))).collect()
             } else if word.is_empty() {
                 vec![]
             } else {
-                self.0.iter().cloned().chain(interp::names(&self.1)).chain(modules::units::user_units()).collect()
+                self.0.iter().cloned().chain(session.names()).chain(modules::units::user_units()).collect()
             }
         });
         hits.retain(|n| n.starts_with(word));
@@ -130,17 +129,18 @@ impl rustyline::ConditionalEventHandler for Stash {
     }
 }
 
-pub fn repl(interp: &mut Interp) {
+pub fn repl(session: Session) {
+    let session = Rc::new(RefCell::new(session));
     let config = rustyline::Config::builder().completion_type(rustyline::CompletionType::List).build();
     let mut rl = rustyline::Editor::with_config(config).expect("terminal");
-    rl.set_helper(Some(Names::new(interp)));
+    rl.set_helper(Some(Names::new(Rc::clone(&session))));
     let stashed = std::sync::Arc::default();
     rl.bind_sequence(
         rustyline::KeyEvent(rustyline::KeyCode::Char('q'), rustyline::Modifiers::ALT),
         rustyline::EventHandler::Conditional(Box::new(Stash(std::sync::Arc::clone(&stashed)))),
     );
     // Ctrl-C while code runs stops it; while reading a line, rustyline sees it as a key instead.
-    let interrupt = std::sync::Arc::clone(&interp.limits.interrupt);
+    let interrupt = std::sync::Arc::clone(&session.borrow_mut().limits().interrupt);
     let _ = ctrlc::set_handler(move || interrupt.store(true, std::sync::atomic::Ordering::Relaxed));
     let history = cache_dir().map(|d| d.join("history.txt"));
     if let Some(h) = &history {
@@ -183,15 +183,16 @@ pub fn repl(interp: &mut Interp) {
             continue;
         }
         let _ = rl.add_history_entry(src.trim_end());
-        interp.limits.interrupt.store(false, std::sync::atomic::Ordering::Relaxed);
+        let mut session = session.borrow_mut();
+        session.limits().interrupt.store(false, std::sync::atomic::Ordering::Relaxed);
         // Printed directly, so it keeps its colors.
         if let Some(topic) = help_shorthand(&src) {
             pager::page(&help::live(help_term(&src), || help::help(topic, color_on())).unwrap_or_else(|e| e));
             println!();
             continue;
         }
-        match help::live(help_term(&src), || run(interp, &src)) {
-            Ok(v) => match repl::record(interp, &mut n, &v) {
+        match help::live(help_term(&src), || session.eval(&src)) {
+            Ok(v) => match repl::record(&mut session, &mut n, &v) {
                 Shown::Hidden => {}
                 Shown::Bare if help_term(&src).is_some() => pager::page(&v.to_string()),
                 Shown::Bare => println!("{v}"),
@@ -216,8 +217,8 @@ mod tests {
     fn completes_names_at_cursor() {
         let history = rustyline::history::DefaultHistory::new();
         let ctx = rustyline::Context::new(&history);
-        let mut interp = Interp::new();
-        let names = Names::new(&interp);
+        let session = Rc::new(RefCell::new(Session::new(zil::host::get())));
+        let names = Names::new(Rc::clone(&session));
         assert_eq!(names.complete("x.upp", 5, &ctx).unwrap(), (2, vec!["upper".to_string()]));
         assert!(names.complete("5 kilo", 6, &ctx).unwrap().1.contains(&"kilometers".to_string()));
         assert!(names.complete("x ", 2, &ctx).unwrap().1.is_empty());
@@ -228,11 +229,11 @@ mod tests {
         assert!(!length.contains(&"kg".into()) && !length.contains(&"kilometers".into()));
         assert_eq!(to("print(5 km to m"), ["m", "marathon", "mi", "mm"]);
         assert!(to("y = 60 km/h to ").contains(&"mph".into()));
-        run(&mut interp, "x = 3 kg").unwrap();
+        session.borrow_mut().eval("x = 3 kg").unwrap();
         assert!(to("x to ").contains(&"g".into()));
         assert!(to("z to ").is_empty());
 
-        run(&mut interp, "my_total = 1; my_fn = |x| x").unwrap();
+        session.borrow_mut().eval("my_total = 1; my_fn = |x| x").unwrap();
         assert_eq!(to("my_"), ["my_fn", "my_total"]);
         assert_eq!(to("x.my_"), ["my_fn"]);
         assert!(!to("x.").contains(&"km".into()) && to("x.").contains(&"upper".into()));
@@ -244,7 +245,7 @@ mod tests {
         use rustyline::hint::Hinter;
         let history = rustyline::history::DefaultHistory::new();
         let ctx = rustyline::Context::new(&history);
-        let names = Names::new(&Interp::new());
+        let names = Names::new(Rc::new(RefCell::new(Session::new(zil::host::get()))));
         assert_eq!(names.hint("x.upp", 5, &ctx).as_deref(), Some("er"));
         assert_eq!(names.hint("x.upp", 3, &ctx), None);
         let line = names.highlight("if x 5 \"s\"", 0);
