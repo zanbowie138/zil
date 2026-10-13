@@ -1488,7 +1488,7 @@ checksum = "e13084392c5e4bc371903e2935a5eaeed24905a7511356b883835e18a78f6879"
 
 [[package]]
 name = "zil"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "ariadne",
  "base64",
@@ -1516,7 +1516,7 @@ dependencies = [
 
 [[package]]
 name = "zil-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "crossterm",
  "jiff",
@@ -1528,7 +1528,7 @@ dependencies = [
 
 [[package]]
 name = "zil-wasm"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "fastrand",
  "jiff",
