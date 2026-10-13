@@ -73,10 +73,21 @@ impl Error {
     pub fn span(&self) -> Span {
         self.labels[0].0.clone()
     }
+
+    /// Where the error starts in `src`: 1-based line and column, the column counted in characters.
+    pub fn line_col(&self, src: &str) -> (usize, usize) {
+        let before = src.get(..self.span().start).unwrap_or(src);
+        let line_start = before.rfind('\n').map_or(0, |i| i + 1);
+        (before.matches('\n').count() + 1, before[line_start..].chars().count() + 1)
+    }
+
+    /// The report for this error in `src` (called `name`), as the terminal shows it: ANSI colored if `color`, else plain.
+    pub fn render(&self, name: &str, src: &str, color: bool) -> String {
+        render(self, name, src, color)
+    }
 }
 
-/// The report for `e` in `src` (called `name`), as the terminal shows it.
-pub fn render(e: &Error, name: &str, src: &str, color: bool) -> String {
+fn render(e: &Error, name: &str, src: &str, color: bool) -> String {
     let labels = e.labels.iter().map(|(span, text)| Label::new((name, span.clone())).with_color(Color::Red).with_message(text));
     let config = Config::default().with_color(color).with_index_type(IndexType::Byte);
     let mut r = Report::build(ReportKind::Error, (name, e.span())).with_config(config).with_message(&e.msg).with_labels(labels);
@@ -154,6 +165,9 @@ mod tests {
         assert_eq!(did_you_mean("qqqq", ["upper"]), "");
         let e = Error::new("bad\nnote: n\nhelp: h", 0..1);
         assert_eq!((e.msg.as_str(), e.notes, e.help), ("bad", vec!["n".to_string()], vec!["h".to_string()]));
+        let src = "x = 1\ny = \"é\" + )";
+        assert_eq!(crate::parser::parse(src).unwrap_err().line_col(src), (2, 11));
+        assert_eq!(Error::new("past the end", 99..99).line_col("a\nb"), (2, 2));
     }
 
     /// `src/errors.snap`: `>>> source` lines, each followed by its plain report. `UPDATE=1 cargo test` rewrites the reports.
@@ -168,7 +182,7 @@ mod tests {
                 let src = src.replace("\\n", "\n");
                 let report = match crate::run(&mut crate::interp::Interp::new(), &src) {
                     Ok(v) => format!("ok: {v:?}\n"),
-                    Err(e) => render(&e, "<-e>", &src, false),
+                    Err(e) => e.render("<-e>", &src, false),
                 };
                 out += &format!(">>> {}\n{}\n", src.replace('\n', "\\n"), report.trim_end());
             }

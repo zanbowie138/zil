@@ -69,5 +69,5 @@ fn real_main() {
 fn report(name: &str, src: &str, e: Error) {
     use std::io::IsTerminal;
     let color = std::io::stderr().is_terminal() && std::env::var_os("NO_COLOR").is_none();
-    eprint!("{}", zil::error::render(&e, name, src, color));
+    eprint!("{}", e.render(name, src, color));
 }

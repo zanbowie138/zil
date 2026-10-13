@@ -10,7 +10,7 @@ use zil::host::Host;
 use zil::interp::Interp;
 use zil::repl::{self, Shown};
 use zil::value::Value;
-use zil::{error, help, parser};
+use zil::{help, parser};
 
 thread_local! {
     /// What the program printed, since the last `take_output`.
@@ -89,12 +89,12 @@ fn shown(v: &Value) -> String {
 pub fn run(src: &str) -> Vec<String> {
     take_output();
     let last_line = |end: usize| src[..end].trim_end().matches('\n').count();
-    let error_line = |e: &zil::Error| src[..e.labels.first().map_or(src.len(), |l| l.0.start).min(src.len())].matches('\n').count();
+    let error_line = |e: &zil::Error| e.line_col(src).0 - 1;
     let mut lines: Vec<(usize, String)> = Vec::new();
     let (result, err) = match parser::parse(src) {
         Err(e) => {
             lines.push((error_line(&e), format!("error: {}", e.msg)));
-            (String::new(), error::render(&e, "sandbox", src, true))
+            (String::new(), e.render("sandbox", src, true))
         }
         Ok(prog) => {
             let mut interp = sandboxed();
@@ -120,7 +120,7 @@ pub fn run(src: &str) -> Vec<String> {
             }
             match out {
                 Ok(v) => (shown(&v), String::new()),
-                Err(e) => (String::new(), error::render(&e, "sandbox", src, true)),
+                Err(e) => (String::new(), e.render("sandbox", src, true)),
             }
         }
     };
@@ -213,7 +213,7 @@ pub fn repl(src: &str) -> Vec<String> {
                 Shown::Bare => (v.to_string(), String::new()),
                 Shown::Numbered(k) => (repl::show(k, &v, true), String::new()),
             },
-            Err(e) => (String::new(), error::render(&e, "<repl>", src, true)),
+            Err(e) => (String::new(), e.render("<repl>", src, true)),
         }),
     });
     [take_output(), shown, err].iter().map(|s| to_html(s.trim_end())).collect()
