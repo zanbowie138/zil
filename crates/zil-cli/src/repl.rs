@@ -7,7 +7,7 @@ use std::rc::Rc;
 use zil::ansi::{RESET, Role, color_on, highlight};
 use zil::interp::{self, Interp};
 use zil::lexer::{self, Tok};
-use zil::session::{self, Shown, help_shorthand, unclosed};
+use zil::repl::{self, Shown, help_shorthand, unclosed};
 use zil::state::{self, State};
 use zil::value::Value;
 use zil::{ast, cache_dir, help, modules, pager, parser, run};
@@ -111,10 +111,10 @@ impl rustyline::highlight::Highlighter for Names {
     }
 }
 
-/// Help shaped for stdout, `(color, width)`, if `src` is help printed straight to it (see `session::help_call`).
+/// Help shaped for stdout, `(color, width)`, if `src` is help printed straight to it (see `repl::help_call`).
 pub fn help_term(src: &str) -> Option<(bool, usize)> {
     let (terminal_size::Width(w), _) = terminal_size::terminal_size_of(std::io::stdout())?;
-    session::help_call(src).then_some((color_on(), w as usize))
+    repl::help_call(src).then_some((color_on(), w as usize))
 }
 
 impl rustyline::validate::Validator for Names {}
@@ -191,11 +191,11 @@ pub fn repl(interp: &mut Interp) {
             continue;
         }
         match help::live(help_term(&src), || run(interp, &src)) {
-            Ok(v) => match session::record(interp, &mut n, &v) {
+            Ok(v) => match repl::record(interp, &mut n, &v) {
                 Shown::Hidden => {}
                 Shown::Bare if help_term(&src).is_some() => pager::page(&v.to_string()),
                 Shown::Bare => println!("{v}"),
-                Shown::Numbered(k) => println!("{}", session::show(k, &v, color_on())),
+                Shown::Numbered(k) => println!("{}", repl::show(k, &v, color_on())),
             },
             Err(e) => report("<repl>", &src, e),
         }

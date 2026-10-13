@@ -252,7 +252,7 @@ mod tests {
                 assert!(crate::parser::parse(src).is_ok(), "{src}");
             } else if !src.is_empty() {
                 let v = crate::run(&mut interp, src).unwrap_or_else(|e| panic!("{src}: {}", e.msg));
-                crate::session::record(&mut interp, &mut n, &v);
+                crate::repl::record(&mut interp, &mut n, &v);
             }
         }
         assert!(TOUR.last().unwrap().1.last().unwrap().1.is_empty(), "the last step opens Script mode");

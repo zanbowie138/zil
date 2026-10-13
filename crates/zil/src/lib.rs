@@ -25,7 +25,8 @@ pub mod pager;
 #[doc(hidden)]
 pub mod parser;
 #[doc(hidden)]
-pub mod session;
+pub mod repl;
+mod session;
 mod signature;
 #[doc(hidden)]
 pub mod state;
@@ -34,9 +35,11 @@ pub mod value;
 
 use interp::Interp;
 use std::path::PathBuf;
-use value::Value;
 
-pub use error::Error;
+pub use error::{Error, Limit};
+pub use interp::Limits;
+pub use session::Session;
+pub use value::Value;
 
 /// A line of program output, from `print` and friends.
 fn print(s: &str) {

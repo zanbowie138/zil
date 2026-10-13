@@ -8,7 +8,7 @@ use zil::ansi::{RESET, Role, strip_ansi, tint, to_html};
 use zil::ast::ExprKind;
 use zil::host::Host;
 use zil::interp::Interp;
-use zil::session::{self, Shown};
+use zil::repl::{self, Shown};
 use zil::value::Value;
 use zil::{error, help, parser};
 
@@ -196,7 +196,7 @@ pub fn repl_reset() -> String {
 /// Whether Enter should continue `src` on a new line instead of running it.
 #[wasm_bindgen]
 pub fn repl_open(src: &str) -> bool {
-    session::unclosed(src)
+    repl::unclosed(src)
 }
 
 /// Runs one REPL input in the session, as the terminal REPL would: `[printed, shown, error]` as HTML, like `run`.
@@ -204,14 +204,14 @@ pub fn repl_open(src: &str) -> bool {
 pub fn repl(src: &str) -> Vec<String> {
     take_output();
     // Help shown straight to the screen links its names and examples, for the sandbox to make clickable.
-    let (shown, err) = help::linked(session::help_call(src), || match session::help_shorthand(src) {
+    let (shown, err) = help::linked(repl::help_call(src), || match repl::help_shorthand(src) {
         Some(topic) => (help::help(topic, true).unwrap_or_else(|e| e), String::new()),
         // Like the terminal REPL, a bare `help(...)` or `tip()` comes back colored; the log scrolls, so nothing wraps.
-        None => SESSION.with_borrow_mut(|(interp, n)| match help::live(session::help_call(src).then_some((true, usize::MAX)), || zil::run(interp, src)) {
-            Ok(v) => match session::record(interp, n, &v) {
+        None => SESSION.with_borrow_mut(|(interp, n)| match help::live(repl::help_call(src).then_some((true, usize::MAX)), || zil::run(interp, src)) {
+            Ok(v) => match repl::record(interp, n, &v) {
                 Shown::Hidden => (String::new(), String::new()),
                 Shown::Bare => (v.to_string(), String::new()),
-                Shown::Numbered(k) => (session::show(k, &v, true), String::new()),
+                Shown::Numbered(k) => (repl::show(k, &v, true), String::new()),
             },
             Err(e) => (String::new(), error::render(&e, "<repl>", src, true)),
         }),
