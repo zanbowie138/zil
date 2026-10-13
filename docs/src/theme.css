@@ -12,6 +12,8 @@
   --sl-color-white: #faf8f3; --sl-color-gray-1: #ebe9e3; --sl-color-gray-2: #c9c5bb; --sl-color-gray-3: #9a958b;
   --sl-color-gray-4: #67635b; --sl-color-gray-5: #3a3935; --sl-color-gray-6: #1d1d1b; --sl-color-black: #131312;
   --sl-color-accent-low: #3a2116; --sl-color-accent: #ff7b3f; --sl-color-accent-high: #ffc2a3;
+  /* links and the active sidebar item in the accent, not Starlight's pale accent-high */
+  --sl-color-text-accent: var(--accent); --sl-color-text-invert: var(--accent-ink);
   --sl-color-hairline: var(--line); --sl-color-hairline-light: var(--line); --sl-color-hairline-shade: var(--line);
   --sl-color-bg-inline-code: var(--sunk);
 }
@@ -61,12 +63,23 @@ kbd { font: 500 11px var(--mono); padding: 1px 5px; border: 1px solid var(--line
 .sl-markdown-content h3 { font-size: var(--sl-text-xl); }
 .sl-markdown-content .generated { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); font-size: var(--sl-text-xs); color: var(--sl-color-gray-3); }
 
-/* runnable examples (lib/runnable.js) */
+/* runnable examples: built as an editor (ec.config.mjs), CodeMirror once you point at one (lib/runnable.js); both line up */
 .zil-run { position: relative; }
-.zil-run pre { caret-color: var(--ink); }
-.zil-run code:focus { outline: none; }
+.zil-run .ec-line .gutter .ln, .zil-run .cm-lineNumbers .cm-gutterElement { box-sizing: content-box; min-width: 2ch; padding: 0 0 0 1rem; color: var(--faint); text-align: right; font-variant-numeric: tabular-nums; }
+.zil-run .ec-line .gutter ~ .code { padding-inline-start: 1rem; }
+.zil-run .cm-editor { flex: 1 0 100%; background: transparent; color: var(--ink); white-space: normal; }
+.zil-run .cm-editor.cm-focused { outline: none; }
+.zil-run .cm-scroller { font-family: var(--ec-codeFontFml); font-size: var(--ec-codeFontSize); line-height: var(--ec-codeLineHt); }
+.zil-run .cm-content { padding: var(--ec-codePadBlk) 0; }
+.zil-run .cm-line { padding: 0 var(--ec-codePadInl) 0 1rem; }
+.zil-run .cm-content > .zil-out { margin: 0 var(--ec-codePadInl) 0 1rem; }
+.zil-run .cm-gutters { background: transparent; border: 0; }
+.zil-run .cm-cursor { border-left-color: var(--ink); }
+.zil-run .cm-selectionBackground, .zil-run .cm-focused .cm-selectionBackground { background: color-mix(in srgb, var(--accent) 22%, transparent) !important; }
+.zil-run .cm-matchingBracket { background: color-mix(in srgb, var(--accent) 18%, transparent); outline: none; }
 .zil-run:focus-within .frame pre { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); }
-.zil-run .zil-result { color: var(--muted); font-style: normal; }
+.zil-status { display: flex; justify-content: space-between; gap: 1rem; margin-top: -1px; padding: 2px 12px; border: 1px solid var(--line); border-top-style: dashed; border-radius: 0 0 0.6rem 0.6rem; background: var(--sunk); font: 12px/1.6 var(--sans); color: var(--faint); }
+.zil-run .frame pre { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 .zil-tools { position: absolute; top: 6px; right: 44px; z-index: 1; display: flex; gap: 4px; opacity: 0; transition: opacity .12s; }
 .zil-run:hover .zil-tools, .zil-run:focus-within .zil-tools, .zil-run.busy .zil-tools { opacity: 1; }
 .zil-tools .btn { height: 28px; padding: 0 10px; font-size: 13px; box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); }

@@ -13,12 +13,13 @@
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, acceptCompletion } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap, indentLess, insertTab } from "@codemirror/commands";
 import { HighlightStyle, StreamLanguage, bracketMatching, indentUnit, syntaxHighlighting } from "@codemirror/language";
-import { Compartment, EditorState, Prec, StateEffect, StateField } from "@codemirror/state";
-import { Decoration, EditorView, WidgetType, drawSelection, hoverTooltip, keymap, showTooltip } from "@codemirror/view";
+import { Compartment, EditorState, Prec, RangeSetBuilder, StateEffect, StateField } from "@codemirror/state";
+import { Decoration, EditorView, GutterMarker, WidgetType, drawSelection, gutterLineClass, hoverTooltip, keymap, lineNumbers, showTooltip } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { KEYWORDS, tokenAt, vocab } from "./client.js";
+import "./cm.css";
 
-export { EditorState, EditorView, Prec, keymap };
+export { EditorState, EditorView, Prec, keymap, lineNumbers };
 
 const language = () =>
   StreamLanguage.define({
@@ -204,23 +205,30 @@ const signatures = StateField.define({
   provide: (f) => showTooltip.from(f),
 });
 
+const bad = (text) => text.startsWith("error: ");
+
+/** A line's value: beside it, or under it if it's several lines, like the docs' built examples (ec.config.mjs). */
 class Result extends WidgetType {
-  constructor(text, error) {
+  constructor(text) {
     super();
     this.text = text;
-    this.error = error;
   }
   eq(o) {
-    return o.text === this.text && o.error === this.error;
+    return o.text === this.text;
   }
   toDOM() {
-    const s = el("span", this.error ? "zil-inline bad" : "zil-inline", this.error ? this.text : `→ ${this.text}`);
+    if (this.text.includes("\n")) return el("div", bad(this.text) ? "zil-out bad" : "zil-out", this.text);
+    const s = el("span", bad(this.text) ? "zil-inline bad" : "zil-inline", this.text);
     s.title = this.text;
     return s;
   }
 }
 
-/** Each line's value beside it, from the wasm's `run`: `[[line, text], ...]`, errors as `error: ...`. */
+const errorLine = new (class extends GutterMarker {
+  elementClass = "zil-err";
+})();
+
+/** Each line's value beside it, from the wasm's `run` or `notebook`: `[[line, text], ...]`, errors as `error: ...`, marked in the gutter. */
 export const setResults = StateEffect.define();
 const results = StateField.define({
   create: () => Decoration.none,
@@ -232,13 +240,22 @@ const results = StateField.define({
         .filter(([line]) => line < doc.lines)
         .map(([line, text]) => {
           const at = doc.line(line + 1).to;
-          return Decoration.widget({ widget: new Result(text, text.startsWith("error: ")), side: 1 }).range(at);
+          return Decoration.widget({ widget: new Result(text), side: 1, block: text.includes("\n") }).range(at);
         });
       return Decoration.set(widgets, true);
     }
     return tr.docChanged ? deco.map(tr.changes) : deco;
   },
-  provide: (f) => EditorView.decorations.from(f),
+  provide: (f) => [
+    EditorView.decorations.from(f),
+    gutterLineClass.compute([f], (state) => {
+      const b = new RangeSetBuilder();
+      state.field(f).between(0, state.doc.length, (from, _, d) => {
+        if (bad(d.spec.widget.text)) b.add(state.doc.lineAt(from).from, state.doc.lineAt(from).from, errorLine);
+      });
+      return b.finish();
+    }),
+  ],
 });
 
 /** Tab accepts a suggestion, else indents; Escape then Tab leaves the editor, as CodeMirror does. */
