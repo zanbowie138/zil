@@ -30,6 +30,44 @@ extern "C" {
     fn tag(o: &Object, text: &str) -> Object;
 }
 
+#[wasm_bindgen(typescript_custom_section)]
+const TS: &str = r#"
+/** A zil value as JS sees it; see the mapping in `session.rs`. */
+export type ZilValue =
+  | null | boolean | number | bigint | string
+  | ZilValue[] | Set<ZilValue> | Map<string, ZilValue>
+  | ZilFunction
+  | Tagged<"frac", { num: bigint; den: bigint; value: number }>
+  | Tagged<"quantity", { value: number; unit: string }>
+  | Tagged<"uncertain", { value: number; error: number; unit: string }>
+  | Tagged<"complex", { re: number; im: number }>
+  | Tagged<"date", { iso: string; tz: string; epochMs: number }>
+  | Tagged<"table", { columns: string[]; rows: ZilValue[][] }>
+  | Tagged<"regex", { source: string }>;
+
+/** `toString()` is zil's display of the value. */
+export type Tagged<T extends string, F> = { type: T; toString(): string } & F;
+
+/** What `set` and `call` accept: every `ZilValue` but functions, plus plain objects as maps. Tagged objects need only their fields. */
+export type ZilInput =
+  | null | undefined | boolean | number | bigint | string
+  | ZilInput[] | Set<ZilInput> | Map<string, ZilInput> | { [key: string]: ZilInput }
+  | { type: "frac"; num: bigint | number; den: bigint | number }
+  | { type: "quantity"; value: number; unit: string }
+  | { type: "uncertain"; value: number; error: number; unit?: string }
+  | { type: "complex"; re: number; im: number }
+  | { type: "date"; iso: string }
+  | { type: "table"; columns: string[]; rows: ZilInput[][] }
+  | { type: "regex"; source: string };
+
+export interface SessionOptions {
+  /** Each printed line; `console.log` by default. */
+  onPrint?: (text: string) => void;
+  /** Caps on each `eval` or `call`; `Infinity` for none. By default 5 seconds and 1 MiB of output. */
+  limits?: { steps?: number; seconds?: number; depth?: number; len?: number; bits?: number; output?: number };
+}
+"#;
+
 /// A zil session: globals and user units persist across `eval`s.
 #[wasm_bindgen(js_name = Session)]
 pub struct JsSession(zil::Session);
@@ -39,7 +77,7 @@ impl JsSession {
     /// Options: `onPrint(text)` receives each printed line (default `console.log`), and `limits` overrides any of
     /// `{steps, seconds, depth, len, bits, output}` (`Infinity` for none). By default a run stops after 5 s or 1 MiB of output.
     #[wasm_bindgen(constructor)]
-    pub fn new(options: Option<Object>) -> Result<JsSession, JsValue> {
+    pub fn new(#[wasm_bindgen(unchecked_optional_param_type = "SessionOptions")] options: Option<Object>) -> Result<JsSession, JsValue> {
         let opt = |o: &JsValue, k: &str| Reflect::get(o, &k.into()).ok().filter(|v| !v.is_undefined());
         let options: JsValue = options.map_or(JsValue::UNDEFINED, Into::into);
         let print = match opt(&options, "onPrint") {
@@ -69,25 +107,28 @@ impl JsSession {
     }
 
     /// Runs `src`, returning the last statement's value. Throws a `ZilError`.
+    #[wasm_bindgen(unchecked_return_type = "ZilValue")]
     pub fn eval(&mut self, src: &str) -> Result<JsValue, ZilError> {
         let v = self.0.eval(src).map_err(|e| ZilError::new(e, src))?;
         Ok(self.to_js(&v))
     }
 
     /// A global variable or builtin, or `undefined`.
+    #[wasm_bindgen(unchecked_return_type = "ZilValue | undefined")]
     pub fn get(&self, name: &str) -> JsValue {
         self.0.get(name).map_or(JsValue::UNDEFINED, |v| self.to_js(&v))
     }
 
     /// Calls `f` with `args`, under the same limits as `eval`. Throws a `ZilError`, or a `TypeError` for an argument zil can't hold.
-    pub fn call(&mut self, f: &ZilFunction, args: Option<Array>) -> Result<JsValue, JsValue> {
+    #[wasm_bindgen(unchecked_return_type = "ZilValue")]
+    pub fn call(&mut self, f: &ZilFunction, #[wasm_bindgen(unchecked_optional_param_type = "ZilInput[]")] args: Option<Array>) -> Result<JsValue, JsValue> {
         let args = args.unwrap_or_default().iter().map(|a| self.0.from_data(from_js(&a)?).map_err(|e| type_error(&e))).collect::<Result<_, _>>()?;
         let v = self.0.call(&f.0, args).map_err(|e| ZilError::new(e, ""))?;
         Ok(self.to_js(&v))
     }
 
     /// Sets a global variable. Throws a `TypeError` for a value zil can't hold.
-    pub fn set(&mut self, name: &str, value: JsValue) -> Result<(), JsValue> {
+    pub fn set(&mut self, name: &str, #[wasm_bindgen(unchecked_param_type = "ZilInput")] value: JsValue) -> Result<(), JsValue> {
         let v = self.0.from_data(from_js(&value)?).map_err(|e| type_error(&e))?;
         self.0.set(name, v);
         Ok(())
@@ -107,7 +148,7 @@ pub struct ZilFunction(Value);
 #[wasm_bindgen]
 impl ZilFunction {
     /// `"function"`, like the tagged objects' `type`.
-    #[wasm_bindgen(getter, js_name = type)]
+    #[wasm_bindgen(getter, js_name = type, unchecked_return_type = "\"function\"")]
     pub fn kind(&self) -> String {
         "function".into()
     }
