@@ -8,7 +8,7 @@ use std::rc::Rc;
 type PResult<T> = Result<T, Error>;
 
 pub fn parse(src: &str) -> PResult<Vec<Expr>> {
-    let mut p = Parser { src, toks: lex(src)?, pos: 0, prev_end: 0, holes: 0, depth: 0 };
+    let mut p = Parser { src, toks: lex(src)?, pos: 0, prev_end: 0, holes: 0, depth: 0, stop: usize::MAX };
     let mut stmts = Vec::new();
     p.skip_nl();
     while *p.peek() != Tok::Eof {
@@ -29,6 +29,8 @@ struct Parser<'a> {
     prev_end: usize,
     /// `_` placeholders seen so far, so `x |> f(_, 2)` knows to bind `_` instead of inserting `x`.
     holes: usize,
+    /// A token position where expressions end, like a closer: the `|` of a set-builder.
+    stop: usize,
     /// How deep the expression being built is nested, capped at `MAX_NEST`.
     depth: usize,
 }
@@ -210,7 +212,7 @@ impl Parser<'_> {
         self.nest()?;
         let start = self.span().start;
         let mut lhs = self.prefix()?;
-        loop {
+        while self.pos != self.stop {
             if *self.peek() == Tok::Newline && matches!(self.peek_past_nl(), Tok::Pipe | Tok::Dot) {
                 self.skip_nl();
             }
@@ -407,7 +409,14 @@ impl Parser<'_> {
                 return Ok(e);
             }
             Tok::LBracket => ExprKind::List(self.list(Tok::RBracket, &tok_span)?),
-            Tok::LBrace => ExprKind::Map(self.map_body(&tok_span)?),
+            Tok::LBrace => {
+                self.skip_nl();
+                if matches!(self.peek(), Tok::RBrace) || matches!(self.peek_at(1), Tok::Colon) {
+                    ExprKind::Map(self.map_body(&tok_span)?)
+                } else {
+                    self.set_builder(&tok_span)?
+                }
+            }
             Tok::Minus => ExprKind::Unary(UnOp::Neg, Box::new(self.expr(PREFIX_BP)?)),
             Tok::Bang => ExprKind::Unary(UnOp::Not, Box::new(self.expr(PREFIX_BP)?)),
             Tok::Tilde => ExprKind::Unary(UnOp::BitNot, Box::new(self.expr(PREFIX_BP)?)),
@@ -678,7 +687,7 @@ impl Parser<'_> {
                         return Err(Error::new("empty `{}` in a string", start + i..start + end + 1)
                             .help("put an expression inside, or write `\\{` for a literal brace"));
                     }
-                    let mut p = Parser { src: self.src, toks: inner_toks, pos: 0, prev_end: 0, holes: 0, depth: self.depth + 1 };
+                    let mut p = Parser { src: self.src, toks: inner_toks, pos: 0, prev_end: 0, holes: 0, depth: self.depth + 1, stop: usize::MAX };
                     p.skip_nl();
                     let e = p.expr(0)?;
                     p.skip_nl();
@@ -751,6 +760,45 @@ impl Parser<'_> {
         }
         self.close(Tok::RBrace, open)?;
         Ok(entries)
+    }
+
+    /// After `{`: `{x * 2 | x in xs}` maps and `{x in xs | x > 2}` filters, both into a set.
+    fn set_builder(&mut self, open: &Span) -> PResult<ExprKind> {
+        // The first `|` outside brackets splits it.
+        let mut depth = 0;
+        let bar = self.toks[self.pos..].iter().position(|(t, _)| {
+            match t {
+                Tok::LParen | Tok::LBracket | Tok::LBrace => depth += 1,
+                Tok::RParen | Tok::RBracket | Tok::RBrace | Tok::Eof => depth -= 1,
+                _ => {}
+            }
+            depth < 0 || depth == 0 && *t == Tok::Bar
+        });
+        let outer = std::mem::replace(&mut self.stop, bar.map_or(usize::MAX, |i| self.pos + i));
+        let left = self.expr(0);
+        self.stop = outer;
+        let left = left?;
+        self.expect(Tok::Bar, "`:` for a map, or `|` for a set like `{x * 2 | x in xs}`")?;
+        let right = self.expr(0)?;
+        let binding = |e: Expr| match e.kind {
+            ExprKind::Binary(BinOp::In, var, src) => match var.kind {
+                ExprKind::Ident(x) => Ok((x, *src)),
+                _ => Err(Error::new("expected a name", var.span)),
+            },
+            _ => Err(Error::new("expected `x in xs`", e.span)),
+        };
+        let ((var, src), body, method) = match left.kind {
+            ExprKind::Binary(BinOp::In, ref var, _) if matches!(var.kind, ExprKind::Ident(_)) => (binding(left)?, right, "filter"),
+            _ => (binding(right)?, left, "map"),
+        };
+        self.skip_nl();
+        self.close(Tok::RBrace, open)?;
+        let start = open.start;
+        let f = Expr { span: body.span.clone(), kind: ExprKind::Fn(Rc::new(FnDef { params: vec![Pat::Name(var)], body })) };
+        // `to list` so sets, strings and ranges all work.
+        let src = Expr { span: src.span.clone(), kind: ExprKind::To(Box::new(src), Target::Named("list".into(), None)) };
+        let call = ExprKind::Call(Box::new(self.mk(ExprKind::Field(Box::new(src), method.into()), start)), vec![f]);
+        Ok(ExprKind::To(Box::new(self.mk(call, start)), Target::Named("set".into(), None)))
     }
 
     fn block(&mut self) -> PResult<Expr> {
