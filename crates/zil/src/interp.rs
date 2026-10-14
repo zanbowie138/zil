@@ -378,8 +378,8 @@ impl Interp {
             Some(Err(msg)) => {
                 // Name both sides as written: `5 kmh to kg` says kmh, not kph.
                 let msg = match (&v, target) {
-                    (Value::Qty(_, u), Target::Unit(spec)) if units::unit_of(spec).is_ok_and(|t| t.dim() != u.dim()) => {
-                        let t = units::unit_of(spec).unwrap();
+                    (Value::Qty(_, u), Target::Unit(spec)) if units::target_of(spec).is_ok_and(|t| t.dim() != u.dim()) => {
+                        let t = units::target_of(spec).unwrap();
                         format!("cannot convert {} to {}", units::describe(u, written(x).as_deref()), units::describe(&t, Some(&units::spec_name(spec))))
                     }
                     _ => msg,

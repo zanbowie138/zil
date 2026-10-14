@@ -233,16 +233,16 @@ fn compare(a: &Value, b: &Value) -> Option<Ordering> {
 fn convert(v: &Value, t: &Target) -> Claim {
     let r = match (v, t) {
         (Value::Qty(x, u), Target::Units(specs)) => {
-            specs.iter().map(unit_of).collect::<Result<Vec<_>, _>>().and_then(|us| match us.iter().find(|t| t.dim() != u.dim()) {
+            specs.iter().map(target_of).collect::<Result<Vec<_>, _>>().and_then(|us| match us.iter().find(|t| t.dim() != u.dim()) {
                 Some(t) => Err(format!("cannot convert {} to {}", describe(u, None), describe(t, None))),
                 None => Ok(Value::str(split(u.to_si(*x), &us))),
             })
         }
-        (Value::Qty(x, u), Target::Unit(spec)) => unit_of(spec).and_then(|t| to_unit(*x, u, t)),
+        (Value::Qty(x, u), Target::Unit(spec)) => target_of(spec).and_then(|t| to_unit(*x, u, t)),
         (v, Target::Unit(_) | Target::Units(_)) if num(v).is_some() => {
             if let Err(e) = match t {
-                Target::Unit(spec) => unit_of(spec).map(drop),
-                Target::Units(specs) => specs.iter().try_for_each(|s| unit_of(s).map(drop)),
+                Target::Unit(spec) => target_of(spec).map(drop),
+                Target::Units(specs) => specs.iter().try_for_each(|s| target_of(s).map(drop)),
                 _ => Ok(()),
             } {
                 return Some(Err(e));
@@ -257,6 +257,22 @@ fn convert(v: &Value, t: &Target) -> Claim {
         _ => return None,
     };
     Some(r)
+}
+
+/// A conversion target, where a physical constant also counts as a unit: `to c`, `to m_e`.
+pub fn target_of(spec: &UnitSpec) -> Result<Unit, String> {
+    let mut u = Unit::default();
+    for (name, p) in spec {
+        u = u.mul(&unit(name).or_else(|e| constant(name).ok_or(e))?.pow(*p), 1);
+    }
+    Ok(u)
+}
+
+/// A constant from `units.constants` as a unit of its own size, named after it.
+fn constant(name: &str) -> Option<Unit> {
+    let (_, x, ts) = constants::MODULE.quantities.iter().find(|q| q.0 == name)?;
+    let u = terms(ts).ok()?;
+    Some(Unit(vec![(Rc::new(UnitDef { name: name.into(), scale: Cell::new(x * u.scale()), offset: 0.0, dim: u.dim() }), 1)]))
 }
 
 /// `length (km)`, or just `` `km*kg` `` for a kind with no name.
@@ -841,6 +857,8 @@ unit * 2"
         assert_eq!(show("0.00002 m to best"), "20 µm");
         assert_eq!(show("unit tile\n60 s*min/tile to best"), "3600 s^2/tile");
         assert_eq!(show("unit tile\n10 m*km/tile to best"), "1 ha/tile");
+        assert_eq!(show("[500 km/ms to c, 1 kg * 9.81 m/s^2 to g0*kg, 1e-30 kg to m_e]"), "[1.66782 c, 1.00034 g0*kg, 1.09777 m_e]");
+        assert!(try_eval("5 km to c").is_err());
         assert!(try_eval("5 to best").is_err());
         assert!(try_eval("5 km + 1 kg").is_err());
         assert!(try_eval("5 km to kg").is_err());
