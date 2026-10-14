@@ -117,21 +117,62 @@ pub enum Shown {
     Bare,
     /// Everything else, labeled `_n =`.
     Numbered(usize),
+    /// An assignment, labeled with what it assigned and the `_n` it's saved as: `a = 5  · _1`.
+    Named(usize, Vec<(String, Value)>),
+    /// A function assigned to a name: its signature, `f(x)`.
+    Defined(String),
 }
 
-/// Saves a result as `_`, and as the next `_n` (counted in `n`) when it's numbered.
-pub fn record(s: &mut Session, n: &mut usize, v: &Value) -> Shown {
-    let shown = match v {
-        Value::Nil | Value::Fn(_) => return Shown::Hidden,
-        Value::Str(s) if s.contains('\n') => Shown::Bare,
-        _ => {
+/// Saves `src`'s result `v` as `_`, and as the next `_n` (counted in `n`) when it's numbered.
+pub fn record(s: &mut Session, n: &mut usize, src: &str, v: &Value) -> Shown {
+    let named = assigned(src).map(|names| match &names[..] {
+        [one] => vec![(one.clone(), v.clone())],
+        _ => names.into_iter().filter_map(|k| Some((s.get(&k)?, k))).map(|(v, k)| (k, v)).collect(),
+    });
+    let shown = match (v, named) {
+        (Value::Fn(f), Some(pairs)) if pairs.len() == 1 => return Shown::Defined(format!("{}({})", pairs[0].0, f.params())),
+        (Value::Nil | Value::Fn(_), _) => return Shown::Hidden,
+        (Value::Str(s), None) if s.contains('\n') => Shown::Bare,
+        (_, named) => {
             *n += 1;
             s.set(&format!("_{n}"), v.clone());
-            Shown::Numbered(*n)
+            named.map_or(Shown::Numbered(*n), |pairs| Shown::Named(*n, pairs))
         }
     };
     s.set("_", v.clone());
     shown
+}
+
+/// What the last statement of `src` assigns to, as written: `a`, `m.k`, `xs[0]`, or each name in `[a, [b, _]] = ...`.
+fn assigned(src: &str) -> Option<Vec<String>> {
+    use crate::ast::{ExprKind, Pat};
+    fn names(p: &Pat, out: &mut Vec<String>) {
+        match p {
+            Pat::Name(n) => out.push(n.clone()),
+            Pat::Skip => {}
+            Pat::List(ps, _) => ps.iter().for_each(|p| names(p, out)),
+        }
+    }
+    match crate::parser::parse(src).ok()?.pop()?.kind {
+        ExprKind::Assign(lhs, _) => Some(vec![src.get(lhs.span)?.to_string()]),
+        ExprKind::Unpack(p, _) => {
+            let mut out = vec![];
+            names(&p, &mut out);
+            Some(out)
+        }
+        _ => None,
+    }
+}
+
+/// An assignment's result: `a = 5  · _1`, or a table's grid labeled `· a · _1`.
+pub fn show_named(n: usize, pairs: &[(String, Value)], color: bool) -> String {
+    let (dim, reset) = if color { (Role::ResultLabel.code(), RESET) } else { ("", "") };
+    if let [(name, Value::Table(t))] = pairs {
+        return format!("{}{dim} · {name} · _{n}{reset}", crate::modules::data::tables::grid(t, color));
+    }
+    let tinted = |v: &Value| if color { format!("{}{v}{RESET}", tint(v).code()) } else { v.to_string() };
+    let body: Vec<String> = pairs.iter().map(|(k, v)| format!("{k} = {}", tinted(v))).collect();
+    format!("{}  {dim}· _{n}{reset}", body.join(", "))
 }
 
 /// A numbered result labeled with the `_n` it's saved as, colored by type if `color`.
@@ -162,10 +203,12 @@ mod tests {
         assert_eq!(complete(&it, "print(5 km to ", "ma"), ["marathon"]);
         let mut put = |src: &str| {
             let v = it.eval(src).unwrap();
-            match record(&mut it, &mut n, &v) {
+            match record(&mut it, &mut n, src, &v) {
                 Shown::Hidden => "hidden".to_string(),
                 Shown::Bare => "bare".to_string(),
                 Shown::Numbered(k) => show(k, &v, false),
+                Shown::Named(k, pairs) => show_named(k, &pairs, false),
+                Shown::Defined(sig) => sig,
             }
         };
         assert_eq!(put("1 + 1"), "_1 = 2");
@@ -173,5 +216,18 @@ mod tests {
         assert_eq!(put(r#""a\nb""#), "bare");
         assert_eq!(put("_1 * 10"), "_2 = 20");
         assert_eq!(put("_"), "_3 = 20");
+        assert_eq!(put("a = [1, 2]"), "a = [1, 2]  · _4");
+        assert_eq!(put("a += [3]"), "a = [1, 2, 3]  · _5");
+        assert_eq!(put("a[0] = 9"), "a[0] = 9  · _6");
+        assert_eq!(put("[x, [_, y]] = [1, [2, 3]]"), "x = 1, y = 3  · _7");
+        assert_eq!(put("f = |x, [a, _]| x"), "f(x, [a, _])");
+        assert_eq!(put("|x| x"), "hidden");
+        assert_eq!(put("b = 1; 2"), "_8 = 2");
+        assert_eq!(
+            put(r#"s = "a
+b""#),
+            "s = a
+b  · _9"
+        );
     }
 }

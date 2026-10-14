@@ -207,10 +207,12 @@ pub fn repl(src: &str) -> Vec<String> {
         Some(topic) => (help::help(topic, true).unwrap_or_else(|e| e), String::new()),
         // Like the terminal REPL, a bare `help(...)` or `tip()` comes back colored; the log scrolls, so nothing wraps.
         None => SESSION.with_borrow_mut(|(session, n)| match help::live(repl::help_call(src).then_some((true, usize::MAX)), || session.eval(src)) {
-            Ok(v) => match repl::record(session, n, &v) {
+            Ok(v) => match repl::record(session, n, src, &v) {
                 Shown::Hidden => (String::new(), String::new()),
                 Shown::Bare => (v.to_string(), String::new()),
                 Shown::Numbered(k) => (repl::show(k, &v, true), String::new()),
+                Shown::Named(k, pairs) => (repl::show_named(k, &pairs, true), String::new()),
+                Shown::Defined(sig) => (format!("{}{sig}{RESET}", Role::Dim.code()), String::new()),
             },
             Err(e) => (String::new(), e.render("<repl>", src, true)),
         }),

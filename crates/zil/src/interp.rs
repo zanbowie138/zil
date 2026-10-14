@@ -23,6 +23,20 @@ pub struct Closure {
     env: Env,
 }
 
+impl Closure {
+    /// Its parameters as written: `x, [a, _]`.
+    pub fn params(&self) -> String {
+        fn pat(p: &Pat) -> String {
+            match p {
+                Pat::Name(n) => n.clone(),
+                Pat::Skip => "_".into(),
+                Pat::List(ps, _) => format!("[{}]", ps.iter().map(pat).collect::<Vec<_>>().join(", ")),
+            }
+        }
+        self.def.params.iter().map(pat).collect::<Vec<_>>().join(", ")
+    }
+}
+
 pub type Env = Rc<RefCell<Scope>>;
 
 #[derive(Default)]

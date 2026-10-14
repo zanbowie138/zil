@@ -133,11 +133,14 @@ pub fn repl(session: Session) {
             continue;
         }
         match help::live(help_term(&src), || session.eval(&src)) {
-            Ok(v) => match repl::record(&mut session, &mut n, &v) {
+            Ok(v) => match repl::record(&mut session, &mut n, &src, &v) {
                 Shown::Hidden => {}
                 Shown::Bare if help_term(&src).is_some() => pager::page(&v.to_string()),
                 Shown::Bare => println!("{v}"),
                 Shown::Numbered(k) => println!("{}", repl::show(k, &v, color_on())),
+                Shown::Named(k, pairs) => println!("{}", repl::show_named(k, &pairs, color_on())),
+                Shown::Defined(sig) if color_on() => println!("{}{sig}{RESET}", Role::Dim.code()),
+                Shown::Defined(sig) => println!("{sig}"),
             },
             Err(e) => report("<repl>", &src, e),
         }
