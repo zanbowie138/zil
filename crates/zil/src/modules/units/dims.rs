@@ -43,6 +43,10 @@ pub const SIEMENS: Dim = d(-2, -1, 3, 2);
 pub const WEBER: Dim = d(2, 1, -2, -1);
 pub const TESLA: Dim = d(0, 1, -2, -1);
 pub const HENRY: Dim = d(2, 1, -2, -2);
+pub const VISCOSITY: Dim = d(-1, 1, -1, 0);
+pub const KINEMATIC_VISCOSITY: Dim = d(2, 0, -1, 0);
+pub const FLOW: Dim = d(3, 0, -1, 0);
+pub const FUEL: Dim = d(-2, 0, 0, 0);
 
 /// Names of the kinds of unit in TABLE, for `help`. Each needs at least two units.
 #[rustfmt::skip]
@@ -54,5 +58,6 @@ pub const DIMS: &[(&str, Dim)] = &[
     ("current", CURRENT), ("voltage", VOLT), ("resistance", OHM), ("charge", COULOMB),
     ("capacitance", FARAD), ("conductance", SIEMENS), ("magnetic_flux", WEBER), ("magnetic_field", TESLA),
     ("inductance", HENRY), ("frequency", PER_TIME), ("amount", AMOUNT), ("concentration", MOLAR),
-    ("light", LIGHT), ("illuminance", LUX), ("dose", DOSE),
+    ("light", LIGHT), ("illuminance", LUX), ("dose", DOSE), ("viscosity", VISCOSITY),
+    ("kinematic_viscosity", KINEMATIC_VISCOSITY), ("flow", FLOW), ("fuel_economy", FUEL),
 ];

@@ -415,7 +415,12 @@ fn base_terms(dim: &Dim) -> Vec<(String, i8)> {
 
 /// The unit a kind is defined in, written out: `J`, `m/s`, `bit/s`, `pizza`.
 fn base_name(dim: &Dim) -> String {
-    product(base_terms(dim).iter().map(|(n, p)| (n.as_str(), *p)))
+    let terms = base_terms(dim);
+    // `to 1/m` doesn't parse, `to m^-1` does.
+    if terms.iter().all(|t| t.1 < 0) {
+        return terms.iter().map(|(n, p)| format!("{n}^{p}")).collect::<Vec<_>>().join("*");
+    }
+    product(terms.iter().map(|(n, p)| (n.as_str(), *p)))
 }
 
 fn units_of(kind: &str) -> Vec<&'static str> {
@@ -753,6 +758,10 @@ mod tests {
         assert_eq!(show("72 F to C"), "22.2222 C");
         assert_eq!(show("-40 C to F"), "-40 F");
         assert_eq!(show("3 km / 20 min to kph"), "9 kph");
+        assert_eq!(
+            show("[1 pc to ly, 30 mpg to mpg_uk, 1 rev to deg, 12 point to pica, 100 Å to nm, 1 thm to kWh]"),
+            "[3.26156 ly, 36.0285 mpg_uk, 360 deg, 1 pica, 10 nm, 29.3071 kWh]"
+        );
         assert_eq!(show("1.5 GB to MiB"), "1430.51 MiB");
         assert_eq!(show("2 m + 30 cm"), "2.3 m");
         assert_eq!(show("60 km/h to m/s"), "16.6667 m/s");
