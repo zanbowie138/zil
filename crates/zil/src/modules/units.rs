@@ -113,7 +113,8 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         ("simplify", [Qty(x, u)]) => simplify(*x, u),
         ("si", [Qty(x, u)]) => {
             let si = base_terms(&u.dim()).iter().try_fold(Unit::default(), |acc, (n, p)| Ok::<_, String>(acc.mul(&unit(n)?.pow(*p), 1)))?;
-            to_unit(*x, u, si)?
+            // Dimensionless (`3 dozen`) comes out a plain number.
+            Value::qty(convert_value(*x, u, &si)?, si)
         }
         ("all_units", []) => all_units(),
         ("db", [x, rest @ ..]) if rest.len() <= 1 && num(x).is_some() => {
@@ -175,7 +176,16 @@ fn merge(x: f64, u: &Unit) -> Value {
 
 fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
     use Value::*;
+    // `3 dozen + 1`: a dimensionless quantity adds to a plain number as its value.
+    let plain = |v: &Value| match v {
+        Qty(x, u) if u.dim() == NONE => Some(x * u.scale()),
+        _ => num(v),
+    };
     Some(Ok(match (op, a, b) {
+        (BinOp::Add | BinOp::Sub, Qty(_, u), n) | (BinOp::Add | BinOp::Sub, n, Qty(_, u)) if u.dim() == NONE && num(n).is_some() => {
+            let (x, y) = (plain(a).unwrap(), plain(b).unwrap());
+            Float(if op == BinOp::Add { x + y } else { x - y })
+        }
         (BinOp::Add | BinOp::Sub, Qty(x, u), Qty(y, w)) => {
             if u.dim() != w.dim() {
                 return Some(Err(mismatch(op, a, b)));
@@ -239,6 +249,10 @@ fn convert(v: &Value, t: &Target) -> Claim {
             })
         }
         (Value::Qty(x, u), Target::Unit(spec)) => target_of(spec).and_then(|t| to_unit(*x, u, t)),
+        // `36 to dozen`, `0.002 to ppm`: a plain number converts to a dimensionless unit.
+        (v, Target::Unit(spec)) if num(v).is_some() && target_of(spec).is_ok_and(|t| t.dim() == NONE) => {
+            to_unit(num(v).unwrap(), &Unit::default(), target_of(spec).unwrap())
+        }
         (v, Target::Unit(_) | Target::Units(_)) if num(v).is_some() => {
             if let Err(e) = match t {
                 Target::Unit(spec) => target_of(spec).map(drop),
@@ -346,7 +360,9 @@ fn topic(topic: &str) -> bool {
         }
         // The SI or named base unit of the kind; temperatures show their zero, since 1 C is not 1 K apart from 0 C.
         let base = base_name(dim);
-        if base != name {
+        if base.is_empty() {
+            row("equals", code(&format!("1 {name} = {}", crate::value::fmt_float(*scale))));
+        } else if base != name {
             let x = if *offset != 0.0 { 0 } else { 1 };
             row("equals", code(&format!("{x} {name} = {}", eval(&format!("{x} {name} to {base}")))));
         }
@@ -827,10 +843,10 @@ unit slice = pizza / 8
         );
         assert_eq!(
             show(
-                "unit dozen = 12
-2 dozen to dozen"
+                "unit six_pack = 6
+2 six_pack to six_pack"
             ),
-            "2 dozen"
+            "2 six_pack"
         );
         assert!(try_eval("unit km = 3").is_err());
         assert!(
@@ -857,6 +873,8 @@ unit * 2"
         assert_eq!(show("0.00002 m to best"), "20 µm");
         assert_eq!(show("unit tile\n60 s*min/tile to best"), "3600 s^2/tile");
         assert_eq!(show("unit tile\n10 m*km/tile to best"), "1 ha/tile");
+        assert_eq!(show("[36 to dozen, 0.0025 to ppm, 2 gross to dozen, 3 dozen to si, 5 ‰ to ppm]"), "[3 dozen, 2500 ppm, 24 dozen, 36, 5000 ppm]");
+        assert_eq!(show("[3 dozen + 1, 1 - 2 dozen, 2 dozen * 3, 50 ppm * 2 kg]"), "[37, -23, 72, 0.0001 kg]");
         assert_eq!(show("[500 km/ms to c, 1 kg * 9.81 m/s^2 to g0*kg, 1e-30 kg to m_e]"), "[1.66782 c, 1.00034 g0*kg, 1.09777 m_e]");
         assert!(try_eval("5 km to c").is_err());
         assert!(try_eval("5 to best").is_err());

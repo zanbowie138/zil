@@ -60,4 +60,5 @@ pub const DIMS: &[(&str, Dim)] = &[
     ("inductance", HENRY), ("frequency", PER_TIME), ("amount", AMOUNT), ("concentration", MOLAR),
     ("light", LIGHT), ("illuminance", LUX), ("dose", DOSE), ("viscosity", VISCOSITY),
     ("kinematic_viscosity", KINEMATIC_VISCOSITY), ("flow", FLOW), ("fuel_economy", FUEL),
+    ("ratio", NONE),
 ];
