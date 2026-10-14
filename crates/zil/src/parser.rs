@@ -230,6 +230,22 @@ impl Parser<'_> {
                 self.nest()?;
                 continue;
             }
+            // `5!` and `5!!`, touching the operand.
+            if t == Tok::Bang && self.touching() {
+                if POSTFIX_BP < min_bp {
+                    break;
+                }
+                self.bump();
+                let op = if *self.peek() == Tok::Bang && self.touching() {
+                    self.bump();
+                    UnOp::DoubleFactorial
+                } else {
+                    UnOp::Factorial
+                };
+                lhs = self.mk(ExprKind::Unary(op, Box::new(lhs)), start);
+                self.nest()?;
+                continue;
+            }
             if t == Tok::To {
                 if TO_BP < min_bp {
                     break;

@@ -558,6 +558,8 @@ impl Interp {
             }
             ExprKind::Unary(op, x) => match (op, self.eval(x, env)?) {
                 (UnOp::Not, v) => Value::Bool(!v.truthy()),
+                (UnOp::Factorial, v) => self.call(&modules::builtin("factorial"), vec![v], &e.span)?,
+                (UnOp::DoubleFactorial, v) => self.call(&modules::builtin("double_factorial"), vec![v], &e.span)?,
                 (UnOp::Neg, Value::Int(n, b)) => n.checked_neg().map_or_else(|| Value::Big(Rc::new(-BigInt::from(n)), b), |n| Value::Int(n, b)),
                 (UnOp::Neg, Value::Big(n, b)) => exact(BigRational::from_integer(-&*n), b, false),
                 (UnOp::Neg, Value::Frac(r, f)) => Value::Frac(Rc::new(-&*r), f),

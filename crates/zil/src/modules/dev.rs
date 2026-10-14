@@ -25,7 +25,7 @@ pub const MODULE: Module = Module {
             ("what's in this token?", r#"jwt("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZGEiLCJpYXQiOjE1MTYyMzkwMjJ9.c2ln").payload"#),
             ("query string of a URL", r#"url_parse("https://example.com/search?q=zil&page=2").query"#),
             ("is 1.10 newer than 1.9?", r#"semver("1.10.0") > "1.9.3""#),
-            ("chmod 640 means", "perm(640)"),
+            ("chmod 640 means", "chmod(640)"),
         ]),
     ],
     fns: FNS,
@@ -47,8 +47,8 @@ const FNS: &[Doc] = &[
         &[r#"semver("1.2.3") < semver("1.10.0")"#, r#"semver("1.0.0-beta") < "1.0.0""#, r#"semver("v2.1.0-rc.1+build5")"#], &["bump"]),
     doc("bump", "bump(v: str|map, part: str)", "next \"major\", \"minor\" or \"patch\" version; a pre-release bumps to its own release",
         &[r#"bump("1.2.3", "minor")"#, r#"bump("2.0.0-rc.1", "major")"#], &["semver"]),
-    doc("perm", "perm(mode: int|str)", "Unix permissions between octal and rwx: 755 or 0o755 gives \"rwxr-xr-x\", and back",
-        &["perm(755)", r#"perm("rw-r--r--")"#, "perm(0o4755)"], &[]),
+    doc("chmod", "chmod(mode: int|str)", "Unix permissions between octal and rwx: 755 or 0o755 gives \"rwxr-xr-x\", and back",
+        &["chmod(755)", r#"chmod("rw-r--r--")"#, "chmod(0o4755)"], &[]),
 ];
 
 fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
@@ -62,11 +62,11 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             let b = s.bump(part).ok_or_else(|| Fail::Arg(1, format!("unknown part {part:?}\nnote: parts are major, minor and patch")))?;
             if matches!(v, Value::Str(_)) { Value::str(b.to_string()) } else { b.value() }
         }
-        ("perm", [Value::Int(n, r)]) => {
+        ("chmod", [Value::Int(n, r)]) => {
             let mode = if r.base == 8 { Some(*n) } else { i64::from_str_radix(&n.to_string(), 8).ok() };
             Value::str(perm_str(mode.filter(|m| (0..=0o7777).contains(m)).ok_or_else(|| Fail::Arg(0, format!("`{n}` is not an octal mode like 755")))?))
         }
-        ("perm", [Value::Str(s)]) => {
+        ("chmod", [Value::Str(s)]) => {
             let mode = i64::from_str_radix(s, 8).ok().or_else(|| perm_mode(s)).filter(|m| (0..=0o7777).contains(m));
             Value::Int(mode.ok_or_else(|| Fail::Arg(0, format!("`{s}` is not a mode like \"rwxr-xr-x\" or \"755\"")))?, Radix { base: 8, width: 0 })
         }
@@ -341,14 +341,14 @@ mod tests {
     }
 
     #[test]
-    fn perm() {
-        assert_eq!(show("perm(755)"), "rwxr-xr-x");
-        assert_eq!(show("perm(0o644)"), "rw-r--r--");
-        assert_eq!(show("perm(4755)"), "rwsr-xr-x");
-        assert_eq!(show("perm(1777)"), "rwxrwxrwt");
-        assert_eq!(show(r#"perm("rwxr-xr-x")"#), "0o755");
-        assert_eq!(show(r#"perm("drwsr-Sr-T")"#), "0o7744");
-        assert_eq!(show("perm(perm(640))"), "0o640");
-        assert!(try_eval("perm(789)").is_err());
+    fn chmod() {
+        assert_eq!(show("chmod(755)"), "rwxr-xr-x");
+        assert_eq!(show("chmod(0o644)"), "rw-r--r--");
+        assert_eq!(show("chmod(4755)"), "rwsr-xr-x");
+        assert_eq!(show("chmod(1777)"), "rwxrwxrwt");
+        assert_eq!(show(r#"chmod("rwxr-xr-x")"#), "0o755");
+        assert_eq!(show(r#"chmod("drwsr-Sr-T")"#), "0o7744");
+        assert_eq!(show("chmod(chmod(640))"), "0o640");
+        assert!(try_eval("chmod(789)").is_err());
     }
 }

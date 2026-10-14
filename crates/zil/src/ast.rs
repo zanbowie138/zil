@@ -104,6 +104,10 @@ pub enum UnOp {
     Neg,
     Not,
     BitNot,
+    /// Postfix `n!`.
+    Factorial,
+    /// Postfix `n!!`.
+    DoubleFactorial,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

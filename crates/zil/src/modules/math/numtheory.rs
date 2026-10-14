@@ -1,12 +1,14 @@
 //! Number theory on exact integers: gcd, primes, factoring, combinatorics.
 
 use super::{big, int};
+use crate::ast::Radix;
 use crate::interp::Interp;
 use crate::lexer::Span;
 use crate::modules::{Call, Doc, Fail, Module, doc};
-use crate::value::{Value, num, ratio};
+use crate::value::{Value, exact, num, ratio};
 use num_bigint::BigInt;
 use num_integer::Integer;
+use num_rational::BigRational;
 use num_traits::{One, Signed, Zero};
 
 pub const MODULE: Module = Module {
@@ -18,10 +20,19 @@ pub const MODULE: Module = Module {
             ("prime factors", "factors(2 ** 32 + 1)"),
             ("is a Mersenne number prime", "is_prime(2 ** 61 - 1)"),
             ("poker hands", "choose(52, 5)"),
+            ("podium finishes from 8 runners", "permutations(8, 3)"),
+            ("every way to pick 2", "[1, 2, 3].combinations(2)"),
             ("modular power", "mod_pow(3, 1000, 7)"),
             ("a 209-digit Fibonacci", "fib(1000).str.len"),
             ("π's famous fractions", "pi.cfrac(4)"),
             ("the next prime after a googol", "(10 ** 100).next_prime - 10 ** 100"),
+        ]),
+    ],
+    #[rustfmt::skip]
+    guide: &[
+        ("syntax", &[
+            ("n! and n!!, touching the number", "5!"),
+            ("double factorial", "7!!"),
         ]),
     ],
     fns: FNS,
@@ -35,8 +46,18 @@ const FNS: &[Doc] = &[
     doc("lcm", "lcm(a: int, b: int, ...) / lcm(xs: list)", "least common multiple", &["lcm(4, 6)", "(1..=20).lcm"], &["gcd"]),
     doc("is_prime", "is_prime(n: int)", "primality (Miller-Rabin; exact below 3e24)", &["is_prime(97)", "is_prime(2 ** 61 - 1)"], &["factors"]),
     doc("factors", "factors(n: int)", "prime factors, smallest first", &["360.factors", "factors(2 ** 32 + 1)"], &["is_prime", "gcd"]),
-    doc("factorial", "factorial(n: int)", "n!, exact", &["factorial(5)", "factorial(30)"], &["choose"]),
-    doc("choose", "choose(n: int, k: int)", "ways to pick k of n, exact", &["choose(5, 2)", "choose(52, 5)"], &["factorial"]),
+    doc("factorial", "factorial(n: int)", "n!, exact; also written `n!`", &["factorial(5)", "30!"], &["choose", "double_factorial"]),
+    doc("double_factorial", "double_factorial(n: int)", "n!! = n × (n - 2) × (n - 4) × ..., exact; also written `n!!`", &["double_factorial(7)", "8!!"], &["factorial"]),
+    doc("hyperfactorial", "hyperfactorial(n: int)", "1¹ × 2² × ... × nⁿ, exact", &["hyperfactorial(4)"], &["superfactorial", "factorial"]),
+    doc("superfactorial", "superfactorial(n: int)", "1! × 2! × ... × n!, exact", &["superfactorial(4)"], &["hyperfactorial", "factorial"]),
+    doc("derangements", "derangements(n: int)", "ways to shuffle n items so none stays put, exact", &["derangements(4)"], &["permutations", "factorial"]),
+    doc("choose", "choose(n: num, k: int)", "ways to pick k of n, exact; any other n gives the generalized binomial coefficient", &["choose(5, 2)", "choose(52, 5)", "choose(1/2, 2)", "choose(-1, 3)"], &["permutations", "combinations", "factorial"]),
+    doc("nCr", "nCr(n: num, k: int)", "same as choose", &["nCr(5, 2)"], &["choose"]),
+    doc("permutations", "permutations(n: int, k: int) / permutations(xs: list, k?: int)", "ways to arrange k of n in order, exact; given a list, every ordering of k of its items (all of them by default)",
+        &["permutations(5, 2)", "[1, 2, 3].permutations", r#""abc".chars.permutations(2).len"#], &["choose", "combinations"]),
+    doc("perm", "perm(n: int, k: int) / perm(xs: list, k?: int)", "same as permutations", &["perm(5, 2)"], &["permutations"]),
+    doc("nPr", "nPr(n: int, k: int) / nPr(xs: list, k?: int)", "same as permutations", &["nPr(5, 2)"], &["permutations"]),
+    doc("combinations", "combinations(xs: list, k: int)", "every way to pick k of the list's items, keeping their order", &["[1, 2, 3, 4].combinations(2)"], &["choose", "permutations"]),
     doc("mod_pow", "mod_pow(b: int, e: int, m: int)", "b ** e % m without the huge power", &["mod_pow(2, 100, 7)", "mod_pow(3, 10 ** 18, 1000000007)"], &["gcd"]),
     doc("fib", "fib(n: int)", "the nth Fibonacci number (fib(0) = 0), exact", &["fib(10)", "fib(100)"], &["factorial"]),
     doc("next_prime", "next_prime(n: int)", "the smallest prime greater than n", &["next_prime(100)", "next_prime(2 ** 64)"], &["is_prime"]),
@@ -67,12 +88,61 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             out.sort();
             Value::list(out.into_iter().map(big).collect())
         }
-        ("factorial", [Int(n, _)]) if (0..=20_000).contains(n) => {
-            crate::state::check_bits((*n as f64 * (*n as f64).log2()) as u64)?;
-            big((1..=*n).map(BigInt::from).product())
+        ("factorial" | "double_factorial" | "hyperfactorial" | "superfactorial" | "derangements", [Int(n, _)]) => {
+            if !(0..=20_000).contains(n) {
+                return Err(Fail::Arg(0, format!("n must be from 0 to 20000, got {n}")));
+            }
+            let n = *n;
+            let bits = (n as f64 * (n as f64).max(1.0).log2()) as u64;
+            crate::state::check_bits(if matches!(name, "hyperfactorial" | "superfactorial") { bits * n as u64 / 2 } else { bits })?;
+            big(match name {
+                "factorial" => (1..=n).map(BigInt::from).product(),
+                "double_factorial" => (1..=n).rev().step_by(2).map(BigInt::from).product(),
+                "hyperfactorial" => (1..=n).map(|i| BigInt::from(i).pow(i as u32)).product(),
+                "superfactorial" => (1..=n)
+                    .scan(BigInt::one(), |f, i| {
+                        *f *= i;
+                        Some(f.clone())
+                    })
+                    .product(),
+                // !n = n·!(n-1) + (-1)^n
+                _ => (1..=n).fold(BigInt::one(), |d, i| d * i + if i % 2 == 0 { 1 } else { -1 }),
+            })
         }
-        ("factorial", [Int(n, _)]) => return Err(Fail::Arg(0, format!("n must be from 0 to 20000, got {n}"))),
-        ("choose", [Int(n, _), Int(k, _)]) if *n >= 0 && *k >= 0 => {
+        ("permutations" | "perm" | "nPr", [Int(n, _), Int(k, _)]) if *n >= 0 && *k >= 0 => {
+            if k > n {
+                return Ok(Value::int(0));
+            }
+            crate::state::check_bits((*k as f64 * (*n as f64).log2()) as u64)?;
+            big((n - k..*n).map(|i| BigInt::from(i + 1)).product())
+        }
+        ("permutations" | "perm" | "nPr", [List(l), rest @ ..]) if rest.len() <= 1 => {
+            let xs = l.borrow().clone();
+            let k = match rest {
+                [] => xs.len(),
+                [Int(k, _)] if *k >= 0 => *k as usize,
+                _ => return Err(Fail::Arg(1, "k must be an int, 0 or more".into())),
+            };
+            Value::list(arrangements(&xs, k, true)?)
+        }
+        ("combinations", [List(l), Int(k, _)]) if *k >= 0 => Value::list(arrangements(&l.borrow(), *k as usize, false)?),
+        // Generalized: n(n-1)...(n-k+1) / k!, exact for fractions and negative ints.
+        ("choose" | "nCr", [n, Int(k, _)]) if *k >= 0 && !matches!(n, Int(m, _) if *m >= 0) => {
+            if *k > 10_000 {
+                return Err("result too large".into());
+            }
+            if let Some(r) = ratio(n) {
+                let mut acc = BigRational::one();
+                for i in 0..*k {
+                    acc = acc * (&r - BigRational::from_integer(i.into())) / BigRational::from_integer((i + 1).into());
+                }
+                exact(acc, Radix::DEC, true)
+            } else {
+                let x = num(n).ok_or(Fail::BadArgs)?;
+                Value::Float((0..*k).fold(1.0, |acc, i| acc * (x - i as f64) / (i + 1) as f64))
+            }
+        }
+        ("choose" | "nCr", [Int(n, _), Int(k, _)]) if *n >= 0 && *k >= 0 => {
             if k > n {
                 return Ok(Value::int(0));
             }
@@ -166,6 +236,31 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         }
         _ => return Err(Fail::BadArgs),
     })
+}
+
+/// Every selection of `k` of `xs`: in each order if `ordered`, else once each, in list order.
+fn arrangements(xs: &[Value], k: usize, ordered: bool) -> Result<Vec<Value>, Fail> {
+    fn go(xs: &[Value], k: usize, ordered: bool, used: &mut Vec<usize>, out: &mut Vec<Value>) -> Result<(), Fail> {
+        if used.len() == k {
+            crate::state::check_len(out.len() + 1, "items")?;
+            out.push(Value::list(used.iter().map(|&i| xs[i].clone()).collect()));
+            return Ok(());
+        }
+        let from = if ordered { 0 } else { used.last().map_or(0, |&i| i + 1) };
+        for i in from..xs.len() {
+            if !used.contains(&i) {
+                used.push(i);
+                go(xs, k, ordered, used, out)?;
+                used.pop();
+            }
+        }
+        Ok(())
+    }
+    let mut out = vec![];
+    if k <= xs.len() {
+        go(xs, k, ordered, &mut vec![], &mut out)?;
+    }
+    Ok(out)
 }
 
 fn gcd_lcm(name: &str, vs: &[Value]) -> Call {
@@ -264,5 +359,21 @@ mod tests {
         assert!(try_eval("factors(0)").is_err());
         assert!(try_eval("factorial(-1)").is_err());
         assert!(try_eval("mod_pow(2, 3, 0)").is_err());
+    }
+
+    #[test]
+    fn combinatorics() {
+        assert_eq!(show("[5!, 0!, 7!!, 8!!, 0!!, -3!, 2 ** 3!, 3! + 1, (2 + 1)!]"), "[120, 1, 105, 384, 1, -6, 64, 7, 6]");
+        assert_eq!(show("[5 != 3, !false]"), "[true, true]");
+        assert_eq!(
+            show("[hyperfactorial(4), superfactorial(4), derangements(0), derangements(1), derangements(4), derangements(10)]"),
+            "[27648, 288, 1, 0, 9, 1334961]"
+        );
+        assert_eq!(show("[permutations(5, 2), perm(5, 5), nPr(3, 4), nCr(5, 2)]"), "[20, 120, 0, 10]");
+        assert_eq!(show("[choose(1/2, 2), choose(-1, 3), choose(-2, 2), choose(2.5, 2)]"), "[-1/8, -1, 3, 15/8]");
+        assert_eq!(show("[1, 2, 3].permutations"), "[[1, 2, 3], [1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]]");
+        assert_eq!(show("[[1, 2, 3].permutations(2).len, [1, 2].permutations(3), [1, 2].permutations(0)]"), "[6, [], [[]]]");
+        assert_eq!(show("[1, 2, 3, 4].combinations(2)"), "[[1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4]]");
+        assert!(try_eval("(-1)!").is_err());
     }
 }
