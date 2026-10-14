@@ -49,7 +49,7 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("clipart", "clipart(name?: str)", "a piece from the gallery, or the list of names", &[r#"clipart("owl")"#, "clipart().len"], &["cowsay", "boxed"]),
+    doc("clipart", "clipart(name?: str)", "a piece from the gallery, or the list of names", &[r#"clipart("owl")"#, "clipart().len"], &["say", "boxed"]),
     doc("rainbow", "rainbow(s: str)", "color each character along a diagonal rainbow, for truecolor terminals", &[r#""rainbow".rainbow"#], &["gradient", "strip_ansi"]),
     doc("gradient", "gradient(s: str, from: str|list, to: str|list)", "fade text left to right between two colors, for truecolor terminals", &[r#"gradient("sunset", "gold", "crimson")"#], &["rainbow", "color"]),
     doc("qr", "qr(text: str, ec?: str)", "a scannable QR code in half blocks, light on dark; ec is the error correction level \"L\", \"M\" (default), \"Q\" or \"H\"", &[r#"qr("zil")"#], &["url_build"]),
@@ -65,13 +65,7 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], span: &Span) -> Cal
     let color = |i: usize| colors::parse(&args[i]).ok_or_else(|| Fail::Arg(i, "expected a color name, \"#rrggbb\" or [r, g, b]".into()));
     Ok(match (name, args) {
         ("clipart", []) => Value::list(GALLERY.iter().map(|g| Value::str(g.0)).collect()),
-        ("clipart", [Str(n)]) => {
-            let piece = GALLERY
-                .iter()
-                .find(|g| g.0 == n.trim().to_lowercase())
-                .ok_or_else(|| Fail::Arg(0, format!("no {n:?} in the gallery; clipart() lists them")))?;
-            Value::str(piece.1.trim_start_matches('\n'))
-        }
+        ("clipart", [Str(n)]) => Value::str(piece(n).ok_or_else(|| Fail::Arg(0, format!("no {n:?} in the gallery; clipart() lists them")))?),
         ("rainbow", [Str(s)]) => Value::str(paint(s, |col, row, _| colors::from_hsl((col * 12 + row * 6) as f64, 1.0, 0.6))),
         ("gradient", [Str(s), _, _]) => {
             let (a, b) = (color(1)?, color(2)?);
@@ -201,6 +195,11 @@ impl Dots {
     }
 }
 
+/// A gallery piece by name, ignoring case.
+fn piece(name: &str) -> Option<&'static str> {
+    GALLERY.iter().find(|g| g.0 == name.trim().to_lowercase()).map(|g| g.1.trim_start_matches('\n'))
+}
+
 /// Original pieces and old folk art from Usenet days.
 const GALLERY: &[(&str, &str)] = &[
     (
@@ -232,6 +231,23 @@ o'')}____//
 (\_/)
 (•ᴗ•)
 / > ♥",
+    ),
+    (
+        "cow",
+        r"
+         (__)
+         (oo)
+  /-------\/
+ / |     ||
+*  ||----||
+   ~~    ~~",
+    ),
+    (
+        "pikachu",
+        r#"
+ (\__/)
+ (o^.^o)
+z(_(")(")"#,
     ),
     (
         "fish",

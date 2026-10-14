@@ -8,13 +8,13 @@ use crate::value::Value;
 
 pub const MODULE: Module = Module {
     name: "frames",
-    about: "boxes, cowsay; art side by side, stacked, overlaid, mirrored, rotated, scaled",
+    about: "boxes, speech bubbles; art side by side, stacked, overlaid, mirrored, rotated, scaled",
     #[rustfmt::skip]
     examples: &[
         ("compose", &[
             ("a caption under a picture", r#"clipart("owl").stack("hoo?", "center")"#),
             ("two friends", r#"clipart("cat").beside(clipart("dog"), 4)"#),
-            ("a cat says", r#"cowsay("deploy on friday?", "cat")"#),
+            ("a cat says", r#"say("deploy on friday?", "cat")"#),
             ("a picture frame", r#"clipart("house").boxed("double").boxed("shadow")"#),
             ("a dark sky", r#"starfield(20, 4, 1).negative"#),
         ]),
@@ -26,9 +26,10 @@ pub const MODULE: Module = Module {
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
-    doc("boxed", "boxed(s: str, style?: str)", "draw a box around text; style is \"single\" (default), \"double\", \"round\", \"heavy\", \"ascii\", \"stars\" or \"shadow\"", &[r#"boxed("hello")"#, r#""zil\ncalc".boxed("round")"#], &["cowsay", "stack"]),
-    doc("cowsay", "cowsay(s: str, critter?: str)", "a critter saying s in a speech bubble; critter is \"cow\" (default), \"cat\", \"ghost\", \"crab\" or \"pikachu\"", &[r#"cowsay("moo")"#], &["think", "boxed"]),
-    doc("think", "think(s: str, critter?: str)", "like cowsay, in a thought bubble", &[r#"think("hmm", "ghost")"#], &["cowsay"]),
+    doc("boxed", "boxed(s: str, style?: str)", "draw a box around text; style is \"single\" (default), \"double\", \"round\", \"heavy\", \"ascii\", \"stars\" or \"shadow\"", &[r#"boxed("hello")"#, r#""zil\ncalc".boxed("round")"#], &["say", "stack"]),
+    doc("say", "say(s: str, art?: str)", "a clipart() piece saying s in a speech bubble, \"cow\" by default", &[r#"say("moo")"#, r#"say("pika", "pikachu")"#], &["think", "cowsay", "boxed"]),
+    doc("cowsay", "cowsay(s: str, art?: str)", "same as say", &[r#"cowsay("moo")"#], &["say"]),
+    doc("think", "think(s: str, art?: str)", "like say, in a thought bubble", &[r#"think("hmm", "ghost")"#], &["say"]),
     doc("beside", "beside(a: str, b: str, gap?: int)", "put b to the right of a, tops aligned, gap spaces apart (default 1)", &[r#""a\nb".beside("c\nd\ne")"#], &["stack", "overlay"]),
     doc("stack", "stack(a: str, b: str, align?: str)", "put b under a, aligned \"left\" (default), \"center\" or \"right\"", &[r#""wide one".stack("x", "right")"#], &["beside"]),
     doc("overlay", "overlay(a: str, b: str, x: int, y: int)", "draw b over a with its top-left at column x, row y; spaces in b are see-through", &[r#"boxed("     ").overlay("hi", 2, 1)"#], &["beside"]),
@@ -48,15 +49,18 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     Ok(match (name, args) {
         ("boxed", [Str(s)]) => Value::str(boxed(s, "single")?),
         ("boxed", [Str(s), Str(style)]) => Value::str(boxed(s, style).map_err(|e| Fail::Arg(1, e))?),
-        ("cowsay" | "think", [Str(s), rest @ ..]) if rest.len() <= 1 => {
-            let critter = match rest {
+        ("say" | "cowsay" | "think", [Str(s), rest @ ..]) if rest.len() <= 1 => {
+            let piece = match rest {
                 [] => "cow",
-                [Str(c)] => c,
+                [Str(p)] => p,
                 _ => return Err(Fail::BadArgs),
             };
-            let art = CRITTERS.iter().find(|c| c.0 == critter).ok_or_else(|| Fail::Arg(1, format!("no critter {critter:?}; try cow, cat, ghost, crab or pikachu")))?.1;
+            let art = super::piece(piece).ok_or_else(|| Fail::Arg(1, format!("no {piece:?} in the gallery; clipart() lists them")))?;
+            // Line the first row up under the bubble's tail.
+            let pad = " ".repeat(4usize.saturating_sub(art.len() - art.trim_start_matches(' ').len()));
+            let art = art.lines().map(|l| format!("{pad}{l}")).collect::<Vec<_>>().join("\n");
             let tail = if name == "think" { 'o' } else { '\\' };
-            Value::str(format!("{}\n   {tail}\n    {tail}\n{}", bubble(s, name == "think"), art.trim_start_matches('\n')))
+            Value::str(format!("{}\n   {tail}\n    {tail}\n{}", bubble(s, name == "think"), art))
         }
         ("beside", [Str(a), Str(b), rest @ ..]) if rest.len() <= 1 => {
             let gap = if rest.is_empty() { 1 } else { int(2, 0, 200)? };
@@ -261,50 +265,6 @@ const SWAP_V: &[(char, char)] = &[
 const SWAP_TURN: &[(char, char)] = &[('-', '|'), ('─', '│'), ('═', '║'), ('━', '┃'), ('/', '\\'), ('▀', '▐'), ('▄', '▌')];
 const NEGATIVE: &[(char, char)] = &[('▀', '▄'), ('▌', '▐'), ('░', '▓'), ('▒', '▒')];
 
-const CRITTERS: &[(&str, &str)] = &[
-    (
-        "cow",
-        r"
-         (__)
-         (oo)
-  /-------\/
- / |     ||
-*  ||----||
-   ~~    ~~",
-    ),
-    (
-        "cat",
-        r"
-      /\_/\
-     ( o.o )
-      > ^ <",
-    ),
-    (
-        "ghost",
-        r"
-      .-.
-     (o o)
-     | O \
-      \   \
-       `~~~'",
-    ),
-    (
-        "crab",
-        r"
-       _~^~^~_
-    \) /  o o  \ (/
-      '_   -   _'
-      / '-----' \",
-    ),
-    (
-        "pikachu",
-        r#"
-    (\__/)
-    (o^.^o)
-   z(_(")(")"#,
-    ),
-];
-
 #[cfg(test)]
 mod tests {
     use crate::interp::tests::{show, try_eval};
@@ -316,7 +276,8 @@ mod tests {
         assert!(try_eval(r#"boxed("x", "wavy")"#).is_err());
         assert!(show(r#"cowsay("moo")"#).starts_with(" _____\n< moo >\n -----\n   \\"));
         assert!(show(r#"think("a b", "cat")"#).contains("( a b )\n -----\n   o"));
-        assert!(show(r#"cowsay("one two three four five six seven eight nine ten")"#).contains("/ one two"));
+        assert!(show(r#"say("hoo", "Owl")"#).contains("    \\\n    ,_,\n   (O,O)"));
+        assert!(show(r#"say("one two three four five six seven eight nine ten")"#).contains("/ one two"));
         assert_eq!(show(r#""a\nbb".beside("c\nd\ne", 2)"#), "a   c\nbb  d\n    e");
         assert_eq!(show(r#""abc".stack("x", "center")"#), "abc\n x");
         assert_eq!(show(r#""....\n....".overlay("x y", 1, 1)"#), "....\n.x.y");
