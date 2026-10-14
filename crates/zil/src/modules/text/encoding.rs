@@ -22,16 +22,26 @@ pub const MODULE: Module = Module {
             ("how random is it?", r#""aaaaaaaa".entropy"#),
         ]),
     ],
-    guide: &[("conversions", &[("to base64", r#""hi" to base64"#)])],
+    #[rustfmt::skip]
+    guide: &[
+        ("conversions", &[
+            ("to base64 base32 base58 hex url", r#""hi" to base64"#),
+            ("to unicode", r#""é" to unicode"#),
+        ]),
+    ],
     fns: FNS,
     call,
-    targets: &[("base64", "base64")],
+    targets: &[("base64", "base64"), ("base32", "base32"), ("base58", "base58"), ("url", "url_encode"), ("unicode", "unicode")],
     ..Module::EMPTY
 };
 
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
     doc("base64", "base64(s: str)", "base64-encode a string; same as `s to base64`", &[r#"base64("hi there")"#, r#""hi" to base64"#], &["encode", "decode"]),
+    doc("base32", "base32(s: str)", "base32-encode a string; same as `s to base32`", &[r#""hi" to base32"#], &["encode", "decode"]),
+    doc("base58", "base58(s: str)", "base58-encode a string; same as `s to base58`", &[r#""hi" to base58"#], &["encode", "decode"]),
+    doc("url_encode", "url_encode(s: str)", "percent-encode a string; same as `s to url`", &[r#""a b&c" to url"#], &["encode", "decode", "url_build"]),
+    doc("unicode", "unicode(v: str|int)", "code points as U+ notation, one per character; same as `v to unicode`", &[r#""é" to unicode"#, "233 to unicode"], &["ord", "chr"]),
     doc("encode", "encode(s: str, fmt: str)", "encode as \"base64\", \"base32\", \"base58\", \"url\" or \"hex\"", &[r#""hi there".encode("base64")"#, r#""a b&c".encode("url")"#, r#""hi".encode("base32")"#], &["decode"]),
     doc("decode", "decode(s: str, fmt: str)", "decode \"base64\", \"base32\", \"base58\", \"url\" or \"hex\"; bytes that aren't UTF-8 come back as a list", &[r#""aGk=".decode("base64")"#, r#""6869".decode("hex")"#, r#""Cn8eVZg".decode("base58")"#], &["encode"]),
     doc("ord", "ord(c: str)", "Unicode code point of a single character", &[r#""A".ord"#, r#""A".ord to hex"#], &["chr", "bytes"]),
@@ -47,6 +57,14 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     use Value::*;
     Ok(match (name, args) {
         ("base64", [Str(s)]) => Value::str(base64::engine::general_purpose::STANDARD.encode(s.as_bytes())),
+        ("base32", [Str(s)]) => Value::str(base32(s.as_bytes())),
+        ("base58", [Str(s)]) => Value::str(base58(s.as_bytes())),
+        ("url_encode", [Str(s)]) => Value::str(url_encode(s)),
+        ("unicode", [Str(s)]) => Value::str(s.chars().map(|c| format!("U+{:04X}", c as u32)).collect::<Vec<_>>().join(" ")),
+        ("unicode", [Int(n, _)]) => match u32::try_from(*n).ok().and_then(char::from_u32) {
+            Some(c) => Value::str(format!("U+{:04X}", c as u32)),
+            None => return Err(Fail::Arg(0, format!("`{n}` is not a Unicode code point"))),
+        },
         ("encode", [Str(s), Str(fmt)]) => Value::str(match &**fmt {
             "base64" => base64::engine::general_purpose::STANDARD.encode(s.as_bytes()),
             "base32" => base32(s.as_bytes()),
@@ -253,6 +271,13 @@ mod tests {
         assert_eq!(show(r#""/w==".decode("base64")"#), "[255]");
         assert!(try_eval(r#""0OIl".decode("base58")"#).is_err());
         assert!(try_eval("[256].from_bytes").is_err());
+        assert_eq!(show(r#""foobar" to base32"#), "MZXW6YTBOI======");
+        assert_eq!(show(r#""hello world" to base58"#), "StV1DL6CwTryKyV");
+        assert_eq!(show(r#""a b&c" to url"#), "a%20b%26c");
+        assert_eq!(show(r#""hi" to hex"#), "6869");
+        assert_eq!(show(r#""hi" to unicode"#), "U+0068 U+0069");
+        assert_eq!(show("0x1f600 to unicode"), "U+1F600");
+        assert!(try_eval("-1 to unicode").is_err());
     }
 
     #[test]
