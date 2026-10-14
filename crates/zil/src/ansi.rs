@@ -71,7 +71,7 @@ pub fn columns() -> usize {
 /// A value's role by type, as REPL results and help color it.
 pub fn tint(v: &Value) -> Role {
     match v {
-        Value::Int(..) | Value::Big(..) | Value::Frac(..) | Value::Float(_) | Value::Qty(..) | Value::Unc(..) | Value::Cplx(..) => Role::Number,
+        Value::Int(..) | Value::Big(..) | Value::Frac(..) | Value::Float(_) | Value::Qty(..) | Value::Unc(..) | Value::Cplx(..) | Value::Mod(_) => Role::Number,
         Value::Str(_) => Role::Str,
         Value::Regex(_) => Role::Regex,
         Value::Bool(_) => Role::Bool,
@@ -92,7 +92,9 @@ pub fn highlight(src: &str) -> String {
             Ok(Tok::Regex(_)) => Role::Regex,
             Ok(Tok::True | Tok::False) => Role::Bool,
             Ok(Tok::Nil) => Role::Nil,
-            Ok(Tok::Fn | Tok::If | Tok::Else | Tok::While | Tok::For | Tok::In | Tok::To | Tok::Of | Tok::Return | Tok::Break | Tok::Continue) => Role::Keyword,
+            Ok(Tok::Fn | Tok::If | Tok::Else | Tok::While | Tok::For | Tok::In | Tok::To | Tok::Of | Tok::Mod | Tok::Return | Tok::Break | Tok::Continue) => {
+                Role::Keyword
+            }
             _ => continue,
         };
         out.push_str(&src[last..span.start]);

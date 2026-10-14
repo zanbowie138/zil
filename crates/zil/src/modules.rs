@@ -195,6 +195,7 @@ pub const DISPATCH: &[&Module] = &[
     // Before units, which would otherwise claim `qty * uncertain` and fail.
     &math::uncertainty::MODULE,
     &math::bits::MODULE,
+    &math::numtheory::MODULE,
     &time::MODULE,
     &time::zones::MODULE,
     &geo::MODULE,

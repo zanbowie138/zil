@@ -9,6 +9,7 @@
 //! | quantity | `{type: "quantity", value, unit}` |
 //! | uncertain | `{type: "uncertain", value, error, unit}` |
 //! | complex | `{type: "complex", re, im}` |
+//! | mod | `{type: "mod", residue, modulus}` (bigint) |
 //! | date | `{type: "date", iso, tz, epochMs}` |
 //! | list, set, map | `Array`, `Set`, `Map` |
 //! | table | `{type: "table", columns, rows}` |
@@ -41,6 +42,7 @@ export type ZilValue =
   | Tagged<"quantity", { value: number; unit: string }>
   | Tagged<"uncertain", { value: number; error: number; unit: string }>
   | Tagged<"complex", { re: number; im: number }>
+  | Tagged<"mod", { residue: bigint; modulus: bigint }>
   | Tagged<"date", { iso: string; tz: string; epochMs: number }>
   | Tagged<"table", { columns: string[]; rows: ZilValue[][] }>
   | Tagged<"regex", { source: string }>;
@@ -56,6 +58,7 @@ export type ZilInput =
   | { type: "quantity"; value: number; unit: string }
   | { type: "uncertain"; value: number; error: number; unit?: string }
   | { type: "complex"; re: number; im: number }
+  | { type: "mod"; residue: bigint | number; modulus: bigint | number }
   | { type: "date"; iso: string }
   | { type: "table"; columns: string[]; rows: ZilInput[][] }
   | { type: "regex"; source: string };
@@ -199,6 +202,7 @@ fn to_js(v: &Value) -> JsValue {
             Data::Qty { value, unit } => tagged("quantity", &[("value", value.into()), ("unit", unit.into())]),
             Data::Unc { value, error, unit } => tagged("uncertain", &[("value", value.into()), ("error", error.into()), ("unit", unit.into())]),
             Data::Cplx { re, im } => tagged("complex", &[("re", re.into()), ("im", im.into())]),
+            Data::Mod { residue, modulus } => tagged("mod", &[("residue", big(&residue)), ("modulus", big(&modulus))]),
             Data::Str(s) => s.into(),
             Data::Regex(s) => tagged("regex", &[("source", s.into())]),
             Data::Date(iso) => {
@@ -260,6 +264,7 @@ fn from_js(v: &JsValue) -> Result<Data, JsValue> {
             Some("quantity") => Data::Qty { value: num("value")?, unit: text("unit")? },
             Some("uncertain") => Data::Unc { value: num("value")?, error: num("error")?, unit: field("unit").as_string().unwrap_or_default() },
             Some("complex") => Data::Cplx { re: num("re")?, im: num("im")? },
+            Some("mod") => Data::Mod { residue: int(&field("residue"))?, modulus: int(&field("modulus"))? },
             Some("date") => Data::Date(text("iso")?),
             Some("regex") => Data::Regex(text("source")?),
             Some("function") => return Err(type_error("a zil function can't be passed back in; call it with session.call")),

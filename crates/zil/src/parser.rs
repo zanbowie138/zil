@@ -53,7 +53,7 @@ fn infix_bp(t: &Tok) -> Option<(u8, u8)> {
         Tok::Amp => (20, 21),
         Tok::Shl | Tok::Shr => (22, 23),
         Tok::Plus | Tok::Minus | Tok::PlusMinus => (24, 25),
-        Tok::Star | Tok::Slash | Tok::SlashSlash | Tok::Percent | Tok::Of => (26, 27),
+        Tok::Star | Tok::Slash | Tok::SlashSlash | Tok::Percent | Tok::Of | Tok::Mod => (26, 27),
         Tok::StarStar => (30, 29),
         _ => return None,
     })
@@ -82,6 +82,7 @@ fn binop(t: &Tok) -> BinOp {
         Tok::Slash => BinOp::Div,
         Tok::SlashSlash => BinOp::IntDiv,
         Tok::Percent => BinOp::Rem,
+        Tok::Mod => BinOp::Mod,
         Tok::StarStar => BinOp::Pow,
         Tok::Caret => BinOp::BitXor,
         Tok::Amp => BinOp::BitAnd,

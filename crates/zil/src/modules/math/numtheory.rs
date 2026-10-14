@@ -1,10 +1,11 @@
 //! Number theory on exact integers: gcd, primes, factoring, combinatorics.
 
 use super::{big, int};
-use crate::ast::Radix;
+use crate::ast::{BinOp, Radix};
 use crate::interp::Interp;
 use crate::lexer::Span;
-use crate::modules::{Call, Doc, Fail, Module, doc};
+use crate::modules::{Call, Claim, Doc, Fail, Module, doc};
+use crate::ops::mismatch;
 use crate::value::{Value, exact, num, ratio};
 use num_bigint::BigInt;
 use num_integer::Integer;
@@ -23,6 +24,9 @@ pub const MODULE: Module = Module {
             ("podium finishes from 8 runners", "permutations(8, 3)"),
             ("every way to pick 2", "[1, 2, 3].combinations(2)"),
             ("modular power", "mod_pow(3, 1000, 7)"),
+            ("clock arithmetic", "10 mod 12 + 5"),
+            ("an inverse mod 7", "1 / (3 mod 7)"),
+            ("x ≡ 2 (mod 3), x ≡ 3 (mod 5)", "crt([2, 3], [3, 5])"),
             ("a 209-digit Fibonacci", "fib(1000).str.len"),
             ("π's famous fractions", "pi.cfrac(4)"),
             ("the next prime after a googol", "(10 ** 100).next_prime - 10 ** 100"),
@@ -30,6 +34,12 @@ pub const MODULE: Module = Module {
     ],
     #[rustfmt::skip]
     guide: &[
+        ("types", &[("mod", "5 mod 7")]),
+        ("operators", &[
+            ("+ - * / with another mod or an int", "(5 mod 7) * 3"),
+            ("mod ** int, negative too", "(3 mod 7) ** -1"),
+            ("== tests congruence", "(2 mod 7) ** 3 == 1"),
+        ]),
         ("syntax", &[
             ("n! and n!!, touching the number", "5!"),
             ("double factorial", "7!!"),
@@ -37,6 +47,7 @@ pub const MODULE: Module = Module {
     ],
     fns: FNS,
     call,
+    binary: Some(binary),
     ..Module::EMPTY
 };
 
@@ -58,7 +69,13 @@ const FNS: &[Doc] = &[
     doc("perm", "perm(n: int, k: int) / perm(xs: list, k?: int)", "same as permutations", &["perm(5, 2)"], &["permutations"]),
     doc("nPr", "nPr(n: int, k: int) / nPr(xs: list, k?: int)", "same as permutations", &["nPr(5, 2)"], &["permutations"]),
     doc("combinations", "combinations(xs: list, k: int)", "every way to pick k of the list's items, keeping their order", &["[1, 2, 3, 4].combinations(2)"], &["choose", "permutations"]),
-    doc("mod_pow", "mod_pow(b: int, e: int, m: int)", "b ** e % m without the huge power", &["mod_pow(2, 100, 7)", "mod_pow(3, 10 ** 18, 1000000007)"], &["gcd"]),
+    doc("mod_pow", "mod_pow(b: int, e: int, m: int)", "b ** e % m without the huge power; a negative e uses b's inverse", &["mod_pow(2, 100, 7)", "mod_pow(3, 10 ** 18, 1000000007)", "mod_pow(3, -1, 7)"], &["mod_inv", "gcd"]),
+    doc("mod_inv", "mod_inv(a: int, m: int) / mod_inv(x: mod)", "the b with a * b ≡ 1 (mod m); an error if a and m share a factor", &["mod_inv(3, 7)", "mod_inv(5 mod 12)"], &["mod_pow", "crt"]),
+    doc("crt", "crt(rs: list, ms: list) / crt(xs: list)", "the Chinese remainder theorem: the x with x ≡ r (mod m) for every pair, as a mod; the moduli needn't be coprime",
+        &["crt([2, 3, 2], [3, 5, 7])", "crt([2 mod 3, 3 mod 5])"], &["mod_inv"]),
+    doc("residue", "residue(x: mod)", "the int a mod stands for, from 0 to its modulus - 1", &["(17 mod 5).residue"], &["modulus"]),
+    doc("modulus", "modulus(x: mod)", "a mod's modulus", &["(17 mod 5).modulus"], &["residue"]),
+    doc("rem", "rem(a: num, b: num)", "the remainder with a's sign, like C's `%`; zil's `%` is never negative", &["rem(-7, 3)", "-7 % 3"], &["mod_pow"]),
     doc("fib", "fib(n: int)", "the nth Fibonacci number (fib(0) = 0), exact", &["fib(10)", "fib(100)"], &["factorial"]),
     doc("next_prime", "next_prime(n: int)", "the smallest prime greater than n", &["next_prime(100)", "next_prime(2 ** 64)"], &["is_prime"]),
     doc("totient", "totient(n: int)", "Euler's φ: how many of 1..n share no factor with n", &["totient(36)", "totient(97)"], &["factors", "gcd"]),
@@ -158,14 +175,52 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
         }
         ("mod_pow", [b, e, m]) => {
             let (b, e, m) = (int(b)?, int(e)?, int(m)?);
-            if e.is_negative() {
-                return Err(Fail::Arg(1, format!("the exponent must be 0 or more, got {e}")));
-            }
             if !m.is_positive() {
                 return Err(Fail::Arg(2, format!("the modulus must be positive, got {m}")));
             }
-            big(b.modpow(&e, &m))
+            big(pow(&b, &e, &m)?)
         }
+        ("mod_inv", [Mod(x)]) => Value::modular(inverse(&x.0, &x.1)?, x.1.clone()),
+        ("mod_inv", [a, m]) => {
+            let (a, m) = (int(a)?, int(m)?);
+            if !m.is_positive() {
+                return Err(Fail::Arg(1, format!("the modulus must be positive, got {m}")));
+            }
+            big(inverse(&a, &m)?.mod_floor(&m))
+        }
+        ("crt", [List(xs)]) => {
+            let pairs = xs
+                .borrow()
+                .iter()
+                .map(|x| if let Mod(x) = x { Ok((**x).clone()) } else { Err(Fail::Arg(0, format!("expected a list of mods, got a {}", x.type_name()))) })
+                .collect::<Result<Vec<_>, _>>()?;
+            crt(pairs)?
+        }
+        ("crt", [List(rs), List(ms)]) => {
+            let (rs, ms) = (rs.borrow(), ms.borrow());
+            if rs.len() != ms.len() {
+                return Err(format!("{} remainders for {} moduli", rs.len(), ms.len()).into());
+            }
+            let mut pairs = vec![];
+            for (r, m) in rs.iter().zip(ms.iter()) {
+                let m = int(m).map_err(|_| Fail::Arg(1, "moduli must be ints".into()))?;
+                if !m.is_positive() {
+                    return Err(Fail::Arg(1, format!("moduli must be positive, got {m}")));
+                }
+                pairs.push((int(r).map_err(|_| Fail::Arg(0, "remainders must be ints".into()))?, m));
+            }
+            crt(pairs)?
+        }
+        ("residue", [Mod(x)]) => big(x.0.clone()),
+        ("modulus", [Mod(x)]) => big(x.1.clone()),
+        ("rem", [a @ (Int(..) | Big(..)), b @ (Int(..) | Big(..))]) => {
+            let (a, b) = (int(a)?, int(b)?);
+            if b.is_zero() {
+                return Err("division by zero".into());
+            }
+            big(a % b)
+        }
+        ("rem", [a, b]) if num(a).is_some() && num(b).is_some() => Float(num(a).unwrap() % num(b).unwrap()),
         ("fib", [Int(n, _)]) if (0..=100_000).contains(n) => {
             let (mut a, mut b) = (BigInt::zero(), BigInt::one());
             for _ in 0..*n {
@@ -263,6 +318,68 @@ fn arrangements(xs: &[Value], k: usize, ordered: bool) -> Result<Vec<Value>, Fai
     Ok(out)
 }
 
+/// `5 mod 7`, and arithmetic once either side is a mod: a plain int joins in at that modulus.
+fn binary(op: BinOp, a: &Value, b: &Value) -> Claim {
+    use Value::Mod;
+    let whole = |v: &Value| int(v).ok();
+    if op == BinOp::Mod {
+        return Some(match (whole(a), whole(b)) {
+            (Some(_), Some(m)) if !m.is_positive() => Err(format!("the modulus must be positive, got {m}")),
+            (Some(r), Some(m)) => Ok(Value::modular(r, m)),
+            _ => Err(mismatch(op, a, b) + "\nhelp: `a mod m` takes two ints"),
+        });
+    }
+    let m = match (a, b) {
+        (Mod(x), Mod(y)) if x.1 != y.1 => return Some(Err(format!("cannot {} mods with different moduli, {} and {}", crate::ops::verb(op), x.1, y.1))),
+        (Mod(x), _) | (_, Mod(x)) => x.1.clone(),
+        _ => return None,
+    };
+    let residue = |v: &Value| if let Mod(x) = v { Some(x.0.clone()) } else { whole(v) };
+    let (Some(x), Some(y)) = (residue(a), residue(b)) else { return Some(Err(mismatch(op, a, b))) };
+    let r = match op {
+        BinOp::Add => Ok(x + y),
+        BinOp::Sub => Ok(x - y),
+        BinOp::Mul => Ok(x * y),
+        BinOp::Div => inverse(&y, &m).map(|inv| x * inv),
+        BinOp::Pow if !matches!(b, Mod(_)) => pow(&x, &y, &m),
+        BinOp::Pow => Err("the exponent must be an int, not a mod".into()),
+        _ => return Some(Err(mismatch(op, a, b))),
+    };
+    Some(r.map(|r| Value::modular(r, m)))
+}
+
+/// The b with `a * b ≡ 1 (mod m)`, not yet reduced.
+fn inverse(a: &BigInt, m: &BigInt) -> Result<BigInt, String> {
+    let g = a.extended_gcd(m);
+    if !g.gcd.is_one() {
+        return Err(format!("{a} has no inverse mod {m}: both are divisible by {}", g.gcd));
+    }
+    Ok(g.x)
+}
+
+/// `b ** e mod m`; a negative `e` raises the inverse.
+fn pow(b: &BigInt, e: &BigInt, m: &BigInt) -> Result<BigInt, String> {
+    if e.is_negative() { Ok(inverse(b, m)?.modpow(&-e, m)) } else { Ok(b.modpow(e, m)) }
+}
+
+/// One `x mod lcm` meeting every `x ≡ r (mod m)`, merging two at a time.
+fn crt(pairs: Vec<(BigInt, BigInt)>) -> Call {
+    let (mut x, mut l) = (BigInt::zero(), BigInt::one());
+    for (r, m) in pairs {
+        let g = l.gcd(&m);
+        let diff = &r - &x;
+        if !(&diff % &g).is_zero() {
+            return Err(format!("no solution: x ≡ {x} (mod {l}) and x ≡ {} (mod {m}) disagree", r.mod_floor(&m)).into());
+        }
+        let n = &m / &g;
+        let k = (diff / &g * inverse(&(&l / &g), &n)?).mod_floor(&n);
+        x += &l * k;
+        l = l.lcm(&m);
+        x = x.mod_floor(&l);
+    }
+    Ok(Value::modular(x, l))
+}
+
 fn gcd_lcm(name: &str, vs: &[Value]) -> Call {
     let mut acc = int(vs.first().ok_or("empty list")?)?;
     for v in &vs[1..] {
@@ -335,6 +452,41 @@ mod tests {
     use crate::interp::tests::{show, try_eval};
 
     #[test]
+    fn modular() {
+        assert_eq!(
+            show("[5 mod 7 + 4, 10 mod 12 + 5, -1 mod 5, -(2 mod 5), (3 mod 7) * 5, 2 - (3 mod 7)]"),
+            "[2 (mod 7), 3 (mod 12), 4 (mod 5), 3 (mod 5), 1 (mod 7), 6 (mod 7)]"
+        );
+        assert_eq!(
+            show("[1 / (3 mod 7), (3 mod 7) ** -1, (2 mod 7) ** 100, (2 mod 7) ** 3 == 1, (2 mod 7) == 9, 2 mod 7 == 2 mod 5]"),
+            "[5 (mod 7), 5 (mod 7), 2 (mod 7), true, true, false]"
+        );
+        assert_eq!(
+            show("[mod_inv(3, 7), mod_inv(5 mod 12), mod_pow(3, -1, 7), (17 mod 5).residue, (17 mod 5).modulus, type(1 mod 2)]"),
+            r#"[5, 5 (mod 12), 5, 2, 5, "mod"]"#
+        );
+        assert_eq!(
+            show("[crt([2, 3, 2], [3, 5, 7]), crt([2 mod 3, 3 mod 5]), crt([1, 3], [4, 6]), crt([], [])]"),
+            "[23 (mod 105), 8 (mod 15), 9 (mod 12), 0 (mod 1)]"
+        );
+        assert_eq!(show("[rem(-7, 3), -7 % 3, rem(7, -3), rem(-7.5, 2)]"), "[-1, 2, 1, -1.5]");
+        assert_eq!(show("(2 ** 127 - 1) mod 2 ** 64"), "18446744073709551615 (mod 18446744073709551616)");
+        for bad in [
+            "1 / (2 mod 4)",
+            "(1 mod 5) + (1 mod 7)",
+            "5 mod 0",
+            "5.5 mod 2",
+            "(2 mod 5) ** (2 mod 5)",
+            "(1 mod 5) < 2",
+            "mod_inv(2, 4)",
+            "crt([1, 2], [4, 6])",
+            "rem(1, 0)",
+        ] {
+            assert!(try_eval(bad).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
     fn number_theory() {
         assert_eq!(show("[gcd(12, 18), [12, 18, 27].gcd, lcm(4, 6), (1..=20).lcm, gcd(0, 5)]"), "[6, 3, 12, 232792560, 5]");
         assert_eq!(show("(1..30).filter(is_prime)"), "[2, 3, 5, 7, 11, 13, 17, 19, 23, 29]");
@@ -359,6 +511,7 @@ mod tests {
         assert!(try_eval("factors(0)").is_err());
         assert!(try_eval("factorial(-1)").is_err());
         assert!(try_eval("mod_pow(2, 3, 0)").is_err());
+        assert!(try_eval("mod_pow(2, -1, 4)").is_err());
     }
 
     #[test]

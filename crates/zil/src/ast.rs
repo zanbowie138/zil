@@ -120,6 +120,8 @@ pub enum BinOp {
     Div,
     IntDiv,
     Rem,
+    /// `a mod m`: a modular value.
+    Mod,
     Pow,
     BitAnd,
     BitOr,

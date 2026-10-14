@@ -16,6 +16,7 @@ pub fn verb(op: BinOp) -> &'static str {
         BinOp::Mul => "multiply",
         BinOp::Div | BinOp::IntDiv => "divide",
         BinOp::Rem => "take the remainder of",
+        BinOp::Mod => "reduce",
         BinOp::Pow => "raise",
         BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge => "compare",
         BinOp::Range | BinOp::RangeIncl => "make a range of",

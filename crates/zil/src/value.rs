@@ -31,6 +31,8 @@ pub enum Value {
     Unc(Rc<(f64, f64, Unit)>),
     /// `2 + 3i`: real and imaginary parts.
     Cplx(f64, f64),
+    /// `5 mod 7`: residue and modulus, with `0 <= residue < modulus`.
+    Mod(Rc<(BigInt, BigInt)>),
     Str(Rc<str>),
     Regex(Rc<Regex>),
     Date(Rc<Zoned>),
@@ -119,6 +121,12 @@ impl Value {
         Value::Unc(Rc::new((x, e, u)))
     }
 
+    /// `r mod m` for a positive `m`, reduced into `0..m`.
+    pub fn modular(r: BigInt, m: BigInt) -> Value {
+        use num_integer::Integer;
+        Value::Mod(Rc::new((r.mod_floor(&m), m)))
+    }
+
     pub fn date(z: Zoned) -> Value {
         Value::Date(Rc::new(z))
     }
@@ -148,6 +156,7 @@ impl Value {
             Value::Qty(..) => "quantity",
             Value::Unc(..) => "uncertain",
             Value::Cplx(..) => "complex",
+            Value::Mod(_) => "mod",
             Value::Str(_) => "str",
             Value::Regex(_) => "regex",
             Value::Date(_) => "date",
@@ -177,6 +186,7 @@ impl Value {
             Value::Cplx(re, im) if *re == 0.0 => write!(f, "{}i", fmt_float(*im)),
             Value::Cplx(re, im) if im.is_sign_negative() => write!(f, "{} - {}i", fmt_float(*re), fmt_float(-im)),
             Value::Cplx(re, im) => write!(f, "{} + {}i", fmt_float(*re), fmt_float(*im)),
+            Value::Mod(x) => write!(f, "{} (mod {})", x.0, x.1),
             Value::Str(s) if top => write!(f, "{s}"),
             Value::Str(s) => write!(f, "{s:?}"),
             Value::Regex(r) => write!(f, "r\"{}\"", r.as_str()),
@@ -249,6 +259,12 @@ impl PartialEq for Value {
             (Qty(..), Qty(..)) => compare(self, other) == Some(Ordering::Equal),
             (Unc(a), Unc(b)) => Value::qty(a.0, a.2.clone()) == Value::qty(b.0, b.2.clone()) && Value::qty(a.1, a.2.clone()) == Value::qty(b.1, b.2.clone()),
             (Cplx(a, b), Cplx(c, d)) => a == c && b == d,
+            (Mod(a), Mod(b)) => a == b,
+            // Congruence: `(2 mod 7) ** 3 == 1`.
+            (Mod(x), Int(..) | Big(..)) | (Int(..) | Big(..), Mod(x)) => {
+                let n = if let Mod(_) = self { other } else { self };
+                matches!(ratio(n), Some(r) if Value::modular(r.to_integer(), x.1.clone()) == Mod(x.clone()))
+            }
             (Str(a), Str(b)) => a == b,
             (Regex(a), Regex(b)) => a.as_str() == b.as_str(),
             (Date(a), Date(b)) => a.timestamp() == b.timestamp(),

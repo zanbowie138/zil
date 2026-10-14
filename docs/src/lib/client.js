@@ -65,7 +65,7 @@ export async function call(fn, src = "") {
 /** Stops a run in progress. */
 export const stop = () => kill("stopped");
 
-export const KEYWORDS = ["fn", "if", "else", "while", "for", "in", "to", "of", "return", "break", "continue", "true", "false", "nil"];
+export const KEYWORDS = ["fn", "if", "else", "while", "for", "in", "to", "of", "mod", "return", "break", "continue", "true", "false", "nil"];
 const TOKEN = [
   /(?<result>^[ \t]*# → .*$)/,
   // Before comments, so `16#ff` is a number; durations and clock times, then the rest, like the lexer's.

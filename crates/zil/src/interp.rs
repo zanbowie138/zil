@@ -567,6 +567,7 @@ impl Interp {
                 (UnOp::Neg, Value::Qty(n, u)) => Value::Qty(-n, u),
                 (UnOp::Neg, Value::Unc(c)) => Value::unc(-c.0, c.1, c.2.clone()),
                 (UnOp::Neg, Value::Cplx(re, im)) => Value::Cplx(-re, -im),
+                (UnOp::Neg, Value::Mod(x)) => Value::modular(-&x.0, x.1.clone()),
                 (UnOp::Neg, v) => return Err(err(format!("cannot negate a {}", v.type_name()))),
                 (UnOp::BitNot, Value::Int(n, b)) => Value::Int(!n, b),
                 (UnOp::BitNot, Value::Big(n, b)) => exact(BigRational::from_integer(!&*n), b, false),

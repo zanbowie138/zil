@@ -36,6 +36,7 @@ pub const SYNTAX: &[Section] = &[
         ("bases are kept", "0xff + 1"),
         ("units attach to numbers", "60 km/h to m/s"),
         ("percentages", "80 + 15%"),
+        ("modular values", "10 mod 12 + 5"),
         ("interpolation", r#""2 + 2 = {2 + 2}""#),
         ("slices, from the end", r#""hello"[-3..]"#),
         ("regex literals", r#""a1b22".find_all(r"\d+")"#),

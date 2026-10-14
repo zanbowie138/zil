@@ -27,6 +27,9 @@ pub enum Tok {
     /// `20% of 50`: multiplication.
     #[token("of")]
     Of,
+    /// `5 mod 7`: a modular value.
+    #[token("mod")]
+    Mod,
     #[token("return")]
     Return,
     #[token("break")]

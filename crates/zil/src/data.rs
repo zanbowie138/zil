@@ -30,6 +30,11 @@ pub enum Data {
         re: f64,
         im: f64,
     },
+    /// `residue (mod modulus)`.
+    Mod {
+        residue: BigInt,
+        modulus: BigInt,
+    },
     Str(String),
     /// The pattern's source.
     Regex(String),
@@ -59,6 +64,7 @@ impl Value {
             Value::Qty(x, u) => Data::Qty { value: *x, unit: u.to_string() },
             Value::Unc(c) => Data::Unc { value: c.0, error: c.1, unit: c.2.to_string() },
             Value::Cplx(re, im) => Data::Cplx { re: *re, im: *im },
+            Value::Mod(x) => Data::Mod { residue: x.0.clone(), modulus: x.1.clone() },
             Value::Str(s) => Data::Str(s.to_string()),
             Value::Regex(r) => Data::Regex(r.as_str().into()),
             Value::Date(z) => Data::Date(z.to_string()),
@@ -84,6 +90,8 @@ impl Value {
             Data::Unc { error, .. } if error.is_nan() || error < 0.0 => return Err(format!("uncertainty must be ≥ 0, got {error}")),
             Data::Unc { value, error, unit } => Value::unc(value, error, units::parse(&unit)?),
             Data::Cplx { re, im } => Value::Cplx(re, im),
+            Data::Mod { modulus, .. } if modulus <= BigInt::ZERO => return Err(format!("the modulus must be positive, got {modulus}")),
+            Data::Mod { residue, modulus } => Value::modular(residue, modulus),
             Data::Str(s) => Value::str(s),
             Data::Regex(s) => Value::Regex(regex::Regex::new(&s).map_err(|e| e.to_string())?.into()),
             Data::Date(s) => Value::date(s.parse().map_err(|e| format!("bad date `{s}`: {e}"))?),
