@@ -74,7 +74,7 @@ pub const MODULE: Module = Module {
     ],
     fns: FNS,
     call,
-    targets: &[("best", "simplify")],
+    targets: &[("best", "simplify"), ("si", "si")],
     ident: Some(|_, name| match unit(name) {
         Ok(u) => Some(Ok(Value::Qty(1.0, u))),
         Err(e) if e.starts_with("unknown unit") => None,
@@ -93,6 +93,8 @@ pub const MODULE: Module = Module {
 const FNS: &[Doc] = &[
     doc("simplify", "simplify(q: quantity)", "the quantity in the prefixed unit of the same family that reads best, like `1.2 m` or `3.6 kW`; also `to best`",
         &["0.0012 km to best", "3600 J/s to best", "1 kg*m^2/s^2 to best", "1.5e9 B.simplify"], &[]),
+    doc("si", "si(q: quantity)", "the quantity in its SI unit: the named one like `J` or `N` if there is one, else SI base units; also `to si`",
+        &["5 mi/h to si", "2 kWh to si", "72 F to si"], &["simplify"]),
     doc("all_units", "all_units()", "every unit as a table: {name, full, desc, aliases, kind, si, source}; source is units, informal, currency or user",
         &["all_units().len", r#"all_units().filter(|u| u.kind == "length").map(|u| u.name).take(5)"#, r#"all_units().filter(|u| u.source == "informal")[0]"#], &["simplify"]),
     doc("db", "db(ratio: num, kind?: str)", "a power ratio in decibels (10 log10); kind \"amplitude\" for voltage or pressure ratios (20 log10)", &["db(2)", "db(1000)", r#"db(2, "amplitude")"#], &["from_db", "log"]),
@@ -109,6 +111,10 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
     };
     Ok(match (name, args) {
         ("simplify", [Qty(x, u)]) => simplify(*x, u),
+        ("si", [Qty(x, u)]) => {
+            let si = base_terms(&u.dim()).iter().try_fold(Unit::default(), |acc, (n, p)| Ok::<_, String>(acc.mul(&unit(n)?.pow(*p), 1)))?;
+            to_unit(*x, u, si)?
+        }
         ("all_units", []) => all_units(),
         ("db", [x, rest @ ..]) if rest.len() <= 1 && num(x).is_some() => {
             let x = num(x).unwrap();
@@ -758,6 +764,10 @@ mod tests {
         assert_eq!(show("72 F to C"), "22.2222 C");
         assert_eq!(show("-40 C to F"), "-40 F");
         assert_eq!(show("3 km / 20 min to kph"), "9 kph");
+        assert_eq!(
+            show("[5 mi/h to si, 2 kWh to si, 32 F to si, 1 g/cm^3 to si, 3 Mbps to si]"),
+            "[2.2352 m/s, 7200000 J, 273.15 K, 1000 kg/m^3, 3000000 bps]"
+        );
         assert_eq!(
             show("[1 pc to ly, 30 mpg to mpg_uk, 1 rev to deg, 12 point to pica, 100 Å to nm, 1 thm to kWh]"),
             "[3.26156 ly, 36.0285 mpg_uk, 360 deg, 1 pica, 10 nm, 29.3071 kWh]"
