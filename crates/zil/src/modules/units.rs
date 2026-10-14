@@ -875,6 +875,7 @@ unit * 2"
         assert_eq!(show("unit tile\n10 m*km/tile to best"), "1 ha/tile");
         assert_eq!(show("[36 to dozen, 0.0025 to ppm, 2 gross to dozen, 3 dozen to si, 5 ‰ to ppm]"), "[3 dozen, 2500 ppm, 24 dozen, 36, 5000 ppm]");
         assert_eq!(show("[3 dozen + 1, 1 - 2 dozen, 2 dozen * 3, 50 ppm * 2 kg]"), "[37, -23, 72, 0.0001 kg]");
+        assert_eq!(show("[1 tun to hogshead, 1 chain to perch, 3 barleycorn to in, 1 scruple to gr]"), "[4 hogshead, 4 rod, 1 in, 20 gr]");
         assert_eq!(show("[500 km/ms to c, 1 kg * 9.81 m/s^2 to g0*kg, 1e-30 kg to m_e]"), "[1.66782 c, 1.00034 g0*kg, 1.09777 m_e]");
         assert!(try_eval("5 km to c").is_err());
         assert!(try_eval("5 to best").is_err());
