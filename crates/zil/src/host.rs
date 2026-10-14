@@ -99,6 +99,14 @@ pub trait Host {
     fn run(&self, _cmd: &str) -> io::Result<Ran> {
         denied("running commands")
     }
+    /// Puts `text` on the system clipboard.
+    fn copy_text(&self, _text: &str) -> io::Result<()> {
+        denied("clipboard access")
+    }
+    /// What's on the system clipboard, as text.
+    fn paste_text(&self) -> io::Result<String> {
+        denied("clipboard access")
+    }
     /// HTTP GET `url` with `query` parameters, returning the body.
     fn http_get(&self, _url: &str, _query: &[(&str, &str)]) -> Result<String, String> {
         Err("network access is disabled in this session".into())
@@ -183,6 +191,8 @@ mod tests {
         assert_eq!(show(r#"env("PATH")"#), "nil");
         assert!(show(r#"sh("echo hi")"#).contains("running commands is disabled"));
         assert!(show(r#"img("x.png")"#).contains("file access is disabled"));
+        assert!(show(r#"copy("x")"#).contains("clipboard access is disabled"));
+        assert!(show("paste()").contains("clipboard access is disabled"));
         let a = show("[rand(), rand()]");
         assert_eq!(run(&mut Interp::with_host(Rc::new(NullHost)), "[rand(), rand()]").unwrap().to_string(), a, "seed 0 repeats");
     }

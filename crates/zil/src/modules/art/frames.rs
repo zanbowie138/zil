@@ -27,7 +27,7 @@ pub const MODULE: Module = Module {
 #[rustfmt::skip]
 const FNS: &[Doc] = &[
     doc("boxed", "boxed(s: str, style?: str)", "draw a box around text; style is \"single\" (default), \"double\", \"round\", \"heavy\", \"ascii\", \"stars\" or \"shadow\"", &[r#"boxed("hello")"#, r#""zil\ncalc".boxed("round")"#], &["cowsay", "stack"]),
-    doc("cowsay", "cowsay(s: str, critter?: str)", "a critter saying s in a speech bubble; critter is \"cow\" (default), \"cat\", \"ghost\" or \"crab\"", &[r#"cowsay("moo")"#], &["think", "boxed"]),
+    doc("cowsay", "cowsay(s: str, critter?: str)", "a critter saying s in a speech bubble; critter is \"cow\" (default), \"cat\", \"ghost\", \"crab\" or \"pikachu\"", &[r#"cowsay("moo")"#], &["think", "boxed"]),
     doc("think", "think(s: str, critter?: str)", "like cowsay, in a thought bubble", &[r#"think("hmm", "ghost")"#], &["cowsay"]),
     doc("beside", "beside(a: str, b: str, gap?: int)", "put b to the right of a, tops aligned, gap spaces apart (default 1)", &[r#""a\nb".beside("c\nd\ne")"#], &["stack", "overlay"]),
     doc("stack", "stack(a: str, b: str, align?: str)", "put b under a, aligned \"left\" (default), \"center\" or \"right\"", &[r#""wide one".stack("x", "right")"#], &["beside"]),
@@ -54,7 +54,7 @@ fn call(_: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
                 [Str(c)] => c,
                 _ => return Err(Fail::BadArgs),
             };
-            let art = CRITTERS.iter().find(|c| c.0 == critter).ok_or_else(|| Fail::Arg(1, format!("no critter {critter:?}; try cow, cat, ghost or crab")))?.1;
+            let art = CRITTERS.iter().find(|c| c.0 == critter).ok_or_else(|| Fail::Arg(1, format!("no critter {critter:?}; try cow, cat, ghost, crab or pikachu")))?.1;
             let tail = if name == "think" { 'o' } else { '\\' };
             Value::str(format!("{}\n   {tail}\n    {tail}\n{}", bubble(s, name == "think"), art.trim_start_matches('\n')))
         }
@@ -295,6 +295,13 @@ const CRITTERS: &[(&str, &str)] = &[
     \) /  o o  \ (/
       '_   -   _'
       / '-----' \",
+    ),
+    (
+        "pikachu",
+        r#"
+    (\__/)
+    (o^.^o)
+   z(_(")(")"#,
     ),
 ];
 

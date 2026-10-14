@@ -13,7 +13,7 @@ pub fn network_allowed() -> bool {
 
 pub const MODULE: Module = Module {
     name: "sys",
-    about: "script arguments, environment variables, shell commands, HTTP GET",
+    about: "script arguments, environment variables, shell commands, clipboard, HTTP GET",
     #[rustfmt::skip]
     examples: &[
         ("sys", &[
@@ -43,6 +43,8 @@ const FNS: &[Doc] = &[
     doc("sh", "sh(cmd: str)", "run a shell command (sh -c, or cmd /C on Windows) and return its output, trailing newline trimmed; errors on a non-zero exit", &[], &["run"])
         .shown(&[r#"sh("git rev-parse --short HEAD")"#, r#"sh("ls").lines.len"#]),
     doc("run", "run(cmd: str)", "run a shell command and return {code, out, err}; never fails on the exit code", &[], &["sh"]).shown(&[r#"run("git status").code"#]),
+    doc("copy", "copy(v: any)", "put a value on the system clipboard, as print would show it, and return it", &[], &["paste"]).shown(&[r#"sh("git rev-parse HEAD") |> copy"#]),
+    doc("paste", "paste()", "the text on the system clipboard", &[], &["copy"]).shown(&["paste().lines.len"]),
     doc("fetch", "fetch(url: str)", "HTTP GET a URL and return the body as a string; errors on a non-2xx status", &[], &["from_json"])
         .shown(&[r#"fetch("https://api.github.com/repos/rust-lang/rust").from_json.stargazers_count"#]),
     doc("allow_network_access", "allow_network_access()", "let currency rates, translation and zip codes go online for the rest of the session; until then they only use cached data", &[], &["fetch"])
@@ -73,6 +75,12 @@ fn call(it: &mut Interp, name: &'static str, args: &[Value], _: &Span) -> Call {
             }
             Value::str(out_s)
         }
+        ("copy", [v]) => {
+            let text = if let Table(t) = v { super::data::tables::grid(t, false) } else { v.to_string() };
+            crate::host::get().copy_text(&text).map_err(|e| format!("cannot copy: {}", super::fs::io_reason(&e)))?;
+            v.clone()
+        }
+        ("paste", []) => Value::str(crate::host::get().paste_text().map_err(|e| format!("cannot paste: {}", super::fs::io_reason(&e)))?),
         ("fetch", [Str(url)]) => Value::str(get(url, &[]).map_err(|e| format!("{url}: {e}"))?),
         ("allow_network_access", []) => {
             crate::state::with(|s| s.network.set(true));

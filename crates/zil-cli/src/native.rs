@@ -81,6 +81,27 @@ impl Host for NativeHost {
         let text = |b: &[u8]| String::from_utf8_lossy(b).into_owned();
         Ok(Ran { code: out.status.code().unwrap_or(-1), out: text(&out.stdout), err: text(&out.stderr) })
     }
+    fn copy_text(&self, text: &str) -> io::Result<()> {
+        // clip.exe takes UTF-16; anything else it reads in the console code page and mangles non-ASCII.
+        if cfg!(windows) {
+            clip_tool(&[&["clip"]], &text.encode_utf16().flat_map(u16::to_le_bytes).collect::<Vec<_>>()).map(drop)
+        } else if cfg!(target_os = "macos") {
+            clip_tool(&[&["pbcopy"]], text.as_bytes()).map(drop)
+        } else {
+            clip_tool(&[&["wl-copy"], &["xclip", "-selection", "clipboard"], &["xsel", "--clipboard", "--input"]], text.as_bytes()).map(drop)
+        }
+    }
+    fn paste_text(&self) -> io::Result<String> {
+        let out = if cfg!(windows) {
+            let ps = "[Console]::OutputEncoding = [Text.Encoding]::UTF8; [Console]::Out.Write((Get-Clipboard -Raw))";
+            clip_tool(&[&["powershell", "-NoProfile", "-NonInteractive", "-Command", ps]], b"")?
+        } else if cfg!(target_os = "macos") {
+            clip_tool(&[&["pbpaste"]], b"")?
+        } else {
+            clip_tool(&[&["wl-paste", "--no-newline"], &["xclip", "-selection", "clipboard", "-o"], &["xsel", "--clipboard", "--output"]], b"")?
+        };
+        Ok(String::from_utf8_lossy(&out).replace("\r\n", "\n"))
+    }
     fn http_get(&self, url: &str, query: &[(&str, &str)]) -> Result<String, String> {
         ureq::get(url).query_pairs(query.iter().copied()).call().and_then(|mut r| r.body_mut().read_to_string()).map_err(|e| e.to_string())
     }
@@ -98,6 +119,20 @@ impl Host for NativeHost {
     fn exit(&self, code: i32) -> String {
         std::process::exit(code)
     }
+}
+
+/// Runs the first of `tools` that exists with `input` on its stdin, returning its stdout.
+fn clip_tool(tools: &[&[&str]], input: &[u8]) -> io::Result<Vec<u8>> {
+    use std::process::{Command, Stdio};
+    for tool in tools {
+        let Ok(mut child) = Command::new(tool[0]).args(&tool[1..]).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn() else {
+            continue;
+        };
+        child.stdin.take().unwrap().write_all(input)?;
+        let out = child.wait_with_output()?;
+        return if out.status.success() { Ok(out.stdout) } else { Err(io::Error::other(format!("{} failed", tool[0]))) };
+    }
+    Err(io::Error::new(io::ErrorKind::NotFound, "no clipboard tool found (install wl-clipboard, xclip or xsel)"))
 }
 
 #[cfg(test)]
