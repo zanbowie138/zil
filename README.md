@@ -1,4 +1,4 @@
-# <img src="docs/public/apple-touch-icon.png" width="36" align="top" alt=""> zil
+# zil
 
 [![crates.io](https://img.shields.io/crates/v/zil.svg)](https://crates.io/crates/zil)
 [![docs](https://img.shields.io/badge/docs-reference-blue)](https://zil.alexander-bui.com/)
@@ -145,17 +145,17 @@ function comes with live examples. The [`examples/`](examples) folder has more s
 
 ## Install
 
-Download a prebuilt binary from the [latest release](https://github.com/zanbowie138/zil/releases/latest):
+Download a prebuilt binary from the [latest release](https://github.com/zbu1/zil/releases/latest):
 
 | Platform              | Download                                                                                                                  |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Windows x64 installer | [zil-x86_64-pc-windows-msvc.msi](https://github.com/zanbowie138/zil/releases/latest/download/zil-x86_64-pc-windows-msvc.msi) |
-| Windows x64 portable  | [zil-x86_64-pc-windows-msvc-portable.zip](https://github.com/zanbowie138/zil/releases/latest/download/zil-x86_64-pc-windows-msvc-portable.zip) |
-| Windows x64           | [zil-x86_64-pc-windows-msvc.zip](https://github.com/zanbowie138/zil/releases/latest/download/zil-x86_64-pc-windows-msvc.zip) |
-| macOS (Apple Silicon) | [zil-aarch64-apple-darwin.tar.gz](https://github.com/zanbowie138/zil/releases/latest/download/zil-aarch64-apple-darwin.tar.gz) |
-| macOS (Intel)         | [zil-x86_64-apple-darwin.tar.gz](https://github.com/zanbowie138/zil/releases/latest/download/zil-x86_64-apple-darwin.tar.gz) |
-| Linux x64             | [zil-x86_64-unknown-linux-gnu.tar.gz](https://github.com/zanbowie138/zil/releases/latest/download/zil-x86_64-unknown-linux-gnu.tar.gz) |
-| Linux ARM64           | [zil-aarch64-unknown-linux-gnu.tar.gz](https://github.com/zanbowie138/zil/releases/latest/download/zil-aarch64-unknown-linux-gnu.tar.gz) |
+| Windows x64 installer | [zil-x86_64-pc-windows-msvc.msi](https://github.com/zbu1/zil/releases/latest/download/zil-x86_64-pc-windows-msvc.msi) |
+| Windows x64 portable  | [zil-x86_64-pc-windows-msvc-portable.zip](https://github.com/zbu1/zil/releases/latest/download/zil-x86_64-pc-windows-msvc-portable.zip) |
+| Windows x64           | [zil-x86_64-pc-windows-msvc.zip](https://github.com/zbu1/zil/releases/latest/download/zil-x86_64-pc-windows-msvc.zip) |
+| macOS (Apple Silicon) | [zil-aarch64-apple-darwin.tar.gz](https://github.com/zbu1/zil/releases/latest/download/zil-aarch64-apple-darwin.tar.gz) |
+| macOS (Intel)         | [zil-x86_64-apple-darwin.tar.gz](https://github.com/zbu1/zil/releases/latest/download/zil-x86_64-apple-darwin.tar.gz) |
+| Linux x64             | [zil-x86_64-unknown-linux-gnu.tar.gz](https://github.com/zbu1/zil/releases/latest/download/zil-x86_64-unknown-linux-gnu.tar.gz) |
+| Linux ARM64           | [zil-aarch64-unknown-linux-gnu.tar.gz](https://github.com/zbu1/zil/releases/latest/download/zil-aarch64-unknown-linux-gnu.tar.gz) |
 
 The Windows installer puts `zil` on your PATH and adds a Start menu shortcut to the REPL. The portable zip keeps its history and caches
 in its own `zil-data` folder and writes nothing anywhere else, so it can run from a USB stick. Any zil binary does the same if you make a
@@ -170,7 +170,7 @@ cargo install zil-cli
 To install the latest version from git:
 
 ```sh
-cargo install --git https://github.com/zanbowie138/zil zil-cli
+cargo install --git https://github.com/zbu1/zil zil-cli
 ```
 
 ## Usage
@@ -197,7 +197,7 @@ The full reference is available online at [zil.alexander-bui.com](https://zil.al
 ## Building
 
 ```sh
-git clone https://github.com/zanbowie138/zil
+git clone https://github.com/zbu1/zil
 cd zil
 cargo build --release   # binary at target/release/zil
 cargo test

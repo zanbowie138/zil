@@ -230,7 +230,7 @@ append_file("weight.csv", "{today.format("%Y-%m-%d")},{args()[0]}")
 read_file("weight.csv").from_csv.kg.sparkline"#),
     ("describe any CSV column: zil stats.zil data.csv price", "sys · fs · math.stats", r#"[file, col] = args()
 read_file(file).from_csv.map(|r| r[col]).describe"#),
-    ("GitHub stars, straight from the API", "sys · fs", r#"["rust-lang/rust", "zanbowie138/zil"].map(|r| fetch("https://api.github.com/repos/{r}").from_json.stargazers_count)"#),
+    ("GitHub stars, straight from the API", "sys · fs", r#"["rust-lang/rust", "zbu1/zil"].map(|r| fetch("https://api.github.com/repos/{r}").from_json.stargazers_count)"#),
     ("the weather in Oslo, in Fahrenheit", "sys · fs · units", r#"now_oslo = fetch("https://wttr.in/Oslo?format=j1").from_json.current_condition[0]
 {temp: int(now_oslo.temp_C) * 1 C to F, feels_like: int(now_oslo.FeelsLikeC) * 1 C to F, sky: now_oslo.weatherDesc[0].value}"#),
     ("a 9-day trip at $150 a day, in local money (live rates)", "sys · units.money · geo", r#"allow_network_access()

@@ -25,7 +25,7 @@ pub const MODULE: Module = Module {
             ("a cat in a box", r#"clipart("cat").boxed("round")"#),
             ("pride", r#"banner("zil", "slant").rainbow"#),
             ("measure colored art", r#"rainbow("hi").strip_ansi.len"#),
-            ("a link for your phone", r#"qr("https://github.com/zanbowie138/zil")"#),
+            ("a link for your phone", r#"qr("https://github.com/zbu1/zil")"#),
             ("a big clock", r#"segments(now.format("%H:%M"))"#),
         ]),
     ],

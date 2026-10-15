@@ -15,7 +15,7 @@ export default defineConfig({
     starlight({
       title: "zil",
       description: "A terse calculator and scripting language for units, dates and much more.",
-      social: [{ icon: "github", label: "GitHub", href: "https://github.com/zanbowie138/zil" }],
+      social: [{ icon: "github", label: "GitHub", href: "https://github.com/zbu1/zil" }],
       sidebar,
       customCss: ["./src/theme.css"],
       components: { SocialIcons: "./src/components/Nav.astro", MarkdownContent: "./src/components/Content.astro" },

@@ -8,7 +8,7 @@
     <Icon Id="zil.exe" SourceFile="$(Bin)/zil.exe" />
     <Property Id="ARPPRODUCTICON" Value="zil.exe" />
     <Property Id="ARPHELPLINK" Value="https://zil.alexander-bui.com/docs/" />
-    <Property Id="ARPURLINFOABOUT" Value="https://github.com/zanbowie138/zil" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/zbu1/zil" />
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="zil">
         <Component>
